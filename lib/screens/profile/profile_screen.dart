@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'photo_manager_screen.dart';
 import 'secret_photo_manager_screen.dart';
-import 'profile_setup_screen.dart';
-import '../auth/login_screen.dart';
+import 'account_settings_screen.dart';
 import '../../models/user_profile.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
@@ -46,12 +45,25 @@ class ProfileScreenState extends State<ProfileScreen> {
             .from('profile_photos')
             .select()
             .eq('profile_id', authUser.id)
+            .order('is_primary', ascending: false)
             .order('sort_order');
         
+        // Debug raw query result
+        debugPrint('\n--- PHOTO QUERY RESULT ---');
+        for (var p in (photosData as List)) {
+          debugPrint('photo_id: ${p['id']}, sort_order: ${p['sort_order']}, is_primary: ${p['is_primary']}, public_url: ${p['public_url']}');
+        }
+
         final photoUrls = (photosData as List)
             .map((p) => p['public_url'] as String)
             .where((url) => url.isNotEmpty)
             .toList();
+
+        // Debug final URL order
+        debugPrint('\n--- FINAL PHOTO URL ORDER ---');
+        for (int i = 0; i < photoUrls.length; i++) {
+          debugPrint('$i = ${photoUrls[i]}');
+        }
 
         final secretData = await Supabase.instance.client
             .from('secret_photos')
@@ -104,36 +116,6 @@ class ProfileScreenState extends State<ProfileScreen> {
       debugPrint('Error loading profile: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ยืนยันการออกจากระบบ'),
-        content: const Text('คุณต้องการออกจากระบบใช่หรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('ออกจากระบบ', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await Supabase.instance.client.auth.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
     }
   }
 
@@ -330,14 +312,13 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                           const SizedBox(height: 48),
                           _SettingsButton(
-                            onSettings: () async {
+                            onPressed: () async {
                               await Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
+                                MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
                               );
                               _loadUserData();
                             },
-                            onLogout: _logout,
                           ),
                           const SizedBox(height: 120),
                         ],
@@ -355,99 +336,52 @@ class ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _SettingsButton extends StatelessWidget {
-  final VoidCallback onSettings;
-  final VoidCallback onLogout;
+  final VoidCallback onPressed;
 
   const _SettingsButton({
-    required this.onSettings,
-    required this.onLogout,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MenuAnchor(
-      style: MenuStyle(
-        backgroundColor: WidgetStateProperty.all(Colors.white),
-        elevation: WidgetStateProperty.all(20),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF5C6BC0), Color(0xFF3F51B5)],
         ),
-        padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 8)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3F51B5).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      builder: (context, controller, child) {
-        return Container(
-          decoration: BoxDecoration(
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          minimumSize: const Size(double.infinity, 64),
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF5C6BC0), Color(0xFF3F51B5)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF3F51B5).withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
-          child: ElevatedButton(
-            onPressed: () {
-              if (controller.isOpen) {
-                controller.close();
-              } else {
-                controller.open();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              shadowColor: Colors.transparent,
-              minimumSize: const Size(double.infinity, 64),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              elevation: 0,
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.settings_rounded, size: 24),
-                SizedBox(width: 12),
-                Text(
-                  'การตั้งค่าบัญชี',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-                ),
-                SizedBox(width: 8),
-                Icon(Icons.expand_more_rounded, size: 24),
-              ],
-            ),
-          ),
-        );
-      },
-      menuChildren: [
-        MenuItemButton(
-          onPressed: onSettings,
-          leadingIcon: const Icon(Icons.person_outline_rounded, size: 22, color: AppColors.textPrimary),
-          style: ButtonStyle(
-            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
-          ),
-          child: const Text('ตั้งค่าโปรไฟล์', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          elevation: 0,
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Divider(height: 1),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.settings_rounded, size: 24),
+            SizedBox(width: 12),
+            Text(
+              'การตั้งค่าบัญชี',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+            ),
+          ],
         ),
-        MenuItemButton(
-          onPressed: onLogout,
-          leadingIcon: const Icon(Icons.logout_rounded, size: 22, color: Colors.redAccent),
-          style: ButtonStyle(
-            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
-          ),
-          child: const Text(
-            'ออกจากระบบ',
-            style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -486,6 +420,10 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
   @override
   Widget build(BuildContext context) {
     final photoUrls = widget.user.photoUrls;
+    if (photoUrls.isNotEmpty) {
+      debugPrint('\n--- PROFILE HEADER FIRST PHOTO ---');
+      debugPrint('photoUrls.first: ${photoUrls.first}');
+    }
 
     return Container(
       width: double.infinity,
@@ -865,24 +803,6 @@ class _SocialLine extends StatelessWidget {
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppColors.textSecondary),
-        const SizedBox(width: 12),
-        Expanded(child: Text(text)),
       ],
     );
   }

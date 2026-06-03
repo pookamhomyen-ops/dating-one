@@ -232,20 +232,9 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
       final otherPhotos = finalPhotos.where((p) => p['id'] != primaryPhoto['id']).toList();
       final orderedPhotos = [primaryPhoto, ...otherPhotos];
 
-      // 4. Update all in database
-      // Step 4.1: Move to negative temporary values to avoid any intermediate conflicts
+      // 4. Update sort_order + is_primary ทีละรูป (ไม่มี unique constraint แล้ว)
       for (int i = 0; i < orderedPhotos.length; i++) {
-        await Supabase.instance.client
-            .from('profile_photos')
-            .update({
-              'sort_order': -(i + 1),
-              'is_primary': false,
-            })
-            .eq('id', orderedPhotos[i]['id']);
-      }
-
-      // Step 4.2: Final sequential values
-      for (int i = 0; i < orderedPhotos.length; i++) {
+        debugPrint('Updating photo id: ${orderedPhotos[i]['id']}, sort_order: $i, is_primary: ${i == 0}');
         await Supabase.instance.client
             .from('profile_photos')
             .update({

@@ -1,0 +1,4 @@
+Power Shell
+cd D:\Weerawat\project-dating-one
+.\.aider-env\Scripts\Activate.ps1
+aider
