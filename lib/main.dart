@@ -38,92 +38,22 @@ class DatingOneApp extends StatelessWidget {
   }
 }
 
-// วิดเจ็ตสร้างพื้นหลังท้องฟ้าออโรร่าพาสเทล พร้อมลวดลายโค้งมน Fluid พริ้วไหวท้ายจอ
 class _AuroraFluidBackground extends StatelessWidget {
   final Widget child;
   const _AuroraFluidBackground({required this.child});
 
-  @override
+  @.aider-env\Lib\site-packages\_distutils_hack\override.py
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     return Scaffold(
-      resizeToAvoidBottomInset: false, // ป้องกันพื้นหลังบีบเบี้ยวเวลาคีย์บอร์ดเด้ง
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // เลเยอร์ 1: ไล่เฉดสีท้องฟ้าออโรร่าพาสเทลหลัก (Linear Gradient) จากบนลงล่าง
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.auroraStart,
-                  AppColors.auroraMid,
-                  AppColors.auroraEnd,
-                ],
-                stops: [0.0, 0.5, 1.0],
-              ),
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/bg.png',
+              fit: BoxFit.cover,
             ),
           ),
-          
-          // เลเยอร์ 2: แสงออโรร่าเรืองแสงฟุ้งจางๆ (Radial Glow) สีชมพูที่มุมขวาบนเพิ่มลูกเล่นท้องฟ้า
-          Positioned(
-            top: -size.height * 0.12,
-            right: -size.width * 0.2,
-            child: Container(
-              width: size.width * 1.0,
-              height: size.width * 1.0,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.auroraGlow.withOpacity(0.45),
-                    AppColors.auroraGlow.withOpacity(0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // เลเยอร์ 3: ลวดลายส่วนโค้งมน Fluid ชิ้นหลัก (Organic Wave) พริ้วไหวสวยงามที่ฝั่งซ้ายล่าง
-          Positioned(
-            bottom: size.height * 0.1,
-            left: -size.width * 0.2,
-            child: Container(
-              width: size.width * 0.85,
-              height: size.height * 0.24,
-              decoration: BoxDecoration(
-                color: AppColors.fluidShape.withOpacity(0.35),
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.elliptical(320, 200),
-                  bottomRight: Radius.elliptical(220, 120),
-                  topLeft: Radius.circular(160),
-                  bottomLeft: Radius.circular(160),
-                ),
-              ),
-            ),
-          ),
-          
-          // เลเยอร์ 4: ลวดลาย Fluid ชิ้นเล็ก ซ้อนทับเลเยอร์ท้ายจอเพิ่มมิติเลเยอร์ตื้นลึกแบบมินิมอลไม่รกตา
-          Positioned(
-            bottom: size.height * 0.02,
-            left: size.width * 0.05,
-            child: Container(
-              width: size.width * 0.72,
-              height: size.height * 0.16,
-              decoration: BoxDecoration(
-                color: AppColors.auroraMid.withOpacity(0.4),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.elliptical(200, 130),
-                  topRight: Radius.elliptical(240, 160),
-                  bottomLeft: Radius.circular(100),
-                  bottomRight: Radius.circular(100),
-                ),
-              ),
-            ),
-          ),
-          
-          // ตัวเนื้อหาของแอปจะอยู่ชั้นบนสุด
           child,
         ],
       ),
