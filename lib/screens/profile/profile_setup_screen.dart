@@ -28,6 +28,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   bool _loading = false;
   bool _isNewUser = true;
 
+  List<Map<String, dynamic>> _allInterests = [];
+  Set<String> _selectedInterestIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +43,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) return;
 
+      // 1. Load all interests
+      final interestsData = await Supabase.instance.client
+          .from('interests')
+          .select()
+          .order('name');
+      
+      _allInterests = List<Map<String, dynamic>>.from(interestsData);
+
+      // 2. Load profile
       final data = await Supabase.instance.client
           .from('profiles')
           .select()
@@ -47,6 +59,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           .maybeSingle();
 
       if (data != null) {
+        // 3. Load selected interests
+        final selectedData = await Supabase.instance.client
+            .from('profile_interests')
+            .select('interest_id')
+            .eq('profile_id', user.id);
+        
+        _selectedInterestIds = (selectedData as List)
+            .map((e) => e['interest_id'].toString())
+            .toSet();
+
         setState(() {
           _isNewUser = false;
           _nameCtrl.text = data['display_name'] ?? '';
@@ -122,6 +144,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'x_handle': _xCtrl.text.trim(),
         'facebook': _fbCtrl.text.trim(),
       });
+
+      // Save interests
+      // 1. Delete existing
+      await Supabase.instance.client
+          .from('profile_interests')
+          .delete()
+          .eq('profile_id', user.id);
+
+      // 2. Insert new
+      if (_selectedInterestIds.isNotEmpty) {
+        final inserts = _selectedInterestIds.map((id) => {
+              'profile_id': user.id,
+              'interest_id': id,
+            }).toList();
+        await Supabase.instance.client.from('profile_interests').insert(inserts);
+      }
 
       if (mounted) {
         if (_isNewUser) {
@@ -232,6 +270,42 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               controller: _bioCtrl,
               decoration: const InputDecoration(labelText: 'แนะนำตัวสั้นๆ'),
               maxLines: 3,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'ความสนใจของคุณ',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: _allInterests.map((interest) {
+                final id = interest['id'].toString();
+                final name = interest['name'] ?? '';
+                final isSelected = _selectedInterestIds.contains(id);
+                return FilterChip(
+                  label: Text(name, style: const TextStyle(fontSize: 13)),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedInterestIds.add(id);
+                      } else {
+                        _selectedInterestIds.remove(id);
+                      }
+                    });
+                  },
+                  selectedColor: AppColors.accentSoft,
+                  checkmarkColor: AppColors.brandPink,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected ? AppColors.brandPink : AppColors.border,
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 24),
             const Text(

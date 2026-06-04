@@ -38,11 +38,15 @@ class DatingOneApp extends StatelessWidget {
   }
 }
 
+// วิดเจ็ตสร้างพื้นหลังท้องฟ้าออโรร่าพาสเทล พร้อมลวดลายโค้งมน Fluid พริ้วไหวท้ายจอ
 class _AuroraFluidBackground extends StatelessWidget {
   final Widget child;
-  const _AuroraFluidBackground({required this.child});
 
-  @.aider-env\Lib\site-packages\_distutils_hack\override.py
+  const _AuroraFluidBackground({
+    required this.child,
+  });
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -54,6 +58,7 @@ class _AuroraFluidBackground extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
+
           child,
         ],
       ),

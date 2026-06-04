@@ -497,15 +497,17 @@ class _MemberCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ProfilePhoto(member: member),
-            const SizedBox(width: 12),
-            Expanded(child: _MemberInfo(member: member)),
-            const SizedBox(width: 4),
-            _LikeButton(liked: liked, onTap: onLike),
-          ],
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ProfilePhoto(member: member),
+              const SizedBox(width: 14),
+              Expanded(child: _MemberInfo(member: member)),
+              const SizedBox(width: 4),
+              _LikeButton(liked: liked, onTap: onLike),
+            ],
+          ),
         ),
       ),
     );
@@ -520,16 +522,16 @@ class _ProfilePhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 108,
-      height: 128,
+      width: 120,
       child: Stack(
+        fit: StackFit.expand,
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: NetworkImageBox(
               url: member.photoUrl,
-              width: 108,
-              height: 128,
+              width: double.infinity,
+              height: double.infinity,
               borderRadius: 14,
             ),
           ),

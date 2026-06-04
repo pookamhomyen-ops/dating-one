@@ -155,19 +155,10 @@ class _LogoBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'Soulive',
-              style: GoogleFonts.pacifico(
-                fontSize: 28,
-                color: AppColors.brandPink,
-                height: 1.1,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Text('✨', style: TextStyle(fontSize: 14)),
-          ],
+        Image.asset(
+          'assets/logos/logo-text-dating-one.png',
+          height: 42,
+          fit: BoxFit.contain,
         ),
         const SizedBox(height: 2),
         const Text(
