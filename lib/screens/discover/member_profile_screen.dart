@@ -19,7 +19,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   List<String> _photoUrls = [];
   List<String> _interests = [];
   int _currentImageIndex = 0;
-  int _currentTabItem = 0; // สถานะแท็บด้านล่าง
 
   @override
   void initState() {
@@ -550,6 +549,58 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 iconColor: const Color(0xFF66BB6A),
                               ),
                             ],
+                            if (_interests.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: _interests.map((interest) => _InterestChip(label: interest)).toList(),
+                              ),
+                            ],
+
+                            const SizedBox(height: 24),
+                            const Text(
+                              'ช่องทางติดต่อ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if ((_profileData!['line_id'] ?? '').toString().isNotEmpty)
+                              _SocialInfoTile(
+                                label: 'Line ID',
+                                value: _profileData!['line_id'],
+                                color: const Color(0xFF00C300),
+                                badgeText: 'LINE',
+                              ),
+                            if ((_profileData!['instagram'] ?? '').toString().isNotEmpty) ...[
+                              if ((_profileData!['line_id'] ?? '').toString().isNotEmpty) const SizedBox(height: 12),
+                              _SocialInfoTile(
+                                label: 'Instagram',
+                                value: _profileData!['instagram'],
+                                color: const Color(0xFFE1306C),
+                                badgeText: 'IG',
+                              ),
+                            ],
+                            if ((_profileData!['x_handle'] ?? '').toString().isNotEmpty) ...[
+                              if ((_profileData!['line_id'] ?? '').toString().isNotEmpty || (_profileData!['instagram'] ?? '').toString().isNotEmpty) const SizedBox(height: 12),
+                              _SocialInfoTile(
+                                label: 'X (Twitter)',
+                                value: _profileData!['x_handle'],
+                                color: Colors.black,
+                                badgeText: 'X',
+                              ),
+                            ],
+                            if ((_profileData!['facebook'] ?? '').toString().isNotEmpty) ...[
+                              if ((_profileData!['line_id'] ?? '').toString().isNotEmpty || (_profileData!['instagram'] ?? '').toString().isNotEmpty || (_profileData!['x_handle'] ?? '').toString().isNotEmpty) const SizedBox(height: 12),
+                              _SocialInfoTile(
+                                label: 'Facebook',
+                                value: _profileData!['facebook'],
+                                color: const Color(0xFF1877F2),
+                                badgeText: 'FB',
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -557,26 +608,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       _VerticalActionButtons(),
                     ],
                   ),
-                  
-                  if (_interests.isNotEmpty) ...[
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        const Icon(Icons.favorite_outline_rounded, color: AppColors.brandPink, size: 22),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'ความสนใจ',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _interests.map((interest) => _InterestChip(label: interest)).toList(),
-                    ),
-                  ],
                   
                   const SizedBox(height: 32),
                   
@@ -616,80 +647,80 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
-      
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppColors.brandPink,
-        unselectedItemColor: Colors.grey[400],
-        currentIndex: _currentTabItem,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.style_rounded), label: 'หน้าหลัก'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_rounded), label: 'ค้นหา'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_rounded), label: 'ถูกใจ'),
-          BottomNavigationBarItem(icon: Icon(Icons.forum_rounded), label: 'แชท'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'โปรไฟล์'),
-        ],
-        onTap: (index) {
-          setState(() {
-            _currentTabItem = index;
-          });
-        },
-      ),
     );
   }
 }
 
 class _OnlineStatus extends StatelessWidget {
   final bool isOnline;
+  final VoidCallback? onTap;
 
-  const _OnlineStatus({required this.isOnline});
+  const _OnlineStatus({
+    required this.isOnline,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: isOnline ? const Color(0xFFE8F5E9) : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isOnline ? const Color(0xFF4ADE80) : Colors.grey[400],
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isOnline ? const Color(0xFFE8F5E9) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: isOnline
+                    ? const Color(0xFF4ADE80)
+                    : Colors.grey[400],
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            isOnline ? 'ออนไลน์' : 'ออฟไลน์',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: isOnline ? const Color(0xFF2D7A4D) : Colors.grey[600],
+            const SizedBox(width: 6),
+            Text(
+              'แชท',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isOnline
+                    ? const Color(0xFF2D7A4D)
+                    : Colors.grey[600],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _VerticalActionButtons extends StatelessWidget {
+  final VoidCallback? onFollowTap;
+  final VoidCallback? onLeafTap;
+
+  const _VerticalActionButtons({
+    this.onFollowTap,
+    this.onLeafTap,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _SideBarButton(
-          icon: Icons.person_add_alt_1_rounded,
-          label: 'เพิ่มเพื่อน',
+          icon: Icons.person_pin_rounded,
+          label: 'ติดตาม',
           color: const Color(0xFF4A90E2),
-          onTap: () {},
+          onTap: onFollowTap ?? () {},
         ),
         const SizedBox(height: 12),
         _SideBarButton(
@@ -700,10 +731,10 @@ class _VerticalActionButtons extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _SideBarButton(
-          icon: Icons.chat_bubble_rounded,
-          label: 'แชท',
+          icon: Icons.eco_rounded,
+          label: 'ใบไม้',
           color: const Color(0xFF673AB7),
-          onTap: () {},
+          onTap: onLeafTap ?? () {},
         ),
       ],
     );
@@ -800,22 +831,99 @@ class _InfoLine extends StatelessWidget {
 
 class _InterestChip extends StatelessWidget {
   final String label;
-
   const _InterestChip({required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFCE4EC), Color(0xFFEDE7F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+        border: Border.all(color: AppColors.brandPink.withValues(alpha: 0.25), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brandPink.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFAD1457),
+        ),
       ),
+    );
+  }
+}
+
+class _SocialInfoTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final String badgeText;
+
+  const _SocialInfoTile({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.badgeText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            badgeText,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

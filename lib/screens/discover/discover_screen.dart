@@ -10,7 +10,6 @@ import '../../widgets/soulive_header.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
-
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
 }
@@ -35,7 +34,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       final currentUserId = client.auth.currentUser?.id;
       if (currentUserId == null) return;
 
-      // 7. โหลด profile ของ user ปัจจุบันก่อน
       final myProfile = await client
           .from('profiles')
           .select('latitude, longitude')
@@ -45,7 +43,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       final double myLat = (myProfile['latitude'] as num?)?.toDouble() ?? 0.0;
       final double myLon = (myProfile['longitude'] as num?)?.toDouble() ?? 0.0;
 
-      // 8-10. โหลด profiles ของผู้ใช้อื่นพร้อมรูปและ interests
       final response = await client.from('profiles').select('''
             *,
             profile_photos(public_url, is_primary, sort_order),
@@ -55,20 +52,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       final List<Member> loadedMembers = [];
 
       for (var row in response as List) {
-        // 12. แปลง gender
         Gender gender;
         switch (row['gender']) {
-          case 'female':
-            gender = Gender.female;
-            break;
-          case 'male':
-            gender = Gender.male;
-            break;
-          default:
-            gender = Gender.other;
+          case 'female': gender = Gender.female; break;
+          case 'male': gender = Gender.male; break;
+          default: gender = Gender.other;
         }
 
-        // 13. คำนวณ age
         int age = 0;
         if (row['birth_date'] != null) {
           final birthDate = DateTime.parse(row['birth_date']);
@@ -80,19 +70,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           }
         }
 
-        // 14. คำนวณ lastActiveMinutes
         int? lastActiveMinutes;
         if (row['last_seen_at'] != null) {
           final lastSeen = DateTime.parse(row['last_seen_at']);
           lastActiveMinutes = DateTime.now().difference(lastSeen).inMinutes;
         }
 
-        // 15. คำนวณ distanceKm (Haversine Formula)
         final double lat = (row['latitude'] as num?)?.toDouble() ?? 0.0;
         final double lon = (row['longitude'] as num?)?.toDouble() ?? 0.0;
         final double distanceKm = _calculateDistance(myLat, myLon, lat, lon);
 
-        // 9. เลือกรูปตามลำดับ
         String photoUrl = '';
         final photos = (row['profile_photos'] as List? ?? []);
         if (photos.isNotEmpty) {
@@ -106,7 +93,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           photoUrl = sortedPhotos.first['public_url'] ?? '';
         }
 
-        // 10. โหลด interests
         final List<String> interests = [];
         final piList = (row['profile_interests'] as List? ?? []);
         for (var pi in piList) {
@@ -114,7 +100,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           if (name != null) interests.add(name as String);
         }
 
-        // 11. สร้าง Member
         loadedMembers.add(Member(
           id: row['id'],
           name: row['display_name'] ?? 'ไม่มีชื่อ',
@@ -134,7 +119,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         ));
       }
 
-      // 16. เรียงตามระยะทาง
       loadedMembers.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
 
       setState(() {
@@ -145,7 +129,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       debugPrint('Error loading members: $e');
       if (mounted) {
         setState(() => _isLoading = false);
-        // 19. แสดง SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('เกิดข้อผิดพลาดในการโหลดข้อมูล: $e')),
         );
@@ -154,7 +137,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const r = 6371; // km
+    const r = 6371;
     final dLat = (lat2 - lat1) * pi / 180;
     final dLon = (lon2 - lon1) * pi / 180;
     final a = sin(dLat / 2) * sin(dLat / 2) +
@@ -189,8 +172,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       child: _FilterBar(
                         nearMeActive: _nearMeActive,
                         genderLabel: _genderFilter,
-                        onNearMe: () =>
-                            setState(() => _nearMeActive = !_nearMeActive),
+                        onNearMe: () => setState(() => _nearMeActive = !_nearMeActive),
                         onFilter: () {},
                         onGender: () => _showGenderSheet(),
                         onSearch: () {},
@@ -202,11 +184,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 18,
-                            color: AppColors.brandPink,
-                          ),
+                          const Icon(Icons.location_on_outlined, size: 18, color: AppColors.brandPink),
                           const SizedBox(width: 6),
                           Text(
                             'ผู้ใช้ใกล้คุณ (${_formatKm(_nearestKm)})',
@@ -224,7 +202,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                     sliver: SliverList.separated(
                       itemCount: _members.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final member = _members[index];
                         return GestureDetector(
@@ -281,22 +259,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             children: [
               const SizedBox(height: 12),
               Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
               ),
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: Text(
-                  'เลือกเพศ',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: Text('เลือกเพศ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
               for (final label in ['ทุกเพศ', 'หญิง', 'ชาย', 'อื่นๆ'])
                 ListTile(
@@ -316,6 +284,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 }
+
+// ── helpers ──────────────────────────────────────────────
+
+Color _interestBgColor(Gender gender) {
+  switch (gender) {
+    case Gender.female: return const Color(0xFFEC407A);
+    case Gender.male:   return const Color(0xFF1E88E5);
+    case Gender.other:  return const Color(0xFF8E24AA);
+  }
+}
+
+// ── FilterBar ────────────────────────────────────────────
 
 class _FilterBar extends StatelessWidget {
   const _FilterBar({
@@ -344,25 +324,11 @@ class _FilterBar extends StatelessWidget {
             clipBehavior: Clip.none,
             child: Row(
               children: [
-                _FilterPill(
-                  label: 'ใกล้ฉัน',
-                  icon: Icons.near_me_outlined,
-                  filled: nearMeActive,
-                  onTap: onNearMe,
-                ),
+                _FilterPill(label: 'ใกล้ฉัน', icon: Icons.near_me_outlined, filled: nearMeActive, onTap: onNearMe),
                 const SizedBox(width: 8),
-                _FilterPill(
-                  label: 'ตัวกรอง',
-                  icon: Icons.tune_rounded,
-                  onTap: onFilter,
-                ),
+                _FilterPill(label: 'ตัวกรอง', icon: Icons.tune_rounded, onTap: onFilter),
                 const SizedBox(width: 8),
-                _FilterPill(
-                  label: genderLabel,
-                  icon: Icons.wc_outlined,
-                  onTap: onGender,
-                  maxLabelWidth: 88,
-                ),
+                _FilterPill(label: genderLabel, icon: Icons.wc_outlined, onTap: onGender, maxLabelWidth: 88),
               ],
             ),
           ),
@@ -375,14 +341,7 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _FilterPill extends StatelessWidget {
-  const _FilterPill({
-    required this.label,
-    required this.icon,
-    this.filled = false,
-    required this.onTap,
-    this.maxLabelWidth,
-  });
-
+  const _FilterPill({required this.label, required this.icon, this.filled = false, required this.onTap, this.maxLabelWidth});
   final String label;
   final IconData icon;
   final bool filled;
@@ -404,16 +363,10 @@ class _FilterPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: filled ? Colors.white : AppColors.textPrimary,
-            ),
+            Icon(icon, size: 16, color: filled ? Colors.white : AppColors.textPrimary),
             const SizedBox(width: 6),
             ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxLabelWidth ?? 120,
-              ),
+              constraints: BoxConstraints(maxWidth: maxLabelWidth ?? 120),
               child: Text(
                 label,
                 maxLines: 1,
@@ -434,14 +387,12 @@ class _FilterPill extends StatelessWidget {
 
 class _SearchButton extends StatelessWidget {
   const _SearchButton({required this.onTap});
-
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 44,
-      height: 44,
+      width: 44, height: 44,
       child: Material(
         color: AppColors.surface,
         shape: const CircleBorder(),
@@ -449,16 +400,9 @@ class _SearchButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border),
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.border)),
             alignment: Alignment.center,
-            child: const Icon(
-              Icons.search,
-              size: 22,
-              color: AppColors.textPrimary,
-            ),
+            child: const Icon(Icons.search, size: 22, color: AppColors.textPrimary),
           ),
         ),
       ),
@@ -466,27 +410,21 @@ class _SearchButton extends StatelessWidget {
   }
 }
 
-class _MemberCard extends StatelessWidget {
-  const _MemberCard({
-    required this.member,
-    required this.liked,
-    required this.onLike,
-  });
+// ── MemberCard ───────────────────────────────────────────
 
+class _MemberCard extends StatelessWidget {
+  const _MemberCard({required this.member, required this.liked, required this.onLike});
   final Member member;
   final bool liked;
   final VoidCallback onLike;
 
   @override
   Widget build(BuildContext context) {
-    final bg = AppColors.cardBackground(member.gender);
-    final border = AppColors.cardBorder(member.gender);
-
     return Container(
       decoration: BoxDecoration(
-        color: bg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: border.withValues(alpha: 0.6)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -514,9 +452,10 @@ class _MemberCard extends StatelessWidget {
   }
 }
 
+// ── ProfilePhoto ─────────────────────────────────────────
+
 class _ProfilePhoto extends StatelessWidget {
   const _ProfilePhoto({required this.member});
-
   final Member member;
 
   @override
@@ -536,9 +475,8 @@ class _ProfilePhoto extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 6,
+            bottom: 6,
             left: 6,
-            right: 6,
             child: _StatusBadge(member: member),
           ),
         ],
@@ -549,7 +487,6 @@ class _ProfilePhoto extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.member});
-
   final Member member;
 
   @override
@@ -565,8 +502,7 @@ class _StatusBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 6,
-            height: 6,
+            width: 6, height: 6,
             decoration: BoxDecoration(
               color: online ? const Color(0xFF4ADE80) : AppColors.textMuted,
               shape: BoxShape.circle,
@@ -578,11 +514,7 @@ class _StatusBadge extends StatelessWidget {
               member.statusLabel,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -591,13 +523,16 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
+// ── MemberInfo ───────────────────────────────────────────
+
 class _MemberInfo extends StatelessWidget {
   const _MemberInfo({required this.member});
-
   final Member member;
 
   @override
   Widget build(BuildContext context) {
+    final chipBg = _interestBgColor(member.gender);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -609,7 +544,7 @@ class _MemberInfo extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: Color(0xFF1E1E2C),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -618,37 +553,46 @@ class _MemberInfo extends StatelessWidget {
               const SizedBox(width: 4),
               Container(
                 padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: AppColors.verified,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                decoration: const BoxDecoration(color: AppColors.verified, shape: BoxShape.circle),
+                child: const Icon(Icons.check, size: 12, color: Colors.white),
               ),
             ],
           ],
         ),
-        const SizedBox(height: 8),
-        _DetailLine(icon: Icons.school_outlined, text: member.university),
+        const SizedBox(height: 6),
+        _DetailLine(icon: Icons.school_outlined, text: member.university, color: const Color(0xFF5C6BC0)),
         const SizedBox(height: 4),
-        _DetailLine(icon: Icons.work_outline, text: member.occupation),
+        _DetailLine(icon: Icons.work_outline, text: member.occupation, color: const Color(0xFF26A69A)),
         const SizedBox(height: 4),
         _DetailLine(
           icon: Icons.location_on_outlined,
           text: '${_distanceText(member.distanceKm)} จากคุณ',
+          color: const Color(0xFFEF5350),
         ),
         if (member.interests.isNotEmpty) ...[
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: member.interests
-                .take(3)
-                .map((tag) => _InterestChip(label: tag))
-                .toList(),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: member.interests.map((tag) => Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: chipBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    tag,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              )).toList(),
+            ),
           ),
         ],
       ],
@@ -663,26 +607,23 @@ class _MemberInfo extends StatelessWidget {
 }
 
 class _DetailLine extends StatelessWidget {
-  const _DetailLine({required this.icon, required this.text});
-
+  const _DetailLine({required this.icon, required this.text, required this.color});
   final IconData icon;
   final String text;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: AppColors.textMuted),
+        Icon(icon, size: 14, color: color),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.85), fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -690,34 +631,10 @@ class _DetailLine extends StatelessWidget {
   }
 }
 
-class _InterestChip extends StatelessWidget {
-  const _InterestChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.chipBg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
+// ── LikeButton ───────────────────────────────────────────
 
 class _LikeButton extends StatelessWidget {
   const _LikeButton({required this.liked, required this.onTap});
-
   final bool liked;
   final VoidCallback onTap;
 
@@ -732,8 +649,7 @@ class _LikeButton extends StatelessWidget {
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: Container(
-          width: 44,
-          height: 44,
+          width: 44, height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: liked ? null : Border.all(color: AppColors.border),

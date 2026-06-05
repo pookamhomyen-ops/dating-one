@@ -72,14 +72,6 @@ class SouliveHeader extends StatelessWidget {
                           const Text(' ✨', style: TextStyle(fontSize: 20)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'วันนี้อยากเจอใครสักคนไหม?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -159,14 +151,6 @@ class _LogoBlock extends StatelessWidget {
           'assets/logos/logo-text-dating-one.png',
           height: 42,
           fit: BoxFit.contain,
-        ),
-        const SizedBox(height: 2),
-        const Text(
-          'เชื่อมต่อความรู้สึกดี ๆ ที่เป็นคุณ',
-          style: TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
         ),
       ],
     );
