@@ -63,7 +63,7 @@ class SouliveHeader extends StatelessWidget {
                               timeGreetingTh(),
                               style: const TextStyle(
                                 fontSize: 22,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w500,
                                 color: AppColors.textPrimary,
                                 height: 1.2,
                               ),
@@ -84,7 +84,7 @@ class SouliveHeader extends StatelessWidget {
               pageTitle!,
               style: const TextStyle(
                 fontSize: 22,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -113,7 +113,7 @@ class _HeaderActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: filled ? AppColors.accentSoft : AppColors.surface,
+      color: filled ? AppColors.surface : AppColors.background,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -125,13 +125,13 @@ class _HeaderActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: filled
-                ? Border.all(color: AppColors.brandPink.withValues(alpha: 0.25))
+                ? Border.all(color: AppColors.primary.withValues(alpha: 0.25))
                 : Border.all(color: AppColors.border),
           ),
           child: Icon(
             icon,
             size: 22,
-            color: filled ? AppColors.brandPink : AppColors.textPrimary,
+            color: filled ? AppColors.primary : AppColors.textPrimary,
           ),
         ),
       ),
@@ -177,7 +177,7 @@ class _LikesBanner extends StatelessWidget {
             border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: AppColors.textPrimary.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -189,13 +189,13 @@ class _LikesBanner extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: const BoxDecoration(
-                  color: AppColors.accentSoft,
+                  color: AppColors.surface,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.favorite,
                   size: 16,
-                  color: AppColors.heartRed,
+                  color: AppColors.destructive,
                 ),
               ),
               const SizedBox(width: 8),
@@ -213,7 +213,7 @@ class _LikesBanner extends StatelessWidget {
                     '$count คน',
                     style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -223,7 +223,7 @@ class _LikesBanner extends StatelessWidget {
               const Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: AppColors.textMuted,
+                color: AppColors.textSecondary,
               ),
             ],
           ),

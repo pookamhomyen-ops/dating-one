@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 import 'chat/chat_list_screen.dart';
 import 'discover/discover_screen.dart';
@@ -23,7 +24,10 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
     super.initState();
     _controllers = List.generate(
       4,
-      (_) => AnimationController(vsync: this, duration: const Duration(milliseconds: 450)),
+      (_) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 450),
+      ),
     );
     _scaleAnims = _controllers.map((c) {
       return TweenSequence<double>([
@@ -38,7 +42,9 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
         TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.18), weight: 30),
         TweenSequenceItem(tween: Tween(begin: -0.18, end: 0.12), weight: 30),
         TweenSequenceItem(tween: Tween(begin: 0.12, end: 0.0), weight: 40),
-      ]).animate(CurvedAnimation(parent: _controllers[0], curve: Curves.easeInOut)),
+      ]).animate(
+        CurvedAnimation(parent: _controllers[0], curve: Curves.easeInOut),
+      ),
       TweenSequence<double>([
         TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.0), weight: 100),
       ]).animate(_controllers[1]),
@@ -46,11 +52,15 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
         TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.08), weight: 35),
         TweenSequenceItem(tween: Tween(begin: -0.08, end: 0.06), weight: 35),
         TweenSequenceItem(tween: Tween(begin: 0.06, end: 0.0), weight: 30),
-      ]).animate(CurvedAnimation(parent: _controllers[2], curve: Curves.easeInOut)),
+      ]).animate(
+        CurvedAnimation(parent: _controllers[2], curve: Curves.easeInOut),
+      ),
       TweenSequence<double>([
         TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.25), weight: 50),
         TweenSequenceItem(tween: Tween(begin: 0.25, end: 0.0), weight: 50),
-      ]).animate(CurvedAnimation(parent: _controllers[3], curve: Curves.easeInOut)),
+      ]).animate(
+        CurvedAnimation(parent: _controllers[3], curve: Curves.easeInOut),
+      ),
     ];
   }
 
@@ -91,7 +101,14 @@ class _NavData {
   final IconData icon;
   final IconData activeIcon;
   final String label;
-  const _NavData({required this.icon, required this.activeIcon, required this.label});
+  final Color color;
+
+  const _NavData({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.color,
+  });
 }
 
 class _IslandNavBar extends StatelessWidget {
@@ -109,27 +126,46 @@ class _IslandNavBar extends StatelessWidget {
     required this.controllers,
   });
 
-  static const _activeColor = Color(0xFF1E88E5);
-  static const _inactiveColor = Color(0xFF9E9EAA);
+  static const _inactiveColor = AppColors.textSecondary;
 
   static const _items = [
-    _NavData(icon: Icons.person_search_outlined, activeIcon: Icons.person_search_rounded, label: 'หาเพื่อน'),
-    _NavData(icon: Icons.favorite_border, activeIcon: Icons.favorite, label: 'ฟีด'),
-    _NavData(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'แชท'),
-    _NavData(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'โปรไฟล์'),
+    _NavData(
+      icon: Icons.person_search_outlined,
+      activeIcon: Icons.person_search_rounded,
+      label: 'หาเพื่อน',
+      color: AppColors.iconPurple,
+    ),
+    _NavData(
+      icon: Icons.favorite_border,
+      activeIcon: Icons.favorite,
+      label: 'ฟีด',
+      color: AppColors.iconPink,
+    ),
+    _NavData(
+      icon: Icons.chat_bubble_outline_rounded,
+      activeIcon: Icons.chat_bubble_rounded,
+      label: 'แชท',
+      color: AppColors.iconTeal,
+    ),
+    _NavData(
+      icon: Icons.person_outline_rounded,
+      activeIcon: Icons.person_rounded,
+      label: 'โปรไฟล์',
+      color: AppColors.iconBlue,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.background,
         border: Border(
           top: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.textPrimary.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -166,10 +202,14 @@ class _IslandNavBar extends StatelessWidget {
                               const SizedBox(height: 4),
                               AnimatedDefaultTextStyle(
                                 duration: const Duration(milliseconds: 200),
-                                style: TextStyle(
+                                style: GoogleFonts.notoSansThai(
                                   fontSize: 10,
-                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                                  color: selected ? _activeColor : _inactiveColor,
+                                  fontWeight: selected
+                                      ? FontWeight.w500
+                                      : FontWeight.w400,
+                                  color: selected
+                                      ? _items[i].color
+                                      : _inactiveColor,
                                 ),
                                 child: Text(_items[i].label),
                               ),
@@ -182,9 +222,13 @@ class _IslandNavBar extends StatelessWidget {
                 }),
               ),
               if (selectedIndex == 1)
-                Positioned.fill(child: IgnorePointer(child: _FeedParticlesOverlay())),
+                Positioned.fill(
+                  child: IgnorePointer(child: _FeedParticlesOverlay()),
+                ),
               if (selectedIndex == 2)
-                Positioned.fill(child: IgnorePointer(child: _ChatBubblesOverlay())),
+                Positioned.fill(
+                  child: IgnorePointer(child: _ChatBubblesOverlay()),
+                ),
             ],
           ),
         ),
@@ -193,11 +237,12 @@ class _IslandNavBar extends StatelessWidget {
   }
 
   Widget _buildIcon(int i, bool selected) {
-    if (i == 1 && selected) return _PulsingHeart(color: _activeColor);
+    final color = selected ? _items[i].color : _inactiveColor;
+    if (i == 1 && selected) return _PulsingHeart(color: color);
     return Icon(
       selected ? _items[i].activeIcon : _items[i].icon,
       size: 26,
-      color: selected ? _activeColor : _inactiveColor,
+      color: color,
     );
   }
 }
@@ -209,13 +254,17 @@ class _PulsingHeart extends StatefulWidget {
   State<_PulsingHeart> createState() => _PulsingHeartState();
 }
 
-class _PulsingHeartState extends State<_PulsingHeart> with SingleTickerProviderStateMixin {
+class _PulsingHeartState extends State<_PulsingHeart>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _anim = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.3), weight: 30),
       TweenSequenceItem(tween: Tween(begin: 1.3, end: 0.95), weight: 20),
@@ -224,8 +273,13 @@ class _PulsingHeartState extends State<_PulsingHeart> with SingleTickerProviderS
     ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
     _ctrl.repeat();
   }
+
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => ScaleTransition(
     scale: _anim,
@@ -239,26 +293,41 @@ class _ChatBubblesOverlay extends StatefulWidget {
   State<_ChatBubblesOverlay> createState() => _ChatBubblesOverlayState();
 }
 
-class _ChatBubblesOverlayState extends State<_ChatBubblesOverlay> with SingleTickerProviderStateMixin {
+class _ChatBubblesOverlayState extends State<_ChatBubblesOverlay>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
-      ..addListener(() => setState(() {}))
-      ..forward();
+    _ctrl =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 900),
+          )
+          ..addListener(() => setState(() {}))
+          ..forward();
   }
+
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
-  Widget build(BuildContext context) => CustomPaint(painter: _BubblePainter(_ctrl.value));
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _BubblePainter(_ctrl.value));
 }
 
 class _BubblePainter extends CustomPainter {
   final double progress;
   _BubblePainter(this.progress);
   static final _bubbles = [
-    [0.55, 0.0, 8.0],[0.62, 0.12, 12.0],[0.70, 0.06, 7.0],[0.58, 0.18, 9.0],[0.66, 0.03, 10.0],
+    [0.55, 0.0, 8.0],
+    [0.62, 0.12, 12.0],
+    [0.70, 0.06, 7.0],
+    [0.58, 0.18, 9.0],
+    [0.66, 0.03, 10.0],
   ];
   @override
   void paint(Canvas canvas, Size size) {
@@ -268,12 +337,24 @@ class _BubblePainter extends CustomPainter {
       final opacity = (t < 0.7 ? t / 0.7 : (1.0 - t) / 0.3).clamp(0.0, 1.0);
       final y = size.height - (t * size.height * 1.1);
       final x = b[0] * size.width;
-      canvas.drawCircle(Offset(x, y), b[2] * (1 - t * 0.5),
-        Paint()..color = const Color(0xFF1E88E5).withValues(alpha: opacity * 0.7)..style = PaintingStyle.fill);
-      canvas.drawCircle(Offset(x, y), b[2] * (1 - t * 0.5),
-        Paint()..color = const Color(0xFF1E88E5).withValues(alpha: opacity * 0.4)..style = PaintingStyle.stroke..strokeWidth = 1.2);
+      canvas.drawCircle(
+        Offset(x, y),
+        b[2] * (1 - t * 0.5),
+        Paint()
+          ..color = AppColors.iconTeal.withValues(alpha: opacity * 0.7)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        Offset(x, y),
+        b[2] * (1 - t * 0.5),
+        Paint()
+          ..color = AppColors.iconTeal.withValues(alpha: opacity * 0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2,
+      );
     }
   }
+
   @override
   bool shouldRepaint(_BubblePainter old) => old.progress != progress;
 }
@@ -284,40 +365,59 @@ class _FeedParticlesOverlay extends StatefulWidget {
   State<_FeedParticlesOverlay> createState() => _FeedParticlesOverlayState();
 }
 
-class _FeedParticlesOverlayState extends State<_FeedParticlesOverlay> with SingleTickerProviderStateMixin {
+class _FeedParticlesOverlayState extends State<_FeedParticlesOverlay>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))
-      ..addListener(() => setState(() {}))
-      ..forward();
+    _ctrl =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 700),
+          )
+          ..addListener(() => setState(() {}))
+          ..forward();
   }
+
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
-  Widget build(BuildContext context) => CustomPaint(painter: _ParticlePainter(_ctrl.value));
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _ParticlePainter(_ctrl.value));
 }
 
 class _ParticlePainter extends CustomPainter {
   final double progress;
   _ParticlePainter(this.progress);
   static final _pts = [
-    [-28.0,-24.0,6.0],[28.0,-20.0,5.0],[-20.0,-32.0,4.0],[22.0,-30.0,4.0],[0.0,-36.0,5.0],
+    [-28.0, -24.0, 6.0],
+    [28.0, -20.0, 5.0],
+    [-20.0, -32.0, 4.0],
+    [22.0, -30.0, 4.0],
+    [0.0, -36.0, 5.0],
   ];
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width * 0.375;
     final cy = size.height * 0.45;
     for (final p in _pts) {
-      final opacity = (progress < 0.6 ? progress / 0.6 : (1.0 - progress) / 0.4).clamp(0.0, 1.0);
+      final opacity = (progress < 0.6 ? progress / 0.6 : (1.0 - progress) / 0.4)
+          .clamp(0.0, 1.0);
       canvas.drawCircle(
         Offset(cx + p[0] * progress, cy + p[1] * progress),
         p[2] * (1.0 - progress * 0.4),
-        Paint()..color = const Color(0xFFE53935).withValues(alpha: opacity)..style = PaintingStyle.fill,
+        Paint()
+          ..color = AppColors.destructive.withValues(alpha: opacity)
+          ..style = PaintingStyle.fill,
       );
     }
   }
+
   @override
   bool shouldRepaint(_ParticlePainter old) => old.progress != progress;
 }

@@ -11,12 +11,12 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('th');
-  
+
   await Supabase.initialize(
     url: SupabaseConstants.url,
     anonKey: SupabaseConstants.anonKey,
   );
-  
+
   runApp(const DatingOneApp());
 }
 
@@ -30,7 +30,7 @@ class DatingOneApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: const AuthWrapper(),
-      // ‡∏´‡πà‡∏≠‡∏´‡∏∏‡πâ‡∏°‡πÅ‡∏≠‡∏õ‡∏ó‡∏±‡πâ‡∏á‡∏´‡∏°‡∏î‡∏î‡πâ‡∏ß‡∏¢‡∏î‡∏µ‡πÑ‡∏ã‡∏ô‡πå ‡∏ó‡πâ‡∏≠‡∏á‡∏ü‡πâ‡∏≤‡∏≠‡∏≠‡πÇ‡∏£‡∏£‡πà‡∏≤‡∏û‡∏≤‡∏™‡πÄ‡∏ó‡∏• Fluid
+      // ÀËÕÀÿÈ¡·Õª∑—ÈßÀ¡¥¥È«¬¥’‰´πÏ ∑ÈÕßøÈ“ÕÕ‚√√Ë“æ“ ‡∑≈ Fluid
       builder: (context, child) {
         return _AuroraFluidBackground(child: child ?? const SizedBox());
       },
@@ -38,7 +38,7 @@ class DatingOneApp extends StatelessWidget {
   }
 }
 
-// ‡∏ß‡∏¥‡∏î‡πÄ‡∏à‡πá‡∏ï‡∏™‡∏£‡πâ‡∏≤‡∏á‡∏û‡∏∑‡πâ‡∏ô‡∏´‡∏•‡∏±‡∏á‡∏ó‡πâ‡∏≠‡∏á‡∏ü‡πâ‡∏≤‡∏≠‡∏≠‡πÇ‡∏£‡∏£‡πà‡∏≤‡∏û‡∏≤‡∏™‡πÄ‡∏ó‡∏• ‡∏û‡∏£‡πâ‡∏≠‡∏°‡∏•‡∏ß‡∏î‡∏•‡∏≤‡∏¢‡πÇ‡∏Ñ‡πâ‡∏á‡∏°‡∏ô Fluid ‡∏û‡∏£‡∏¥‡πâ‡∏ß‡πÑ‡∏´‡∏ß‡∏ó‡πâ‡∏≤‡∏¢‡∏à‡∏≠
+// «‘¥‡®Áµ®—¥°“√æ◊ÈπÀ≈—ßÀ≈—°¢Õß·Õª
 class _AuroraFluidBackground extends StatelessWidget {
   final Widget child;
 
@@ -50,18 +50,8 @@ class _AuroraFluidBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/bg.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-
-          child,
-        ],
-      ),
+      backgroundColor: AppColors.background,
+      body: child,
     );
   }
 }
@@ -74,45 +64,60 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isNavigating = false;
+  bool _showTimeoutAction = false;
+
   @override
   void initState() {
     super.initState();
-    _handleInitialSession();
-    _listenToAuthChanges();
+    debugPrint('AuthWrapper: initState');
+    _startTimeoutTimer();
   }
 
-  void _handleInitialSession() {
-    Future.microtask(() async {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
-        _navigateToLogin();
-      } else {
-        await _navigateToCorrectScreen(session.user.id);
+  void _startTimeoutTimer() {
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted && !_isNavigating) {
+        setState(() => _showTimeoutAction = true);
       }
     });
   }
 
-  void _listenToAuthChanges() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      if (!mounted) return;
-      final session = data.session;
-      final event = data.event;
+  Future<void> _handleNavigation(AuthState data) async {
+    if (!mounted || _isNavigating) return;
 
-      if (event == AuthChangeEvent.signedOut || session == null) {
-        _navigateToLogin();
-      } else if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
-        await _navigateToCorrectScreen(session.user.id);
-      }
-    });
+    final session = data.session;
+    final event = data.event;
+    
+    debugPrint('AuthWrapper: Handling Auth Event: $event, Session: ${session != null}');
+
+    // °√≥’∑’Ë‰¡Ë‰¥È≈ÁÕ°Õ‘π À√◊Õ ≈ÁÕ°‡Õ“∑Ï
+    if (session == null) {
+      _navigateToLogin();
+      return;
+    }
+
+    // °√≥’∑’Ë¡’‡´ ™—Ëπ (SignedIn, TokenRefreshed, InitialSession)
+    if (event == AuthChangeEvent.signedIn || 
+        event == AuthChangeEvent.tokenRefreshed || 
+        event == AuthChangeEvent.initialSession) {
+      await _navigateToCorrectScreen(session.user.id);
+    }
   }
 
   Future<void> _navigateToCorrectScreen(String userId) async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+    
+    debugPrint('AuthWrapper: Fetching profile for $userId');
     try {
       final profile = await Supabase.instance.client
           .from('profiles')
           .select()
           .eq('id', userId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint('AuthWrapper: Profile fetch result: ${profile != null ? 'Found' : 'Not Found'}');
 
       if (!mounted) return;
 
@@ -128,12 +133,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
         );
       }
     } catch (e) {
+      debugPrint('AuthWrapper: Error in _navigateToCorrectScreen: $e');
+      _isNavigating = false;
       _navigateToLogin();
     }
   }
 
   void _navigateToLogin() {
+    if (_isNavigating) return;
     if (!mounted) return;
+    _isNavigating = true;
+    
+    debugPrint('AuthWrapper: Navigating to LoginScreen');
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -142,10 +153,36 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          // „™È Future.microtask ‡æ◊ËÕÀ≈’°‡≈’Ë¬ß°“√π”∑“ß√–À«Ë“ß Build
+          Future.microtask(() => _handleNavigation(snapshot.data!));
+        }
+
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                if (_showTimeoutAction) ...[
+                  const SizedBox(height: 24),
+                  const Text('¥Ÿ‡À¡◊Õπ®–„™È‡«≈“π“πº‘¥ª°µ‘'),
+                  TextButton(
+                    onPressed: () {
+                      _isNavigating = false;
+                      _navigateToLogin();
+                    },
+                    child: const Text('‰ªÀπÈ“≈ÁÕ°Õ‘π'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

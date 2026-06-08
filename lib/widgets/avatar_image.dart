@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 class AvatarImage extends StatelessWidget {
   const AvatarImage({
@@ -24,7 +26,7 @@ class AvatarImage extends StatelessWidget {
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -33,14 +35,18 @@ class AvatarImage extends StatelessWidget {
       child: ClipOval(
         child: url.isEmpty
             ? ColoredBox(
-                color: Colors.grey.shade200,
-                child: Icon(Icons.person, size: size * 0.5, color: Colors.grey),
+                color: AppColors.textSecondary,
+                child: Icon(Icons.person, size: size * 0.5, color: AppColors.textSecondary),
               )
-            : Image.network(
-                url,
+            : CachedNetworkImage(
+                imageUrl: url,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => ColoredBox(
-                  color: Colors.grey.shade200,
+                placeholder: (context, url) => ColoredBox(
+                  color: AppColors.textSecondary,
+                  child: Icon(Icons.person, size: size * 0.5, color: AppColors.textSecondary),
+                ),
+                errorWidget: (context, url, error) => ColoredBox(
+                  color: AppColors.textSecondary,
                   child: Icon(Icons.person, size: size * 0.5),
                 ),
               ),

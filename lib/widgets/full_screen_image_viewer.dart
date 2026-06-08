@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 class FullScreenImageViewer extends StatelessWidget {
   final List<String> urls;
@@ -16,7 +17,7 @@ class FullScreenImageViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.textPrimary,
       body: Stack(
         children: [
           InteractiveViewer(
@@ -39,7 +40,7 @@ class FullScreenImageViewer extends StatelessWidget {
                         Positioned.fill(
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                            child: Container(color: Colors.black.withOpacity(0.3)),
+                            child: Container(color: AppColors.textPrimary.withOpacity(0.3)),
                           ),
                         ),
                     ],
@@ -54,7 +55,7 @@ class FullScreenImageViewer extends StatelessWidget {
               child: Align(
                 alignment: Alignment.topRight,
                 child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  icon: Icon(Icons.close, color: AppColors.background, size: 30),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),

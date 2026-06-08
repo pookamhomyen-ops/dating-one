@@ -131,9 +131,9 @@ class _FeedScreenState extends State<FeedScreen> {
                               _filters[i],
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w500,
                                 color: selected
-                                    ? Colors.white
+                                    ? AppColors.background
                                     : AppColors.textPrimary,
                               ),
                             ),
@@ -208,7 +208,7 @@ class _StoriesRow extends StatelessWidget {
             '✨ สตอรี่วันนี้',
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
             ),
           ),
@@ -233,13 +233,13 @@ class _StoriesRow extends StatelessWidget {
                             ? [AppColors.border, AppColors.border]
                             : [
                                 AppColors.brandPink,
-                                const Color(0xFFFFB347),
+                                AppColors.background,
                               ],
                       ),
                     ),
                     child: Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppColors.background,
                         shape: BoxShape.circle,
                       ),
@@ -251,7 +251,7 @@ class _StoriesRow extends StatelessWidget {
                     name,
                     style: const TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -333,7 +333,7 @@ class _FeedPostCard extends StatelessWidget {
                               child: Text(
                                 post.authorName,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w500,
                                   fontSize: 15,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -341,7 +341,7 @@ class _FeedPostCard extends StatelessWidget {
                             ),
                             if (isHot) ...[
                               const SizedBox(width: 6),
-                              _Badge(label: '🔥 Hot', color: const Color(0xFFFF6B35)),
+                              _Badge(label: '🔥 Hot', color: AppColors.background),
                             ] else if (isNew) ...[
                               const SizedBox(width: 6),
                               _Badge(label: '✨ ใหม่', color: AppColors.brandPink),
@@ -405,15 +405,15 @@ class _FeedPostCard extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: AppColors.textPrimary.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         '👆 แตะรูปเพื่อดูเต็มจอ',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.background,
                           fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
@@ -450,7 +450,7 @@ class _FeedPostCard extends StatelessWidget {
                         : Icons.thumb_down_outlined,
                     label: 'ไม่ชอบ',
                     active: post.dislikedByMe,
-                    activeColor: Colors.orange,
+                    activeColor: AppColors.primary,
                     onTap: onDislike,
                   ),
                   const SizedBox(width: 8),
@@ -494,7 +494,7 @@ class _Badge extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w500,
           color: color,
         ),
       ),
@@ -521,7 +521,7 @@ class _ReactionChip extends StatelessWidget {
         '$emoji $count',
         style: const TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -566,7 +566,7 @@ class _ActionPill extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   color: color,
                 ),
               ),
@@ -588,7 +588,7 @@ class _CommentsSheet extends StatelessWidget {
     return Container(
       height: MediaQuery.of(context).size.height * 0.55,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.background,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -609,7 +609,7 @@ class _CommentsSheet extends StatelessWidget {
                 Text(
                   '💬 ความคิดเห็น',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w500,
                       ),
                 ),
                 const SizedBox(width: 8),
@@ -622,7 +622,7 @@ class _CommentsSheet extends StatelessWidget {
                   child: Text(
                     '${post.comments}',
                     style: const TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.brandPink,
                       fontSize: 12,
                     ),

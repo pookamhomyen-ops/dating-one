@@ -9,60 +9,130 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: Colors.transparent, // เปลี่ยนเป็นกระจกใสหลบทางให้พื้นหลังออโรร่า
+      scaffoldBackgroundColor: AppColors.background,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.accent,
-        brightness: Brightness.light,
+        seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        onPrimary: AppColors.onPrimary,
         surface: AppColors.surface,
+        onSurface: AppColors.textPrimary,
+        error: AppColors.destructive,
+        brightness: Brightness.light,
       ),
     );
 
-    final textTheme = GoogleFonts.notoSansThaiTextTheme(base.textTheme);
+    // Using Noto Sans Thai as primary font
+    final textTheme = GoogleFonts.notoSansThaiTextTheme(base.textTheme).copyWith(
+      // App name / heading: 22px, weight 500
+      headlineMedium: GoogleFonts.notoSansThai(
+        fontSize: 22, 
+        fontWeight: FontWeight.w500, 
+        color: AppColors.textPrimary,
+      ),
+      // Screen title: 16px, weight 500
+      titleLarge: GoogleFonts.notoSansThai(
+        fontSize: 16, 
+        fontWeight: FontWeight.w500, 
+        color: AppColors.textPrimary,
+      ),
+      // Body / chat text: 13px, weight 400
+      bodyLarge: GoogleFonts.notoSansThai(
+        fontSize: 13, 
+        fontWeight: FontWeight.w400, 
+        color: AppColors.textPrimary,
+      ),
+      bodyMedium: GoogleFonts.notoSansThai(
+        fontSize: 13, 
+        fontWeight: FontWeight.w400, 
+        color: AppColors.textPrimary,
+      ),
+      // Meta info (distance, job): 12px, weight 400, opacity 75%
+      bodySmall: GoogleFonts.notoSansThai(
+        fontSize: 12, 
+        fontWeight: FontWeight.w400, 
+        color: AppColors.textPrimary.withOpacity(0.75),
+      ),
+      // Question box text: 12px, weight 400
+      labelLarge: GoogleFonts.notoSansThai(
+        fontSize: 12, 
+        fontWeight: FontWeight.w400, 
+        color: AppColors.textPrimary,
+      ),
+      // Tags and chips: 10px, weight 400
+      labelMedium: GoogleFonts.notoSansThai(
+        fontSize: 10, 
+        fontWeight: FontWeight.w400, 
+        color: AppColors.textSecondary,
+      ),
+      // Timestamps / captions: 10px, weight 400
+      labelSmall: GoogleFonts.notoSansThai(
+        fontSize: 10, 
+        fontWeight: FontWeight.w400, 
+        color: AppColors.textSecondary,
+      ),
+    );
 
     return base.copyWith(
-      textTheme: textTheme.apply(
-        bodyColor: AppColors.textPrimary,
-        displayColor: AppColors.textPrimary,
-      ),
+      textTheme: textTheme,
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.transparent, // แถบบาร์ด้านบนใสแจ๋ว ไม่บังลวดลาย
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.onPrimary,
         titleTextStyle: textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: AppColors.onPrimary,
+          fontWeight: FontWeight.w500,
         ),
       ),
       cardTheme: CardThemeData(
-        elevation: 3, // เพิ่มเงานุ่มๆ ให้การ์ดสีขาวดูเด้งลอยเด่นมีมิติขึ้นมา
-        shadowColor: Colors.black.withOpacity(0.04),
+        elevation: 0,
         color: AppColors.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.border, width: 1),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary.withOpacity(0.5)),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.onPrimary,
+          elevation: 0,
+          textStyle: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surface,
+        labelStyle: textTheme.labelMedium,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: AppColors.border),
+        ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.onPrimary,
         elevation: 2,
       ),
     );

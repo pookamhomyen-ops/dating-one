@@ -97,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error saving: $e'), backgroundColor: AppColors.destructive),
         );
       }
     } finally {
@@ -117,7 +117,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text(
               'บันทึก',
               style: TextStyle(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: AppColors.brandPink,
               ),
             ),
@@ -162,7 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           const Text(
             'โซเชียลมีเดีย',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
           ),
           const SizedBox(height: 10),
           _field('💬 Line ID', _lineCtrl, hint: '@username'),
@@ -177,7 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           const Text(
             'ความสนใจ',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Row(
@@ -227,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('ออกจากระบบ', style: TextStyle(color: Colors.red)),
+                      child: const Text('ออกจากระบบ', style: TextStyle(color: AppColors.destructive)),
                     ),
                   ],
                 ),
@@ -237,11 +237,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await Supabase.instance.client.auth.signOut();
               }
             },
-            icon: const Icon(Icons.logout, color: Colors.red),
-            label: const Text('ออกจากระบบ', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            icon: const Icon(Icons.logout, color: AppColors.destructive),
+            label: const Text('ออกจากระบบ', style: TextStyle(color: AppColors.destructive, fontWeight: FontWeight.w500)),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: Colors.red),
+              side: const BorderSide(color: AppColors.destructive),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
           ),

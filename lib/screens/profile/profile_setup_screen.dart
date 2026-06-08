@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
-import '../main_shell.dart';
+import 'package:dating_one/screens/main_shell.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -175,7 +175,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving profile: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error saving profile: $e'), backgroundColor: AppColors.destructive),
         );
       }
     } finally {
@@ -199,7 +199,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             if (_isNewUser)
               const Text(
                 'ยินดีต้อนรับ! กรุณากรอกข้อมูลส่วนตัวของคุณ',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
             const SizedBox(height: 24),
             TextField(
@@ -274,7 +274,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             const SizedBox(height: 24),
             const Text(
               'ความสนใจของคุณ',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -310,7 +310,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             const SizedBox(height: 24),
             const Text(
               'โซเชียลมีเดีย',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -337,12 +337,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               onPressed: _loading ? null : _saveProfile,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandPink,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.background,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _loading 
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('บันทึกโปรไฟล์', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ? const CircularProgressIndicator(color: AppColors.background)
+                : const Text('บันทึกโปรไฟล์', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ),
           ],
         ),

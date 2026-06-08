@@ -1,67 +1,64 @@
 import 'package:flutter/material.dart';
 import '../models/gender.dart';
 
-/// โทนสี Soulive — ท้องฟ้าออโรร่าพาสเทล fluid
+/// โทนสีหลักของแอป พร้อมสีไอคอนแยกประเภท
 class AppColors {
   AppColors._();
 
-  // ปรับเป็นโปร่งใสเพื่อให้เลเยอร์ออโรร่าด้านหลังแสดงผลได้สมบูรณ์
-  static const background = Colors.transparent; 
-  static const surface = Colors.white;
-  static const textPrimary = Color(0xFF1E1E2C);
-  static const textSecondary = Color(0xFF5C6BC0); 
-  static const textMuted = Color(0xFF9FA8DA);
+  // Core Colors
+  static const primary = Color(0xFF5B5FEF);
+  static const onPrimary = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFF20212B);
+  static const background = Color(0xFFF7F8FC);
+  static const surface = Color(0xFFFFFFFF);
+  static const textSecondary = Color(0xFF667085);
+  static const destructive = Color(
+    0xFFFF6B6B,
+  ); // Soft red for notifications/errors
+  static const destructiveAccent = destructive;
+  static const border = Color(0xFFE4E7EC);
+  static const background24 = Color(
+    0x3DFFFFFF,
+  ); // White with 24% opacity (0x3D is ~24%)
 
-  // ชุดสีสำหรับ "พื้นหลังโทนท้องฟ้าออโรร่าพาสเทล fluid"
-  static const auroraStart = Color(0xFFA5B4FC); // สีฟ้าอมม่วงออโรร่าช่วงบนสุด (Soft Indigo)
-  static const auroraMid = Color(0xFFE9D5FF);   // สีม่วงลาเวนเดอร์พาสเทลนุ่มๆ ช่วงกลาง (Soft Lavender)
-  static const auroraEnd = Color(0xFFE8F1FF);   // สีขาวไอซ์บลูสว่างใสช่วงล่าง (Ice Blue)
-  static const auroraGlow = Color(0xFFFBCFE8);  // แสงออโรร่าชมพูฟุ้งสะท้อนมุมจอ (Pastel Pink Glow)
-  static const fluidShape = Color(0xFFC7D2FE);  // สีฟ้าพาสเทลสำหรับวาดส่วนโค้งมน Fluid
+  static const iconBlue = Color(0xFF2563EB);
+  static const iconPurple = Color(0xFF7C3AED);
+  static const iconPink = Color(0xFFEC4899);
+  static const iconOrange = Color(0xFFF97316);
+  static const iconGreen = Color(0xFF16A34A);
+  static const iconTeal = Color(0xFF0891B2);
 
-  static const brandPink = Color(0xFFEC407A); 
-  static const brandPinkDark = Color(0xFFD81B60);
-  static const accent = Color(0xFF5C6BC0); 
-  static const accentSoft = Color(0xFFE8EAF6);
-  static const heartRed = Color(0xFFE85D75);
-  static const navy = Color(0xFF2D2E4F);
-  static const border = Color(0xFFE8E4E0);
-  static const chipBg = Color(0xFFF3F0EE);
+  // Legacy mappings for compatibility
+  static const accent = iconTeal;
+  static const accentSoft = Color(0xFFEFF6FF);
+  static const textMuted = textSecondary;
+  static const brandPink = iconPink;
+  static const brandPinkDark = Color(0xFFBE185D);
+  static const heartRed = destructive;
+  static const navy = Color(0xFF111827);
+  static const chipBg = surface;
+  static const navActive = primary;
+  static const navInactive = textSecondary;
+  static const verified = iconBlue;
 
-  static const navActive = Color(0xFFD67B88);
-  static const navInactive = Color(0xFF9E9EAA);
+  // Gender colors
+  static const femaleBg = surface;
+  static const femaleBorder = border;
+  static const maleBg = surface;
+  static const maleBorder = border;
+  static const otherBg = surface;
+  static const otherBorder = border;
 
-  static const femaleBg = Color(0xFFFFF0F5);
-  static const femaleBorder = Color(0xFFF5D0DC);
-  static const maleBg = Color(0xFFEEF6FF);
-  static const maleBorder = Color(0xFFC8DDF5);
-  static const otherBg = Color(0xFFF3EEFF);
-  static const otherBorder = Color(0xFFD8CCF5);
-
-  static const verified = Color(0xFFD67B88);
-
-  static Color cardBackground(Gender gender) {
-    switch (gender) {
-      case Gender.female:
-        return femaleBg;
-      case Gender.male:
-        return maleBg;
-      case Gender.other:
-        return otherBg;
-    }
-  }
-
-  static Color cardBorder(Gender gender) {
-    switch (gender) {
-      case Gender.female:
-        return femaleBorder;
-      case Gender.male:
-        return maleBorder;
-      case Gender.other:
-        return otherBorder;
-    }
-  }
+  static Color cardBackground(Gender gender) => surface;
+  static Color cardBorder(Gender gender) => border;
 
   @Deprecated('Use cardBorder')
-  static Color cardAccent(Gender gender) => cardBorder(gender);
+  static Color cardAccent(Gender gender) => border;
+
+  // Aurora colors - deprecated but mapped
+  static const auroraStart = background;
+  static const auroraMid = background;
+  static const auroraEnd = background;
+  static const auroraGlow = surface;
+  static const fluidShape = border;
 }

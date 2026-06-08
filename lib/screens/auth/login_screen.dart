@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../constants.dart';
 import '../../theme/app_colors.dart';
-import '../main_shell.dart';
+import 'package:dating_one/screens/main_shell.dart';
 import '../profile/profile_setup_screen.dart';
 import 'register_screen.dart';
 
@@ -30,13 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.message), backgroundColor: AppColors.destructive),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('เกิดข้อผิดพลาดไม่ทราบสาเหตุ'), backgroundColor: Colors.red),
+          SnackBar(content: Text('เกิดข้อผิดพลาดไม่ทราบสาเหตุ'), backgroundColor: AppColors.destructive),
         );
       }
     } finally {
@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-in failed: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Google Sign-in failed: $e'), backgroundColor: AppColors.destructive),
         );
       }
     } finally {
@@ -110,13 +110,13 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.favorite, size: 80, color: AppColors.brandPink),
+              Icon(Icons.favorite, size: 80, color: AppColors.brandPink),
               const SizedBox(height: 16),
               Text(
                 'Soulive',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.brandPink,
                 ),
               ),
@@ -143,26 +143,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _loading ? null : _signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.brandPink,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.background,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _loading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('เข้าสู่ระบบ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
+                  : const Text('เข้าสู่ระบบ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _loading ? null : _signInWithGoogle,
                 icon: const Icon(Icons.g_mobiledata, size: 32),
-                label: const Text('Sign in with Google', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text('Sign in with Google', style: TextStyle(fontWeight: FontWeight.w500)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
+                  backgroundColor: AppColors.background,
+                  foregroundColor: AppColors.textPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border),
                   ),
                   elevation: 0,
                 ),
@@ -176,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
                     child: const Text(
                       'สมัครสมาชิก',
-                      style: TextStyle(color: AppColors.brandPink, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppColors.brandPink, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],

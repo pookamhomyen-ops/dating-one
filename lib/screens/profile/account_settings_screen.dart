@@ -21,7 +21,10 @@ class AccountSettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('ออกจากระบบ', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'ออกจากระบบ',
+              style: TextStyle(color: AppColors.destructive),
+            ),
           ),
         ],
       ),
@@ -45,10 +48,10 @@ class AccountSettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'ตั้งค่าบัญชี',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.w500),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
       ),
@@ -73,8 +76,8 @@ class AccountSettingsScreen extends StatelessWidget {
               context,
               icon: Icons.logout_rounded,
               title: 'ออกจากระบบ',
-              textColor: Colors.redAccent,
-              iconColor: Colors.redAccent,
+              textColor: AppColors.destructiveAccent,
+              iconColor: AppColors.destructiveAccent,
               onTap: () => _handleLogout(context),
             ),
           ],
@@ -94,11 +97,11 @@ class AccountSettingsScreen extends StatelessWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: AppColors.textPrimary.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -117,7 +120,7 @@ class AccountSettingsScreen extends StatelessWidget {
         title: Text(
           title,
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w500,
             fontSize: 16,
             color: textColor ?? AppColors.textPrimary,
           ),
@@ -125,10 +128,10 @@ class AccountSettingsScreen extends StatelessWidget {
         subtitle: subtitle != null
             ? Text(
                 subtitle,
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               )
             : null,
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+        trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
         onTap: onTap,
       ),
     );

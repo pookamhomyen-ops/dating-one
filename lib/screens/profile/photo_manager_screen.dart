@@ -257,7 +257,7 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
           errorMsg = 'เกิดข้อผิดพลาดของลำดับรูปภาพ กรุณาลองใหม่อีกครั้ง';
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('บันทึกไม่สำเร็จ: $errorMsg'), backgroundColor: Colors.red),
+          SnackBar(content: Text('บันทึกไม่สำเร็จ: $errorMsg'), backgroundColor: AppColors.destructive),
         );
       }
     } finally {
@@ -280,7 +280,7 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
               'บันทึก',
               style: TextStyle(
                 color: AppColors.brandPink,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -293,7 +293,7 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Text(
               'กดที่รูปภาพเพื่อเลือกเป็นรูปโปรไฟล์หลัก',
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
@@ -324,7 +324,7 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: isPrimary 
-                                      ? Border.all(color: Colors.green, width: 3)
+                                      ? Border.all(color: AppColors.primary, width: 3)
                                       : null,
                                   ),
                                   child: ClipRRect(
@@ -339,7 +339,7 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
                                 const Positioned(
                                   top: 4,
                                   left: 4,
-                                  child: Icon(Icons.check_circle, color: Colors.green, size: 28),
+                                  child: Icon(Icons.check_circle, color: AppColors.primary, size: 28),
                                 ),
                               Positioned(
                                 top: 4,
@@ -349,11 +349,11 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: const BoxDecoration(
-                                      color: Colors.black54,
+                                      color: AppColors.textPrimary,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.close,
-                                        color: Colors.white, size: 18),
+                                        color: AppColors.background, size: 18),
                                   ),
                                 ),
                               ),
@@ -369,7 +369,7 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
                                     ),
                                     child: const Text(
                                       'ใหม่',
-                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: AppColors.background, fontSize: 10, fontWeight: FontWeight.w500),
                                     ),
                                   ),
                                 ),
@@ -381,19 +381,19 @@ class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
                           onTap: _isSaving ? null : _pickPhotos,
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: AppColors.textSecondary,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_photo_alternate_outlined,
-                                    size: 40, color: Colors.grey[500]),
+                                    size: 40, color: AppColors.textSecondary),
                                 const SizedBox(height: 8),
                                 Text(
                                   'เพิ่มรูป',
                                   style: TextStyle(
-                                    color: Colors.grey[500],
+                                    color: AppColors.textSecondary,
                                     fontSize: 13,
                                   ),
                                 ),

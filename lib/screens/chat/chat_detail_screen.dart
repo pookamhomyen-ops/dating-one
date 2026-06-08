@@ -65,13 +65,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   widget.thread.partnerName,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 if (widget.thread.isOnline)
                   const Text(
                     'ออนไลน์',
-                    style: TextStyle(fontSize: 11, color: Colors.green),
+                    style: TextStyle(fontSize: 11, color: AppColors.primary),
                   ),
               ],
             ),
@@ -90,7 +90,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
           ),
           Container(
-            color: Colors.white,
+            color: AppColors.background,
             padding: EdgeInsets.fromLTRB(
               12,
               10,
@@ -118,7 +118,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   icon: const Icon(Icons.send_rounded, size: 20),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.background,
                   ),
                 ),
               ],
@@ -147,7 +147,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isMine ? AppColors.accent : Colors.white,
+          color: isMine ? AppColors.accent : AppColors.background,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),
@@ -156,7 +156,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: AppColors.textPrimary.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -169,7 +169,7 @@ class _MessageBubble extends StatelessWidget {
             Text(
               message.text,
               style: TextStyle(
-                color: isMine ? Colors.white : AppColors.textPrimary,
+                color: isMine ? AppColors.background : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 4),
@@ -178,7 +178,7 @@ class _MessageBubble extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 color: isMine
-                    ? Colors.white.withValues(alpha: 0.8)
+                    ? AppColors.background.withValues(alpha: 0.8)
                     : AppColors.textSecondary,
               ),
             ),

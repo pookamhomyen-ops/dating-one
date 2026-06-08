@@ -2,7 +2,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
-import '../main_shell.dart';
+import 'package:dating_one/screens/main_shell.dart';
 import '../profile/profile_setup_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -66,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: AppColors.destructive),
     );
   }
 
@@ -134,7 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -146,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Text(
               'สร้างบัญชีใหม่',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w500,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -206,13 +206,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onPressed: _loading ? null : _signUp,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandPink,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.background,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: _loading 
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('สมัครสมาชิก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.background, strokeWidth: 2))
+                : const Text('สมัครสมาชิก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ),
             const SizedBox(height: 16),
             const Row(
@@ -229,14 +229,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ElevatedButton.icon(
               onPressed: _loading ? null : _signInWithGoogle,
               icon: const Icon(Icons.g_mobiledata, size: 32),
-              label: const Text('Sign up with Google', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text('Sign up with Google', style: TextStyle(fontWeight: FontWeight.w500)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black87,
+                backgroundColor: AppColors.background,
+                foregroundColor: AppColors.textPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.border),
                 ),
                 elevation: 0,
               ),

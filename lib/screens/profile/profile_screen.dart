@@ -47,11 +47,13 @@ class ProfileScreenState extends State<ProfileScreen> {
             .eq('profile_id', authUser.id)
             .order('is_primary', ascending: false)
             .order('sort_order');
-        
+
         // Debug raw query result
         debugPrint('\n--- PHOTO QUERY RESULT ---');
         for (var p in (photosData as List)) {
-          debugPrint('photo_id: ${p['id']}, sort_order: ${p['sort_order']}, is_primary: ${p['is_primary']}, public_url: ${p['public_url']}');
+          debugPrint(
+            'photo_id: ${p['id']}, sort_order: ${p['sort_order']}, is_primary: ${p['is_primary']}, public_url: ${p['public_url']}',
+          );
         }
 
         final photoUrls = (photosData as List)
@@ -70,7 +72,7 @@ class ProfileScreenState extends State<ProfileScreen> {
             .select()
             .eq('profile_id', authUser.id)
             .order('sort_order');
-        
+
         final secretUrls = (secretData as List)
             .map((p) => p['public_url'] as String)
             .where((url) => url.isNotEmpty)
@@ -80,8 +82,9 @@ class ProfileScreenState extends State<ProfileScreen> {
         if (data['birth_date'] != null) {
           final birthDate = DateTime.parse(data['birth_date']);
           age = DateTime.now().year - birthDate.year;
-          if (DateTime.now().month < birthDate.month || 
-              (DateTime.now().month == birthDate.month && DateTime.now().day < birthDate.day)) {
+          if (DateTime.now().month < birthDate.month ||
+              (DateTime.now().month == birthDate.month &&
+                  DateTime.now().day < birthDate.day)) {
             age--;
           }
         }
@@ -102,7 +105,7 @@ class ProfileScreenState extends State<ProfileScreen> {
             district: data['district'] ?? '',
             photoUrls: photoUrls,
             bio: data['bio'] ?? '',
-            interests: [], 
+            interests: [],
             profileViews: data['profile_views_count'] ?? 0,
             likesReceived: data['likes_received_count'] ?? 0,
             lineId: data['line_id'] ?? '',
@@ -156,7 +159,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                     _ProfileHeader(
                       user: _user!,
                       onPhotosUpdated: _loadUserData,
-                      onPhotoTap: (index) => _viewFullScreen(_user!.photoUrls, index),
+                      onPhotoTap: (index) =>
+                          _viewFullScreen(_user!.photoUrls, index),
                     ),
                     Container(
                       decoration: const BoxDecoration(
@@ -186,15 +190,21 @@ class ProfileScreenState extends State<ProfileScreen> {
                               spacing: 8,
                               runSpacing: 8,
                               children: _user!.interests
-                                  .map((tag) => Chip(
-                                        label: Text(tag),
-                                        backgroundColor: Colors.white,
-                                        side: BorderSide(color: AppColors.accent.withOpacity(0.1)),
-                                        labelStyle: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.accent,
+                                  .map(
+                                    (tag) => Chip(
+                                      label: Text(tag),
+                                      backgroundColor: AppColors.background,
+                                      side: BorderSide(
+                                        color: AppColors.accent.withOpacity(
+                                          0.1,
                                         ),
-                                      ))
+                                      ),
+                                      labelStyle: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.accent,
+                                      ),
+                                    ),
+                                  )
                                   .toList(),
                             ),
                           ],
@@ -207,15 +217,18 @@ class ProfileScreenState extends State<ProfileScreen> {
                               child: ListView.separated(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: _user!.photoUrls.length,
-                                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 12),
                                 itemBuilder: (context, i) => GestureDetector(
-                                  onTap: () => _viewFullScreen(_user!.photoUrls, i),
+                                  onTap: () =>
+                                      _viewFullScreen(_user!.photoUrls, i),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
+                                          color: AppColors.textPrimary
+                                              .withOpacity(0.05),
                                           blurRadius: 8,
                                           offset: const Offset(0, 4),
                                         ),
@@ -241,12 +254,17 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => SecretPhotoManagerScreen(userId: _user!.id),
+                                      builder: (_) => SecretPhotoManagerScreen(
+                                        userId: _user!.id,
+                                      ),
                                     ),
                                   );
                                   _loadUserData();
                                 },
-                                icon: const Icon(Icons.add_photo_alternate_outlined, color: AppColors.brandPink),
+                                icon: const Icon(
+                                  Icons.add_photo_alternate_outlined,
+                                  color: AppColors.brandPink,
+                                ),
                               ),
                             ],
                           ),
@@ -256,14 +274,19 @@ class ProfileScreenState extends State<ProfileScreen> {
                               width: double.infinity,
                               height: 100,
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: AppColors.background,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(
+                                  color: AppColors.background,
+                                  width: 2,
+                                ),
                               ),
                               child: const Center(
                                 child: Text(
                                   'ยังไม่มีรูปส่วนตัว กด + เพื่อเพิ่ม',
-                                  style: TextStyle(color: AppColors.textSecondary),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
                               ),
                             )
@@ -273,15 +296,21 @@ class ProfileScreenState extends State<ProfileScreen> {
                               child: ListView.separated(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: _secretPhotoUrls.length,
-                                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 12),
                                 itemBuilder: (context, i) => GestureDetector(
-                                  onTap: () => _viewFullScreen(_secretPhotoUrls, i, isPrivate: true),
+                                  onTap: () => _viewFullScreen(
+                                    _secretPhotoUrls,
+                                    i,
+                                    isPrivate: true,
+                                  ),
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
+                                          color: AppColors.textPrimary
+                                              .withOpacity(0.05),
                                           blurRadius: 8,
                                           offset: const Offset(0, 4),
                                         ),
@@ -299,8 +328,13 @@ class ProfileScreenState extends State<ProfileScreen> {
                                           ),
                                           Positioned.fill(
                                             child: BackdropFilter(
-                                              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                              child: Container(color: Colors.black12),
+                                              filter: ImageFilter.blur(
+                                                sigmaX: 8,
+                                                sigmaY: 8,
+                                              ),
+                                              child: Container(
+                                                color: AppColors.textPrimary,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -315,7 +349,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                             onPressed: () async {
                               await Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const AccountSettingsScreen(),
+                                ),
                               );
                               _loadUserData();
                             },
@@ -338,9 +374,7 @@ class ProfileScreenState extends State<ProfileScreen> {
 class _SettingsButton extends StatelessWidget {
   final VoidCallback onPressed;
 
-  const _SettingsButton({
-    required this.onPressed,
-  });
+  const _SettingsButton({required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -348,11 +382,11 @@ class _SettingsButton extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(
-          colors: [Color(0xFF5C6BC0), Color(0xFF3F51B5)],
+          colors: [AppColors.primary, AppColors.primary],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3F51B5).withOpacity(0.3),
+            color: AppColors.primary.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -362,7 +396,7 @@ class _SettingsButton extends StatelessWidget {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.background,
           shadowColor: Colors.transparent,
           minimumSize: const Size(double.infinity, 64),
           shape: RoundedRectangleBorder(
@@ -377,7 +411,11 @@ class _SettingsButton extends StatelessWidget {
             SizedBox(width: 12),
             Text(
               'การตั้งค่าบัญชี',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
@@ -427,7 +465,7 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
 
     return Container(
       width: double.infinity,
-      color: Colors.black, // Profile picture area background is black
+      color: AppColors.textPrimary, // Profile picture area background is black
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -437,9 +475,12 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                 aspectRatio: 3 / 4, // Changed to 3:4
                 child: photoUrls.isEmpty
                     ? Container(
-                        color: Colors.grey[900],
-                        child: const Icon(Icons.person,
-                            size: 120, color: Colors.grey),
+                        color: AppColors.textSecondary,
+                        child: const Icon(
+                          Icons.person,
+                          size: 120,
+                          color: AppColors.textSecondary,
+                        ),
                       )
                     : PageView.builder(
                         controller: _pageController,
@@ -468,9 +509,8 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => PhotoManagerScreen(
-                          userId: widget.user.id,
-                        ),
+                        builder: (_) =>
+                            PhotoManagerScreen(userId: widget.user.id),
                       ),
                     );
                     widget.onPhotosUpdated();
@@ -478,14 +518,20 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: AppColors.background.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      border: Border.all(
+                        color: AppColors.background.withOpacity(0.3),
+                      ),
                     ),
                     child: ClipRRect(
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.camera_alt_rounded,
+                          color: AppColors.background,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
@@ -506,11 +552,13 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                         height: 8,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(_currentPage == index ? 1.0 : 0.4),
+                          color: AppColors.background.withOpacity(
+                            _currentPage == index ? 1.0 : 0.4,
+                          ),
                           borderRadius: BorderRadius.circular(4),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: AppColors.textPrimary.withOpacity(0.2),
                               blurRadius: 4,
                             ),
                           ],
@@ -525,7 +573,7 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
             decoration: const BoxDecoration(
-              color: Colors.white,
+              color: AppColors.background,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(32),
                 topRight: Radius.circular(32),
@@ -541,14 +589,17 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                       widget.user.name,
                       style: const TextStyle(
                         fontSize: 34,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w500,
                         letterSpacing: -1,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.accent.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -557,7 +608,7 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                         '${widget.user.age}',
                         style: const TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w500,
                           color: AppColors.accent,
                         ),
                       ),
@@ -568,23 +619,39 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                 Row(
                   children: [
                     Icon(
-                      widget.user.gender == Gender.female ? Icons.female_rounded : Icons.male_rounded,
+                      widget.user.gender == Gender.female
+                          ? Icons.female_rounded
+                          : Icons.male_rounded,
                       size: 20,
                       color: AppColors.textSecondary,
                     ),
                     const SizedBox(width: 6),
-                    Text(widget.user.gender.labelTh,
-                        style: const TextStyle(
-                            fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                    Text(
+                      widget.user.gender.labelTh,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     const SizedBox(width: 20),
-                    const Icon(Icons.location_on_rounded, size: 20, color: AppColors.textSecondary),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text('${widget.user.district}, ${widget.user.province}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                      child: Text(
+                        '${widget.user.district}, ${widget.user.province}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -595,7 +662,7 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                     decoration: BoxDecoration(
                       color: AppColors.background.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: AppColors.background, width: 2),
                     ),
                     child: Text(
                       widget.user.bio,
@@ -626,19 +693,23 @@ class _StatsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _StatCard(
-          icon: Icons.visibility_outlined,
-          label: 'คนเข้ามาดู',
-          value: _formatCount(views),
-          color: const Color(0xFF7EB8FF),
-        )),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.visibility_outlined,
+            label: 'คนเข้ามาดู',
+            value: _formatCount(views),
+            color: AppColors.primary,
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _StatCard(
-          icon: Icons.favorite_outline,
-          label: 'กดใจ',
-          value: _formatCount(likes),
-          color: AppColors.accent,
-        )),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.favorite_outline,
+            label: 'กดใจ',
+            value: _formatCount(likes),
+            color: AppColors.accent,
+          ),
+        ),
       ],
     );
   }
@@ -667,11 +738,11 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: AppColors.textPrimary.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -683,10 +754,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 2),
           Text(
@@ -694,7 +762,7 @@ class _StatCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -714,9 +782,9 @@ class _SectionTitle extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -733,7 +801,7 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -788,7 +856,7 @@ class _SocialLine extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.textMuted,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 2),
@@ -796,7 +864,7 @@ class _SocialLine extends StatelessWidget {
                 value,
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
                 ),
               ),

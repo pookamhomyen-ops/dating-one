@@ -35,6 +35,8 @@ class Member {
   final bool isVerified;
   final String bio;
 
+  String? get status => bio;
+
   String get statusLabel {
     if (isOnline) return 'ออนไลน์';
     if (lastActiveMinutes != null) {

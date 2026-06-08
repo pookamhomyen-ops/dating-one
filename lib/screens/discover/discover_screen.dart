@@ -43,20 +43,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       final double myLat = (myProfile['latitude'] as num?)?.toDouble() ?? 0.0;
       final double myLon = (myProfile['longitude'] as num?)?.toDouble() ?? 0.0;
 
-      final response = await client.from('profiles').select('''
+      final response = await client
+          .from('profiles')
+          .select('''
             *,
             profile_photos(public_url, is_primary, sort_order),
             profile_interests(interests(name))
-          ''').neq('id', currentUserId);
+          ''')
+          .neq('id', currentUserId);
 
       final List<Member> loadedMembers = [];
 
       for (var row in response as List) {
         Gender gender;
         switch (row['gender']) {
-          case 'female': gender = Gender.female; break;
-          case 'male': gender = Gender.male; break;
-          default: gender = Gender.other;
+          case 'female':
+            gender = Gender.female;
+            break;
+          case 'male':
+            gender = Gender.male;
+            break;
+          default:
+            gender = Gender.other;
         }
 
         int age = 0;
@@ -87,8 +95,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             ..sort((a, b) {
               if (a['is_primary'] == true && b['is_primary'] != true) return -1;
               if (a['is_primary'] != true && b['is_primary'] == true) return 1;
-              return (a['sort_order'] as int? ?? 999)
-                  .compareTo(b['sort_order'] as int? ?? 999);
+              return (a['sort_order'] as int? ?? 999).compareTo(
+                b['sort_order'] as int? ?? 999,
+              );
             });
           photoUrl = sortedPhotos.first['public_url'] ?? '';
         }
@@ -100,23 +109,25 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           if (name != null) interests.add(name as String);
         }
 
-        loadedMembers.add(Member(
-          id: row['id'],
-          name: row['display_name'] ?? 'ไม่มีชื่อ',
-          gender: gender,
-          age: age,
-          province: row['province'] ?? '',
-          district: row['district'] ?? '',
-          distanceKm: distanceKm,
-          photoUrl: photoUrl,
-          university: row['university'] ?? '',
-          occupation: row['occupation'] ?? '',
-          interests: interests,
-          isOnline: row['is_online'] ?? false,
-          lastActiveMinutes: lastActiveMinutes,
-          isVerified: row['is_verified'] ?? false,
-          bio: row['bio'] ?? '',
-        ));
+        loadedMembers.add(
+          Member(
+            id: row['id'],
+            name: row['display_name'] ?? 'ไม่มีชื่อ',
+            gender: gender,
+            age: age,
+            province: row['province'] ?? '',
+            district: row['district'] ?? '',
+            distanceKm: distanceKm,
+            photoUrl: photoUrl,
+            university: row['university'] ?? '',
+            occupation: row['occupation'] ?? '',
+            interests: interests,
+            isOnline: row['is_online'] ?? false,
+            lastActiveMinutes: lastActiveMinutes,
+            isVerified: row['is_verified'] ?? false,
+            bio: row['bio'] ?? '',
+          ),
+        );
       }
 
       loadedMembers.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
@@ -136,19 +147,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
     const r = 6371;
     final dLat = (lat2 - lat1) * pi / 180;
     final dLon = (lon2 - lon1) * pi / 180;
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
-        sin(dLon / 2) * sin(dLon / 2);
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return r * c;
   }
-
-  double get _nearestKm =>
-      _members.isEmpty ? 0 : _members.first.distanceKm;
 
   @override
   Widget build(BuildContext context) {
@@ -159,42 +175,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             ? const Center(child: CircularProgressIndicator())
             : CustomScrollView(
                 slivers: [
-                  const SliverToBoxAdapter(
-                    child: SouliveHeader(
-                      showGreeting: true,
-                      showLikesBanner: true,
-                      likesCount: 12,
-                    ),
-                  ),
+                  const SliverToBoxAdapter(child: SouliveHeader()),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                       child: _FilterBar(
                         nearMeActive: _nearMeActive,
                         genderLabel: _genderFilter,
-                        onNearMe: () => setState(() => _nearMeActive = !_nearMeActive),
+                        onNearMe: () =>
+                            setState(() => _nearMeActive = !_nearMeActive),
                         onFilter: () {},
                         onGender: () => _showGenderSheet(),
                         onSearch: () {},
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.location_on_outlined, size: 18, color: AppColors.brandPink),
-                          const SizedBox(width: 6),
-                          Text(
-                            'ผู้ใช้ใกล้คุณ (${_formatKm(_nearestKm)})',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -210,7 +202,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => MemberProfileScreen(memberId: member.id),
+                                builder: (_) =>
+                                    MemberProfileScreen(memberId: member.id),
                               ),
                             );
                           },
@@ -237,18 +230,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  String _formatKm(double km) {
-    if (km < 1) return '${(km * 1000).round()} ม.';
-    final rounded = km == km.roundToDouble()
-        ? km.toInt().toString()
-        : km.toStringAsFixed(1);
-    return '$rounded กม.';
-  }
-
   void _showGenderSheet() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -259,18 +244,25 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             children: [
               const SizedBox(height: 12),
               Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: Text('เลือกเพศ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                child: Text(
+                  'เลือกเพศ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
               ),
               for (final label in ['ทุกเพศ', 'หญิง', 'ชาย', 'อื่นๆ'])
                 ListTile(
                   title: Text(label),
                   trailing: _genderFilter == label
-                      ? const Icon(Icons.check, color: AppColors.brandPink)
+                      ? Icon(Icons.check, color: AppColors.brandPink)
                       : null,
                   onTap: () {
                     setState(() => _genderFilter = label);
@@ -282,16 +274,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         );
       },
     );
-  }
-}
-
-// ── helpers ──────────────────────────────────────────────
-
-Color _interestBgColor(Gender gender) {
-  switch (gender) {
-    case Gender.female: return const Color(0xFFEC407A);
-    case Gender.male:   return const Color(0xFF1E88E5);
-    case Gender.other:  return const Color(0xFF8E24AA);
   }
 }
 
@@ -324,11 +306,25 @@ class _FilterBar extends StatelessWidget {
             clipBehavior: Clip.none,
             child: Row(
               children: [
-                _FilterPill(label: 'ใกล้ฉัน', icon: Icons.near_me_outlined, filled: nearMeActive, onTap: onNearMe),
+                _FilterPill(
+                  label: 'ใกล้ฉัน',
+                  icon: Icons.near_me_outlined,
+                  filled: nearMeActive,
+                  onTap: onNearMe,
+                ),
                 const SizedBox(width: 8),
-                _FilterPill(label: 'ตัวกรอง', icon: Icons.tune_rounded, onTap: onFilter),
+                _FilterPill(
+                  label: 'ตัวกรอง',
+                  icon: Icons.tune_rounded,
+                  onTap: onFilter,
+                ),
                 const SizedBox(width: 8),
-                _FilterPill(label: genderLabel, icon: Icons.wc_outlined, onTap: onGender, maxLabelWidth: 88),
+                _FilterPill(
+                  label: genderLabel,
+                  icon: Icons.wc_outlined,
+                  onTap: onGender,
+                  maxLabelWidth: 88,
+                ),
               ],
             ),
           ),
@@ -341,7 +337,13 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _FilterPill extends StatelessWidget {
-  const _FilterPill({required this.label, required this.icon, this.filled = false, required this.onTap, this.maxLabelWidth});
+  const _FilterPill({
+    required this.label,
+    required this.icon,
+    this.filled = false,
+    required this.onTap,
+    this.maxLabelWidth,
+  });
   final String label;
   final IconData icon;
   final bool filled;
@@ -363,7 +365,11 @@ class _FilterPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: filled ? Colors.white : AppColors.textPrimary),
+            Icon(
+              icon,
+              size: 16,
+              color: filled ? AppColors.background : AppColors.textPrimary,
+            ),
             const SizedBox(width: 6),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxLabelWidth ?? 120),
@@ -373,8 +379,8 @@ class _FilterPill extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: filled ? Colors.white : AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                  color: filled ? AppColors.background : AppColors.textPrimary,
                 ),
               ),
             ),
@@ -392,7 +398,8 @@ class _SearchButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 44, height: 44,
+      width: 44,
+      height: 44,
       child: Material(
         color: AppColors.surface,
         shape: const CircleBorder(),
@@ -400,9 +407,16 @@ class _SearchButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Container(
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.border)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border),
+            ),
             alignment: Alignment.center,
-            child: const Icon(Icons.search, size: 22, color: AppColors.textPrimary),
+            child: const Icon(
+              Icons.search,
+              size: 22,
+              color: AppColors.textPrimary,
+            ),
           ),
         ),
       ),
@@ -413,7 +427,11 @@ class _SearchButton extends StatelessWidget {
 // ── MemberCard ───────────────────────────────────────────
 
 class _MemberCard extends StatelessWidget {
-  const _MemberCard({required this.member, required this.liked, required this.onLike});
+  const _MemberCard({
+    required this.member,
+    required this.liked,
+    required this.onLike,
+  });
   final Member member;
   final bool liked;
   final VoidCallback onLike;
@@ -422,31 +440,115 @@ class _MemberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.surface,
         border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: AppColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ProfilePhoto(member: member),
-              const SizedBox(width: 14),
-              Expanded(child: _MemberInfo(member: member)),
-              const SizedBox(width: 4),
-              _LikeButton(liked: liked, onTap: onLike),
-            ],
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ProfilePhoto(member: member),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.transgender,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              member.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      _InfoRow(
+                        icon: Icons.account_circle,
+                        text:
+                            '${member.age} ปี, ${member.district} ${member.province}'
+                                .trim()
+                                .replaceAll(RegExp(r'\s+'), ' '),
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        member.status ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ปุ่มกากบาท
+                Material(
+                  color: AppColors.surface,
+                  shape: const CircleBorder(),
+                  elevation: 1,
+                  shadowColor: AppColors.textPrimary,
+                  child: InkWell(
+                    onTap: () {},
+                    customBorder: const CircleBorder(),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: AppColors.textSecondary,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 9),
+                // ปุ่มหัวใจ (คงเดิมทุกอย่าง)
+                _LikeButton(liked: liked, onTap: onLike),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -461,169 +563,85 @@ class _ProfilePhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 120,
+      width: 110,
+      height: 110,
       child: Stack(
-        fit: StackFit.expand,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(8),
             child: NetworkImageBox(
               url: member.photoUrl,
               width: double.infinity,
               height: double.infinity,
-              borderRadius: 14,
+              borderRadius: 8,
             ),
           ),
           Positioned(
-            bottom: 6,
-            left: 6,
-            child: _StatusBadge(member: member),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.member});
-  final Member member;
-
-  @override
-  Widget build(BuildContext context) {
-    final online = member.isOnline;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6, height: 6,
-            decoration: BoxDecoration(
-              color: online ? const Color(0xFF4ADE80) : AppColors.textMuted,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              member.statusLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── MemberInfo ───────────────────────────────────────────
-
-class _MemberInfo extends StatelessWidget {
-  const _MemberInfo({required this.member});
-  final Member member;
-
-  @override
-  Widget build(BuildContext context) {
-    final chipBg = _interestBgColor(member.gender);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                '${member.name}, ${member.age}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1E1E2C),
-                ),
-                overflow: TextOverflow.ellipsis,
+            left: 4,
+            bottom: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.textPrimary.withValues(alpha: 0.58),
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            if (member.isVerified) ...[
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(color: AppColors.verified, shape: BoxShape.circle),
-                child: const Icon(Icons.check, size: 12, color: Colors.white),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        _DetailLine(icon: Icons.school_outlined, text: member.university, color: const Color(0xFF5C6BC0)),
-        const SizedBox(height: 4),
-        _DetailLine(icon: Icons.work_outline, text: member.occupation, color: const Color(0xFF26A69A)),
-        const SizedBox(height: 4),
-        _DetailLine(
-          icon: Icons.location_on_outlined,
-          text: '${_distanceText(member.distanceKm)} จากคุณ',
-          color: const Color(0xFFEF5350),
-        ),
-        if (member.interests.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: member.interests.map((tag) => Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: chipBg,
-                    borderRadius: BorderRadius.circular(20),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.location_on,
+                    size: 12,
+                    color: AppColors.background,
                   ),
-                  child: Text(
-                    tag,
+                  const SizedBox(width: 3),
+                  Text(
+                    '${member.distanceKm.toStringAsFixed(1)} กม.',
                     style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      fontSize: 10,
+                      color: AppColors.background,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              )).toList(),
+                ],
+              ),
             ),
           ),
         ],
-      ],
+      ),
     );
-  }
-
-  String _distanceText(double km) {
-    if (km < 1) return '${(km * 1000).round()} ม.';
-    final v = km == km.roundToDouble() ? km.toInt() : km;
-    return '$v กม.';
   }
 }
 
-class _DetailLine extends StatelessWidget {
-  const _DetailLine({required this.icon, required this.text, required this.color});
+// ── InfoRow ──────────────────────────────────────────────
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.text,
+    required this.color,
+    required this.fontSize,
+  });
   final IconData icon;
   final String text;
   final Color color;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 6),
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.85), fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: fontSize,
+              color: color.withValues(alpha: 0.85),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -633,31 +651,73 @@ class _DetailLine extends StatelessWidget {
 
 // ── LikeButton ───────────────────────────────────────────
 
-class _LikeButton extends StatelessWidget {
+class _LikeButton extends StatefulWidget {
   const _LikeButton({required this.liked, required this.onTap});
   final bool liked;
   final VoidCallback onTap;
 
   @override
+  State<_LikeButton> createState() => _LikeButtonState();
+}
+
+class _LikeButtonState extends State<_LikeButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.3), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.3, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: liked ? AppColors.brandPink : AppColors.surface,
-      shape: const CircleBorder(),
-      elevation: liked ? 0 : 1,
-      shadowColor: Colors.black26,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: liked ? null : Border.all(color: AppColors.border),
-          ),
-          child: Icon(
-            liked ? Icons.favorite : Icons.favorite_border,
-            color: liked ? Colors.white : AppColors.brandPink,
-            size: 22,
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Material(
+        color: widget.liked ? AppColors.brandPink : AppColors.surface,
+        shape: const CircleBorder(),
+        elevation: widget.liked ? 6 : 3,
+        shadowColor: widget.liked
+            ? AppColors.brandPink.withValues(alpha: 0.4)
+            : AppColors.textPrimary,
+        child: InkWell(
+          onTap: () {
+            _controller.forward(from: 0.0);
+            widget.onTap();
+          },
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: widget.liked
+                    ? Colors.transparent
+                    : AppColors.brandPink.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(
+              widget.liked ? Icons.favorite : Icons.favorite_border,
+              color: widget.liked ? AppColors.background : AppColors.brandPink,
+              size: 26,
+            ),
           ),
         ),
       ),

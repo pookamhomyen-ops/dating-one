@@ -240,7 +240,7 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
           errorMsg = 'ไฟล์มีขนาดใหญ่เกินไป แม้จะบีบอัดแล้ว กรุณาเลือกรูปอื่น';
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('บันทึกไม่สำเร็จ: $errorMsg'), backgroundColor: Colors.red),
+          SnackBar(content: Text('บันทึกไม่สำเร็จ: $errorMsg'), backgroundColor: AppColors.destructive),
         );
       }
     } finally {
@@ -263,7 +263,7 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
               'บันทึก',
               style: TextStyle(
                 color: AppColors.brandPink,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -276,7 +276,7 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Text(
               'เลือกรูปภาพที่ต้องการให้เป็นรูปหลักของรูปส่วนตัว',
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
@@ -307,7 +307,7 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
                                     border: isPrimary 
-                                      ? Border.all(color: Colors.green, width: 3)
+                                      ? Border.all(color: AppColors.primary, width: 3)
                                       : null,
                                   ),
                                   child: ClipRRect(
@@ -322,7 +322,7 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
                                 const Positioned(
                                   top: 8,
                                   left: 8,
-                                  child: Icon(Icons.check_circle, color: Colors.green, size: 24),
+                                  child: Icon(Icons.check_circle, color: AppColors.primary, size: 24),
                                 ),
                               Positioned(
                                 top: 4,
@@ -332,11 +332,11 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: const BoxDecoration(
-                                      color: Colors.black54,
+                                      color: AppColors.textPrimary,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.close,
-                                        color: Colors.white, size: 18),
+                                        color: AppColors.background, size: 18),
                                   ),
                                 ),
                               ),
@@ -352,7 +352,7 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
                                     ),
                                     child: const Text(
                                       'ใหม่',
-                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: AppColors.background, fontSize: 10, fontWeight: FontWeight.w500),
                                     ),
                                   ),
                                 ),
@@ -364,19 +364,19 @@ class _SecretPhotoManagerScreenState extends State<SecretPhotoManagerScreen> {
                           onTap: _isSaving ? null : _pickPhotos,
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: AppColors.textSecondary,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_photo_alternate_outlined,
-                                    size: 40, color: Colors.grey[500]),
+                                    size: 40, color: AppColors.textSecondary),
                                 const SizedBox(height: 8),
                                 Text(
                                   'เพิ่มรูปส่วนตัว',
                                   style: TextStyle(
-                                    color: Colors.grey[500],
+                                    color: AppColors.textSecondary,
                                     fontSize: 13,
                                   ),
                                 ),

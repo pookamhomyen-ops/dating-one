@@ -87,9 +87,9 @@ class _ChatTile extends StatelessWidget {
                         width: 12,
                         height: 12,
                         decoration: BoxDecoration(
-                          color: Colors.green,
+                          color: AppColors.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: AppColors.background, width: 2),
                         ),
                       ),
                     ),
@@ -106,7 +106,7 @@ class _ChatTile extends StatelessWidget {
                           child: Text(
                             thread.partnerName,
                             style: const TextStyle(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w500,
                               fontSize: 16,
                             ),
                           ),
@@ -133,7 +133,7 @@ class _ChatTile extends StatelessWidget {
                                   ? AppColors.textPrimary
                                   : AppColors.textSecondary,
                               fontWeight: thread.unreadCount > 0
-                                  ? FontWeight.w600
+                                  ? FontWeight.w500
                                   : FontWeight.normal,
                             ),
                           ),
@@ -152,9 +152,9 @@ class _ChatTile extends StatelessWidget {
                             child: Text(
                               '${thread.unreadCount}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.background,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
