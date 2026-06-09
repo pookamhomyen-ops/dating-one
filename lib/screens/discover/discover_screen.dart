@@ -168,6 +168,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final likedMembers = _members.where((m) => _likedIds.contains(m.id)).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -176,6 +178,109 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             : CustomScrollView(
                 slivers: [
                   const SliverToBoxAdapter(child: SouliveHeader()),
+                  
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ถูกใจล่าสุด',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF561B4D),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          likedMembers.isEmpty
+                              ? const SizedBox(
+                                  height: 90,
+                                  child: Center(
+                                    child: Text(
+                                      'ยังไม่มีรายการถูกใจล่าสุด',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ),
+                                )
+                              : SizedBox(
+                                  height: 90,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: likedMembers.length,
+                                    itemBuilder: (context, index) {
+                                      final member = likedMembers[index];
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => MemberProfileScreen(
+                                                memberId: member.id,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(right: 16),
+                                          child: Column(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(2.5),
+                                                decoration: const BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      Colors.pinkAccent,
+                                                      Colors.purpleAccent
+                                                    ],
+                                                  ),
+                                                ),
+                                                child: Container(
+                                                  decoration: const BoxDecoration(
+                                                    color: Colors.white,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  padding: const EdgeInsets.all(2),
+                                                  child: CircleAvatar(
+                                                    radius: 26,
+                                                    backgroundColor: Colors.grey[200],
+                                                    backgroundImage: member.photoUrl.isNotEmpty
+                                                        ? NetworkImage(member.photoUrl)
+                                                        : null,
+                                                    child: member.photoUrl.isEmpty
+                                                        ? const Icon(Icons.person, color: Colors.grey)
+                                                        : null,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              SizedBox(
+                                                width: 60,
+                                                child: Text(
+                                                  member.name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: AppColors.textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -271,7 +376,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ),
             ],
           ),
-        );
+          );
       },
     );
   }
@@ -450,105 +555,155 @@ class _MemberCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ProfilePhoto(member: member),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.transgender,
-                            size: 14,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              member.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
-                              ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _ProfilePhoto(member: member),
+            const SizedBox(width: 14),
+            Expanded(
+              child: SizedBox(
+                height: 110, // 🔒 ล็อกความสูงให้เท่ากับรูปภาพเป๊ะ เพื่อไม่ให้ตำแหน่งกระโดด
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // 🔒 ตรึงชื่อไว้บนสุด ตรึงสเตตัสไว้ล่างสุด
+                  children: [
+                    // บรรทัดบนสุด: ชื่อและอายุ
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            member.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      _InfoRow(
-                        icon: Icons.account_circle,
-                        text:
-                            '${member.age} ปี, ${member.district} ${member.province}'
-                                .trim()
-                                .replaceAll(RegExp(r'\s+'), ' '),
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        member.status ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textPrimary,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ปุ่มกากบาท
-                Material(
-                  color: AppColors.surface,
-                  shape: const CircleBorder(),
-                  elevation: 1,
-                  shadowColor: AppColors.textPrimary,
-                  child: InkWell(
-                    onTap: () {},
-                    customBorder: const CircleBorder(),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: AppColors.textSecondary,
-                        size: 22,
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.cake_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${member.age}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // บรรทัดกลาง: แยก อำเภอ และ จังหวัด พร้อมใส่ Emoji สวยๆ นำหน้า
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (member.district.isNotEmpty) ...[
+                                Row(
+                                  children: [
+                                    const Text('📍 ', style: TextStyle(fontSize: 11)),
+                                    Expanded(
+                                      child: Text(
+                                        member.district,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2), // ระยะห่างกระชับพิเศษไม่ให้เบียดบนล่าง
+                              ],
+                              if (member.province.isNotEmpty)
+                                Row(
+                                  children: [
+                                    const Text('🗺️ ', style: TextStyle(fontSize: 11)),
+                                    Expanded(
+                                      child: Text(
+                                        member.province,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                        
+                        // 🔒 ตรึงตำแหน่งปุ่มกดให้อยู่ที่เดิม ไม่ขยับตามบรรทัดข้อความ
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Material(
+                              color: AppColors.surface,
+                              shape: const CircleBorder(),
+                              elevation: 1,
+                              shadowColor: AppColors.textPrimary,
+                              child: InkWell(
+                                onTap: () {},
+                                customBorder: const CircleBorder(),
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    color: AppColors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _LikeButton(liked: liked, onTap: onLike),
+                          ],
+                        ),
+                      ],
+                    ),
+                    
+                    // บรรทัดล่างสุด: สเตตัส (Bio) ตรึงไว้ขอบล่างของรูปภาพพอดี
+                    Text(
+                      member.bio,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 9),
-                // ปุ่มหัวใจ (คงเดิมทุกอย่าง)
-                _LikeButton(liked: liked, onTap: onLike),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -608,43 +763,6 @@ class _ProfilePhoto extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── InfoRow ──────────────────────────────────────────────
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.text,
-    required this.color,
-    required this.fontSize,
-  });
-  final IconData icon;
-  final String text;
-  final Color color;
-  final double fontSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: fontSize,
-              color: color.withValues(alpha: 0.85),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

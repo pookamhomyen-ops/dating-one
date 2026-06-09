@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/gender.dart';
@@ -18,7 +19,9 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   Map<String, dynamic>? _profileData;
   List<String> _photoUrls = [];
   List<String> _interests = [];
+  List<String> _secretPhotoUrls = [];
   int _currentImageIndex = 0;
+  bool _isLiked = false; // สำหรับสถานะกดใจเบื้องต้น
 
   @override
   void initState() {
@@ -58,24 +61,29 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
         if (name != null) loadedInterests.add(name as String);
       }
 
+      final secretData = await client
+          .from('secret_photos')
+          .select()
+          .eq('profile_id', widget.memberId)
+          .order('sort_order');
+
+      final secretUrls = (secretData as List)
+          .map((p) => p['public_url'] as String)
+          .where((url) => url.isNotEmpty)
+          .toList();
+
       setState(() {
         _profileData = response;
         _photoUrls = photos.map((p) => p['public_url'] as String).toList();
         _interests = loadedInterests;
+        _secretPhotoUrls = secretUrls;
         _isLoading = false;
       });
     } catch (e) {
-      // บรรทัดนี้จะพ่นออกมาเลยว่า Supabase บล็อกเพราะอะไร เช่น บล็อก RLS หรือหา Table Relation ไม่เจอ
       debugPrint('🔴 Supabase Detail Error: $e');
-      if (e is PostgrestException) {
-        debugPrint('🔴 Message: ${e.message}');
-        debugPrint('🔴 Hint: ${e.hint}');
-        debugPrint('🔴 Details: ${e.details}');
-      }
     }
   }
 
-  // ควบคุม PageView รูปภาพ
   final PageController _profileImageController = PageController();
 
   int _calculateAge(String? birthDateStr) {
@@ -90,7 +98,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     return age;
   }
 
-  // ฟังก์ชันจัดการการแตะที่รูปเพื่อเปลี่ยนรูปถัดไป/ก่อนหน้า (ปรับความเร็วให้เปลี่ยนรูปทันทีและอัปเดตค่าเสถียร)
   void _handleImageTap(TapDownDetails details, double screenWidth) {
     if (_photoUrls.length <= 1) return;
 
@@ -120,7 +127,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     }
   }
 
-  // ฟังก์ชันเปิดดูรูปโปรไฟล์หลักแบบเต็มจอ (เลื่อนซ้ายขวาได้ ซูมได้)
   void _openFullScreenGallery(int initialIndex) {
     Navigator.push(
       context,
@@ -163,28 +169,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
-                    Positioned(
-                      bottom: 40,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          _photoUrls.length,
-                          (index) => Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: localIndex == index
-                                  ? AppColors.background
-                                  : AppColors.background24,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               );
@@ -195,7 +179,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     );
   }
 
-  // ฟังก์ชันเปิดดูรูปแบบ Popup ขนาดใหญ่ ด้านล่างมีคอมเม้นสวยๆ (เลื่อนซ้ายขวาไม่ได้)
   void _openImageCommentsDialog(String imageUrl) {
     showModalBottomSheet(
       context: context,
@@ -204,7 +187,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-        ), // ขยับหลบแป้นพิมพ์อัตโนมัติ
+        ),
         child: Container(
           decoration: const BoxDecoration(
             color: AppColors.background,
@@ -213,7 +196,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
               topRight: Radius.circular(32),
             ),
           ),
-          // แก้ไขบั๊ก No named parameter 'maxHeight' ย้ายมาใส่ใน constraints ตรงนี้เรียบร้อยครับ
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.85,
           ),
@@ -237,7 +219,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // รูปขนาดใหญ่ดีไซน์ขอบโค้งมนสวยงาม (ไม่เต็มหน้าจอ)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(24),
                         child: AspectRatio(
@@ -262,104 +243,17 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '(2)',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
-
-                      // คอมเม้นผู้หญิงพาสเทลชมพูหวานฉ่ำ
                       _buildCommentTile(
                         name: 'มิลค์คาร์เมล ✨',
-                        comment:
-                            'งู้ยยยยย ลุคนี้คือน่ารักใจเจ็บมากเลยค่าาา 🥰 สดใสสุดๆ',
+                        comment: 'งู้ยยยยย ลุคนี้คือน่ารักใจเจ็บมากเลยค่าาา 🥰',
                         time: '10 นาทีที่แล้ว',
                         isFemale: true,
                       ),
-                      const SizedBox(height: 14),
-
-                      // คอมเม้นผู้ชายพาสเทลฟ้าคลีนๆ
-                      _buildCommentTile(
-                        name: 'Napat_โฟล์ค',
-                        comment: 'ถ่ายมุมนี้ออกมาดูดีมากเลยครับ เท่มากๆ 📸⚡',
-                        time: '1 ชม. ที่แล้ว',
-                        isFemale: false,
-                      ),
                     ],
                   ),
-                ),
-              ),
-              // ส่วนกล่องพิมพ์ความคิดเห็นพร้อมปุ่ม Submit ด้านขวา
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.textPrimary.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'พิมพ์ข้อความของคุณที่นี่...',
-                          hintStyle: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                          filled: true,
-                          fillColor: AppColors.background,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // ปุ่มส่ง (Submit) ทรงกลมไล่เฉดสีสุดหรู
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.brandPink, AppColors.background],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.send_rounded,
-                          color: AppColors.background,
-                          size: 18,
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
@@ -369,7 +263,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     );
   }
 
-  // วิดเจ็ตย่อยสำหรับคอมเม้นท์ชายหญิงสไตล์โมเดิร์น
   Widget _buildCommentTile({
     required String name,
     required String comment,
@@ -424,7 +317,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 11,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -436,7 +328,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                     fontSize: 13,
                     color: AppColors.textPrimary,
                     height: 1.4,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -478,7 +369,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // 1. Header Gallery
           SliverToBoxAdapter(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -486,12 +376,11 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                 return Stack(
                   children: [
                     GestureDetector(
-                      // เปลี่ยนจากการกดแล้วเปิดเต็มจอ เป็นการแตะเปลี่ยนรูปซ้ายขวา
                       onTapDown: (details) =>
                           _handleImageTap(details, screenWidth),
                       onLongPress: () => _openFullScreenGallery(
                         _currentImageIndex,
-                      ), // กดค้างเพื่อดูรูปเต็มหน้าจอเหมือนเดิม
+                      ),
                       child: SizedBox(
                         height: screenHeight * 0.65,
                         width: double.infinity,
@@ -502,8 +391,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                               )
                             : PageView.builder(
                                 controller: _profileImageController,
-                                physics:
-                                    const NeverScrollableScrollPhysics(), // ลบการปัดซ้ายขวาออก
+                                physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _photoUrls.length,
                                 onPageChanged: (index) =>
                                     setState(() => _currentImageIndex = index),
@@ -557,10 +445,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                         ),
                       ),
                     ),
-
-                    // กล่องประวัติบนรูปภาพ 30% คลีนๆ สไตล์ขอบเหลี่ยม (ปรับแต่งตามบรีฟใหม่ล่าสุด)
                     Positioned(
-                      bottom: 5, // ขยับลงมาเกือบติดขอบล่างของภาพ (เว้นไว้ 5px)
+                      bottom: 5,
                       left: 20,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -573,14 +459,12 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.textPrimary.withValues(
                             alpha: 0.3,
-                          ), // พื้นหลังสีดำโปร่งใส คาปาซิตี้ 30
-                          // ไม่เอาขอบโค้ง เป็นขอบเหลี่ยมคมสวยงามมินิมอล (ถอด borderRadius ออกแล้ว)
+                          ),
                           border: Border.all(
                             color: AppColors.background.withValues(alpha: 0.15),
                             width: 1,
                           ),
                         ),
-                        // เอาหัวข้อและไอคอนออกทั้งหมด แสดงเฉพาะตัวรายละเอียด text เท่านั้น
                         child: Text(
                           _profileData!['bio'] ?? 'ไม่มีข้อมูลประวัติ',
                           style: TextStyle(
@@ -588,9 +472,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             color: AppColors.background.withValues(alpha: 0.85),
                             height: 1.4,
                           ),
-                          maxLines: 2, // รองรับกรณีข้อความยาวได้ 2 บรรทัด
-                          overflow: TextOverflow
-                              .ellipsis, // หากเกินสองบรรทัด ให้ตัดข้อความที่เหลือออกขึ้น ... ไม่ให้เป็นสามบรรทัด
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
@@ -599,7 +482,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
               },
             ),
           ),
-          // 2. White Container
           SliverToBoxAdapter(
             child: Container(
               transform: Matrix4.translationValues(0, -32, 0),
@@ -613,10 +495,10 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: [ 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center, // 🔒 จัดให้ชื่อ อายุ และปุ่มแชท อยู่กึ่งกลางแนวตั้งร่วมกับปุ่มกดใจ/กากบาท
                     children: [
                       Expanded(
                         child: Row(
@@ -626,7 +508,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 '${_profileData!['display_name']}, $age',
                                 style: const TextStyle(
                                   fontSize: 22,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
                                   letterSpacing: -0.5,
                                   color: AppColors.textPrimary,
                                 ),
@@ -645,7 +527,34 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                           ],
                         ),
                       ),
-                      _OnlineStatus(isOnline: isOnline),
+                      // ── ส่วนปุ่ม Action ปรับปรุงขนาดและระยะห่างใหม่ ──
+                      Padding(
+                        padding: const EdgeInsets.only(right: 5), // 📍 เว้นระยะห่างจากขอบรูปภาพด้านขวา 5px ไม่ให้ปุ่มไปชนขอบพอดี
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center, // 🔒 ล็อกปุ่มแชทให้อยู่กึ่งกลางแนวตั้งเดียวกับปุ่มกดใจ/กากบาท
+                          children: [
+                            _AnimatedActionButton(
+                              icon: Icons.close_rounded,
+                              color: AppColors.textSecondary,
+                              onTap: () {
+                                Navigator.pop(context);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _AnimatedActionButton(
+                              icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                              color: AppColors.brandPink,
+                              isFilled: _isLiked,
+                              onTap: () {
+                                setState(() => _isLiked = !_isLiked);
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _ModernChatButton(isOnline: isOnline), // 🔒 ขนาดปุ่มแชทเท่าเดิม ไม่ขยายตาม
+                          ],
+                        ),
+                      ),
                     ],
                   ),
 
@@ -682,14 +591,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 iconColor: AppColors.iconGreen,
                               ),
                             ],
-                            if (_profileData!['university'] != null) ...[
-                              const SizedBox(height: 12),
-                              _InfoLine(
-                                icon: Icons.school_rounded,
-                                text: _profileData!['university'],
-                                iconColor: AppColors.iconPurple,
-                              ),
-                            ],
                             if (_interests.isNotEmpty) ...[
                               const SizedBox(height: 16),
                               Wrap(
@@ -703,7 +604,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                     .toList(),
                               ),
                             ],
-
                             const SizedBox(height: 24),
                             const Text(
                               'ช่องทางติดต่อ',
@@ -725,52 +625,12 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             if ((_profileData!['instagram'] ?? '')
                                 .toString()
                                 .isNotEmpty) ...[
-                              if ((_profileData!['line_id'] ?? '')
-                                  .toString()
-                                  .isNotEmpty)
-                                const SizedBox(height: 12),
+                              const SizedBox(height: 12),
                               _SocialInfoTile(
                                 label: 'Instagram',
                                 value: _profileData!['instagram'],
                                 color: AppColors.iconPink,
                                 badgeText: 'IG',
-                              ),
-                            ],
-                            if ((_profileData!['x_handle'] ?? '')
-                                .toString()
-                                .isNotEmpty) ...[
-                              if ((_profileData!['line_id'] ?? '')
-                                      .toString()
-                                      .isNotEmpty ||
-                                  (_profileData!['instagram'] ?? '')
-                                      .toString()
-                                      .isNotEmpty)
-                                const SizedBox(height: 12),
-                              _SocialInfoTile(
-                                label: 'X (Twitter)',
-                                value: _profileData!['x_handle'],
-                                color: AppColors.textPrimary,
-                                badgeText: 'X',
-                              ),
-                            ],
-                            if ((_profileData!['facebook'] ?? '')
-                                .toString()
-                                .isNotEmpty) ...[
-                              if ((_profileData!['line_id'] ?? '')
-                                      .toString()
-                                      .isNotEmpty ||
-                                  (_profileData!['instagram'] ?? '')
-                                      .toString()
-                                      .isNotEmpty ||
-                                  (_profileData!['x_handle'] ?? '')
-                                      .toString()
-                                      .isNotEmpty)
-                                const SizedBox(height: 12),
-                              _SocialInfoTile(
-                                label: 'Facebook',
-                                value: _profileData!['facebook'],
-                                color: AppColors.iconBlue,
-                                badgeText: 'FB',
                               ),
                             ],
                           ],
@@ -780,9 +640,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       _VerticalActionButtons(),
                     ],
                   ),
-
                   const SizedBox(height: 32),
-
                   Text(
                     'รูปของ ${_profileData!['display_name']}',
                     style: const TextStyle(
@@ -796,32 +654,89 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
               ),
             ),
           ),
-
-          // 3. Grid View สำหรับรูปทั้งหมด
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 3 / 4,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => GestureDetector(
-                  onTap: () => _openImageCommentsDialog(
-                    _photoUrls[index],
-                  ), // กดรูปในกริตเพื่อเปิดหน้าต่างคอมเม้นล็อกเฉพาะใบนั้น
-                  child: NetworkImageBox(
-                    url: _photoUrls[index],
-                    borderRadius: 16,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: SizedBox(
+                height: 160,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _photoUrls.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) => GestureDetector(
+                    onTap: () => _openImageCommentsDialog(_photoUrls[index]),
+                    child: NetworkImageBox(
+                      url: _photoUrls[index],
+                      width: (MediaQuery.of(context).size.width - 68) / 3,
+                      height: 160,
+                      borderRadius: 14,
+                    ),
                   ),
                 ),
-                childCount: _photoUrls.length,
               ),
             ),
           ),
-
+          if (_secretPhotoUrls.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'รูปส่วนตัว 🔒',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 160,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _secretPhotoUrls.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) => ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: SizedBox(
+                            width: (MediaQuery.of(context).size.width - 68) / 3,
+                            height: 160,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  _secretPhotoUrls[index],
+                                  fit: BoxFit.cover,
+                                ),
+                                BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 12,
+                                    sigmaY: 12,
+                                  ),
+                                  child: Container(
+                                    color: AppColors.textPrimary
+                                        .withValues(alpha: 0.15),
+                                  ),
+                                ),
+                                const Center(
+                                  child: Icon(
+                                    Icons.lock_rounded,
+                                    color: AppColors.background,
+                                    size: 28,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
@@ -829,46 +744,181 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   }
 }
 
-class _OnlineStatus extends StatelessWidget {
-  final bool isOnline;
-  final VoidCallback? onTap;
+// 🔍 ค้นหาคอมโพเนนต์ _AnimatedActionButton ด้านล่างของไฟล์ แล้วเปลี่ยนเป็นบล็อกนี้ครับ:
 
-  const _OnlineStatus({required this.isOnline, this.onTap});
+class _AnimatedActionButton extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isFilled;
+
+  const _AnimatedActionButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.isFilled = false,
+  });
+
+  @override
+  State<_AnimatedActionButton> createState() => _AnimatedActionButtonState();
+}
+
+class _AnimatedActionButtonState extends State<_AnimatedActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.2), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.2, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isOnline
-              ? AppColors.iconGreen.withValues(alpha: 0.1)
-              : AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTap: () {
+          _controller.forward(from: 0.0);
+          widget.onTap();
+        },
+        child: Container(
+          width: 56,  // ✅ เพิ่มขนาดปุ่มกากบาทและกดใจให้ใหญ่ขึ้นเป็น 56
+          height: 56, // ✅ เพิ่มขนาดปุ่มกากบาทและกดใจให้ใหญ่ขึ้นเป็น 56
+          decoration: BoxDecoration(
+            color: widget.isFilled ? widget.color : AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.isFilled ? Colors.transparent : AppColors.border,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.icon,
+            color: widget.isFilled ? AppColors.background : widget.color,
+            size: 28, // ✅ เพิ่มขนาดไอคอนข้างในตามขนาดปุ่มเพื่อให้สมดุลสวยงาม
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: isOnline ? AppColors.iconGreen : AppColors.textSecondary,
-                shape: BoxShape.circle,
-              ),
+      ),
+    );
+  }
+}
+
+// ── ปุ่ม "แชท" ดีไซน์ใหม่ ทันสมัย วัยรุ่นชอบ ──
+class _ModernChatButton extends StatefulWidget {
+  final bool isOnline;
+
+  const _ModernChatButton({required this.isOnline});
+
+  @override
+  State<_ModernChatButton> createState() => _ModernChatButtonState();
+}
+
+class _ModernChatButtonState extends State<_ModernChatButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.1), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.1, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTap: () {
+          _controller.forward(from: 0.0);
+          // Logic เปิดแชท
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: widget.isOnline
+                  ? [const Color(0xFF00E676), const Color(0xFF00C853)] // เขียวนีออนวัยรุ่นชอบ
+                  : [AppColors.brandPink, const Color(0xFFE91E63)], // ชมพูสดใส
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 6),
-            Text(
-              'แชท',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isOnline ? AppColors.iconGreen : AppColors.textSecondary,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: (widget.isOnline ? const Color(0xFF00C853) : AppColors.brandPink)
+                    .withValues(alpha: 0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.chat_bubble_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'แชท',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              if (widget.isOnline) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
