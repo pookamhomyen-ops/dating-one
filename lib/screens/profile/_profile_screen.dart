@@ -153,204 +153,207 @@ class ProfileScreenState extends State<ProfileScreen> {
           onRefresh: _loadUserData,
           child: CustomScrollView(
             slivers: [
+              // 1. Header Gallery
               SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    _ProfileHeader(
-                      user: _user!,
-                      onPhotosUpdated: _loadUserData,
-                      onPhotoTap: (index) =>
-                          _viewFullScreen(_user!.photoUrls, index),
-                    ),
-                    Container(
-                      transform: Matrix4.translationValues(0, -32, 0),
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                      child: Column(
+                child: _ProfileHeader(
+                  user: _user!,
+                  onPhotosUpdated: _loadUserData,
+                  onPhotoTap: (index) =>
+                      _viewFullScreen(_user!.photoUrls, index),
+                ),
+              ),
+              // 2. ข้อมูลผู้ใช้
+              SliverToBoxAdapter(
+                child: _ProfileInfoCard(user: _user!),
+              ),
+              // 3. ส่วนความสนใจและรูปภาพอื่นๆ
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: Column(
+                    children: [
+                      if (_user!.interests.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        _SectionTitle(title: 'ความสนใจ'),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _user!.interests
+                              .map(
+                                (tag) => Chip(
+                                  label: Text(tag),
+                                  backgroundColor: AppColors.background,
+                                  side: BorderSide(
+                                    color: AppColors.accent.withOpacity(
+                                      0.1,
+                                    ),
+                                  ),
+                                  labelStyle: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.accent,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                      if (_user!.photoUrls.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        _SectionTitle(title: 'รูปภาพ'),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 120,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _user!.photoUrls.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (context, i) => GestureDetector(
+                              onTap: () =>
+                                  _viewFullScreen(_user!.photoUrls, i),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.textPrimary
+                                          .withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: NetworkImageBox(
+                                  url: _user!.photoUrls[i],
+                                  width: 90,
+                                  height: 120,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _StatsRow(
-                            views: _user!.profileViews,
-                            likes: _user!.likesReceived,
-                          ),
-                          const SizedBox(height: 24),
-                          if (_user!.interests.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            _SectionTitle(title: 'ความสนใจ'),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _user!.interests
-                                  .map(
-                                    (tag) => Chip(
-                                      label: Text(tag),
-                                      backgroundColor: AppColors.background,
-                                      side: BorderSide(
-                                        color: AppColors.accent.withOpacity(
-                                          0.1,
-                                        ),
-                                      ),
-                                      labelStyle: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.accent,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ],
-                          if (_user!.photoUrls.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            _SectionTitle(title: 'รูปภาพ'),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              height: 120,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _user!.photoUrls.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(width: 12),
-                                itemBuilder: (context, i) => GestureDetector(
-                                  onTap: () =>
-                                      _viewFullScreen(_user!.photoUrls, i),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.textPrimary
-                                              .withOpacity(0.05),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: NetworkImageBox(
-                                      url: _user!.photoUrls[i],
-                                      width: 90,
-                                      height: 120,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _SectionTitle(title: 'รูปส่วนตัว 🔒'),
-                              IconButton(
-                                onPressed: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => SecretPhotoManagerScreen(
-                                        userId: _user!.id,
-                                      ),
-                                    ),
-                                  );
-                                  _loadUserData();
-                                },
-                                icon: const Icon(
-                                  Icons.add_photo_alternate_outlined,
-                                  color: AppColors.brandPink,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          if (_secretPhotoUrls.isEmpty)
-                            Container(
-                              width: double.infinity,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: AppColors.background,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppColors.background,
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  'ยังไม่มีรูปส่วนตัว กด + เพื่อเพิ่ม',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else
-                            SizedBox(
-                              height: 120,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _secretPhotoUrls.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(width: 12),
-                                itemBuilder: (context, i) => GestureDetector(
-                                  onTap: () => _viewFullScreen(
-                                    _secretPhotoUrls,
-                                    i,
-                                    isPrivate: true,
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.textPrimary
-                                              .withOpacity(0.05),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Stack(
-                                        children: [
-                                          Image.network(
-                                            _secretPhotoUrls[i],
-                                            width: 90,
-                                            height: 120,
-                                            fit: BoxFit.cover,
-                                          ),
-                                          Positioned.fill(
-                                            child: BackdropFilter(
-                                              filter: ImageFilter.blur(
-                                                sigmaX: 8,
-                                                sigmaY: 8,
-                                              ),
-                                              child: Container(
-                                                color: AppColors.textPrimary,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 48),
-                          _SettingsButton(
+                          _SectionTitle(title: 'รูปส่วนตัว 🔒'),
+                          IconButton(
                             onPressed: () async {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const AccountSettingsScreen(),
+                                  builder: (_) => SecretPhotoManagerScreen(
+                                    userId: _user!.id,
+                                  ),
                                 ),
                               );
                               _loadUserData();
                             },
+                            icon: const Icon(
+                              Icons.add_photo_alternate_outlined,
+                              color: AppColors.brandPink,
+                            ),
                           ),
-                          const SizedBox(height: 120),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      if (_secretPhotoUrls.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.background,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'ยังไม่มีรูปส่วนตัว กด + เพื่อเพิ่ม',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 120,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _secretPhotoUrls.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 12),
+                            itemBuilder: (context, i) => GestureDetector(
+                              onTap: () => _viewFullScreen(
+                                _secretPhotoUrls,
+                                i,
+                                isPrivate: true,
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.textPrimary
+                                          .withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Stack(
+                                    children: [
+                                      Image.network(
+                                        _secretPhotoUrls[i],
+                                        width: 90,
+                                        height: 120,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      Positioned.fill(
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(
+                                            sigmaX: 8,
+                                            sigmaY: 8,
+                                          ),
+                                          child: Container(
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 48),
+                      _SettingsButton(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AccountSettingsScreen(),
+                            ),
+                          );
+                          _loadUserData();
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      _StatsRow(
+                        views: _user!.profileViews,
+                        likes: _user!.likesReceived,
+                      ),
+                      const SizedBox(height: 120),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -474,24 +477,27 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
             }
           },
           onLongPress: () => widget.onPhotoTap(_currentPage),
-          child: SizedBox(
-            height: screenHeight * 0.65,
-            width: double.infinity,
-            child: photoUrls.isEmpty
-                ? Container(
-                    color: AppColors.textSecondary,
-                    child: const Icon(Icons.person, size: 100),
-                  )
-                : PageView.builder(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: photoUrls.length,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    itemBuilder: (context, index) => Image.network(
-                      photoUrls[index],
-                      fit: BoxFit.cover,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: SizedBox(
+              height: screenHeight * 0.65,
+              width: double.infinity,
+              child: photoUrls.isEmpty
+                  ? Container(
+                      color: AppColors.textSecondary,
+                      child: const Icon(Icons.person, size: 100),
+                    )
+                  : PageView.builder(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: photoUrls.length,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      itemBuilder: (context, index) => Image.network(
+                        photoUrls[index],
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                  ),
+            ),
           ),
         ),
 
@@ -582,109 +588,127 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
 
-        // ── white card ข้อมูล ──
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Transform.translate(
-            offset: const Offset(0, 32),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(32),
-                  topRight: Radius.circular(32),
+class _ProfileInfoCard extends StatelessWidget {
+  const _ProfileInfoCard({required this.user});
+
+  final UserProfile user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ชื่อ + อายุ
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  '${user.name}, ${user.age}',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.5,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ชื่อ + อายุ
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '${user.name}, ${user.age}',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -0.5,
-                            color: AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                  const _ProfileChatButton(isOnline: false),
+                  const SizedBox(width: 8),
+                  _ProfileActionButton(
+                    icon: Icons.close_rounded,
+                    color: AppColors.textSecondary,
+                    onTap: () {},
                   ),
-                  const SizedBox(height: 16),
-                  // เพศ
-                  _InfoLine(
-                    icon: user.gender == Gender.female
-                        ? Icons.female_rounded
-                        : Icons.male_rounded,
-                    text: user.gender.labelTh,
-                    iconColor: user.gender == Gender.female
-                        ? AppColors.iconPink
-                        : AppColors.iconBlue,
+                  const SizedBox(width: 8),
+                  _ProfileActionButton(
+                    icon: Icons.favorite_border,
+                    color: AppColors.brandPink,
+                    onTap: () {},
                   ),
-                  const SizedBox(height: 12),
-                  // ที่อยู่
-                  _InfoLine(
-                    icon: Icons.location_on_rounded,
-                    text: '${user.district}, ${user.province}',
-                    iconColor: AppColors.iconOrange,
-                  ),
-                  const SizedBox(height: 24),
-                  // ช่องทางติดต่อ
-                  const Text(
-                    'ช่องทางติดต่อ',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 16),
-                  if (user.lineId.isNotEmpty)
-                    _SocialInfoTile(
-                        label: 'Line ID',
-                        value: user.lineId,
-                        color: AppColors.iconGreen,
-                        badgeText: 'LINE'),
-                  if (user.instagram.isNotEmpty) ...[
-                    if (user.lineId.isNotEmpty) const SizedBox(height: 12),
-                    _SocialInfoTile(
-                        label: 'Instagram',
-                        value: user.instagram,
-                        color: AppColors.iconPink,
-                        badgeText: 'IG'),
-                  ],
-                  if (user.xHandle.isNotEmpty) ...[
-                    if (user.lineId.isNotEmpty || user.instagram.isNotEmpty)
-                      const SizedBox(height: 12),
-                    _SocialInfoTile(
-                        label: 'X (Twitter)',
-                        value: user.xHandle,
-                        color: AppColors.textPrimary,
-                        badgeText: 'X'),
-                  ],
-                  if (user.facebook.isNotEmpty) ...[
-                    if (user.lineId.isNotEmpty ||
-                        user.instagram.isNotEmpty ||
-                        user.xHandle.isNotEmpty)
-                      const SizedBox(height: 12),
-                    _SocialInfoTile(
-                        label: 'Facebook',
-                        value: user.facebook,
-                        color: AppColors.iconBlue,
-                        badgeText: 'FB'),
-                  ],
                 ],
               ),
-            ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          // เพศ
+          _InfoLine(
+            icon: user.gender == Gender.female
+                ? Icons.female_rounded
+                : Icons.male_rounded,
+            text: user.gender.labelTh,
+            iconColor: user.gender == Gender.female
+                ? AppColors.iconPink
+                : AppColors.iconBlue,
+          ),
+          const SizedBox(height: 12),
+          // ที่อยู่
+          _InfoLine(
+            icon: Icons.location_on_rounded,
+            text: '${user.district}, ${user.province}',
+            iconColor: AppColors.iconOrange,
+          ),
+          const SizedBox(height: 24),
+          // ช่องทางติดต่อ
+          const Text(
+            'ช่องทางติดต่อ',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 16),
+          if (user.lineId.isNotEmpty)
+            _SocialInfoTile(
+                label: 'Line ID',
+                value: user.lineId,
+                color: AppColors.iconGreen,
+                badgeText: 'LINE'),
+          if (user.instagram.isNotEmpty) ...[
+            if (user.lineId.isNotEmpty) const SizedBox(height: 12),
+            _SocialInfoTile(
+                label: 'Instagram',
+                value: user.instagram,
+                color: AppColors.iconPink,
+                badgeText: 'IG'),
+          ],
+          if (user.xHandle.isNotEmpty) ...[
+            if (user.lineId.isNotEmpty || user.instagram.isNotEmpty)
+              const SizedBox(height: 12),
+            _SocialInfoTile(
+                label: 'X (Twitter)',
+                value: user.xHandle,
+                color: AppColors.textPrimary,
+                badgeText: 'X'),
+          ],
+          if (user.facebook.isNotEmpty) ...[
+            if (user.lineId.isNotEmpty ||
+                user.instagram.isNotEmpty ||
+                user.xHandle.isNotEmpty)
+              const SizedBox(height: 12),
+            _SocialInfoTile(
+                label: 'Facebook',
+                value: user.facebook,
+                color: AppColors.iconBlue,
+                badgeText: 'FB'),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -796,91 +820,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.user});
-
-  final UserProfile user;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          if (user.lineId.isNotEmpty)
-            _SocialLine(emoji: '💬', label: 'Line', value: user.lineId),
-          if (user.instagram.isNotEmpty) ...[
-            if (user.lineId.isNotEmpty) const Divider(height: 16),
-            _SocialLine(emoji: '📸', label: 'IG', value: user.instagram),
-          ],
-          if (user.xHandle.isNotEmpty) ...[
-            if (user.lineId.isNotEmpty || user.instagram.isNotEmpty)
-              const Divider(height: 16),
-            _SocialLine(emoji: '✖️', label: 'X', value: user.xHandle),
-          ],
-          if (user.facebook.isNotEmpty) ...[
-            if (user.lineId.isNotEmpty ||
-                user.instagram.isNotEmpty ||
-                user.xHandle.isNotEmpty)
-              const Divider(height: 16),
-            _SocialLine(emoji: '📘', label: 'Facebook', value: user.facebook),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SocialLine extends StatelessWidget {
-  const _SocialLine({
-    required this.emoji,
-    required this.label,
-    required this.value,
-  });
-
-  final String emoji;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 20)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }}
-  class _InfoLine extends StatelessWidget {
+class _InfoLine extends StatelessWidget {
   final IconData icon;
   final String text;
   final Color iconColor;
@@ -975,3 +915,182 @@ class _SocialInfoTile extends StatelessWidget {
   }
 }
 
+class _ProfileChatButton extends StatefulWidget {
+  final bool isOnline;
+
+  const _ProfileChatButton({required this.isOnline});
+
+  @override
+  State<_ProfileChatButton> createState() => _ProfileChatButtonState();
+}
+
+class _ProfileChatButtonState extends State<_ProfileChatButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.1), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.1, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTap: () {
+          _controller.forward(from: 0.0);
+          // Logic เปิดแชท
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: widget.isOnline
+                  ? [const Color(0xFF00E676), const Color(0xFF00C853)]
+                  : [AppColors.brandPink, const Color(0xFFE91E63)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: (widget.isOnline
+                        ? const Color(0xFF00C853)
+                        : AppColors.brandPink)
+                    .withValues(alpha: 0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.chat_bubble_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'แชท',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              if (widget.isOnline) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileActionButton extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isFilled;
+
+  const _ProfileActionButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.isFilled = false,
+  });
+
+  @override
+  State<_ProfileActionButton> createState() => _ProfileActionButtonState();
+}
+
+class _ProfileActionButtonState extends State<_ProfileActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.2), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.2, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTap: () {
+          _controller.forward(from: 0.0);
+          widget.onTap();
+        },
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: widget.isFilled ? widget.color : AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.isFilled ? Colors.transparent : AppColors.border,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.icon,
+            color: widget.isFilled ? AppColors.background : widget.color,
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
+}

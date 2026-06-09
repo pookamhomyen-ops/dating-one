@@ -200,7 +200,24 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ],
                       if (_user!.photoUrls.isNotEmpty) ...[
                         const SizedBox(height: 20),
-                        _SectionTitle(title: 'รูปภาพ'),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _SectionTitle(title: 'รูปโปรไฟล์'),
+                            _SectionSettingsButton(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        PhotoManagerScreen(userId: _user!.id),
+                                  ),
+                                );
+                                _loadUserData();
+                              },
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 10),
                         SizedBox(
                           height: 120,
@@ -238,9 +255,32 @@ class ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _SectionTitle(title: 'รูปส่วนตัว 🔒'),
-                          IconButton(
-                            onPressed: () async {
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _SectionTitle(title: 'รูปส่วนตัว'),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF3E0),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFFFB300)
+                                        .withOpacity(0.4),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.lock_rounded,
+                                  size: 13,
+                                  color: Color(0xFFFFB300),
+                                ),
+                              ),
+                            ],
+                          ),
+                          _SectionSettingsButton(
+                            onTap: () async {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -251,10 +291,6 @@ class ProfileScreenState extends State<ProfileScreen> {
                               );
                               _loadUserData();
                             },
-                            icon: const Icon(
-                              Icons.add_photo_alternate_outlined,
-                              color: AppColors.brandPink,
-                            ),
                           ),
                         ],
                       ),
@@ -300,7 +336,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   boxShadow: [
                                     BoxShadow(
                                       color: AppColors.textPrimary
-                                          .withOpacity(0.05),
+                                          .withOpacity(0.08),
                                       blurRadius: 8,
                                       offset: const Offset(0, 4),
                                     ),
@@ -310,20 +346,21 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                   child: Stack(
                                     children: [
-                                      Image.network(
-                                        _secretPhotoUrls[i],
+                                      SizedBox(
                                         width: 90,
                                         height: 120,
-                                        fit: BoxFit.cover,
+                                        child: Image.network(
+                                          _secretPhotoUrls[i],
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                       Positioned.fill(
                                         child: BackdropFilter(
                                           filter: ImageFilter.blur(
-                                            sigmaX: 8,
-                                            sigmaY: 8,
-                                          ),
+                                              sigmaX: 5, sigmaY: 5),
                                           child: Container(
-                                            color: AppColors.textPrimary,
+                                            color:
+                                                Colors.black.withOpacity(0.05),
                                           ),
                                         ),
                                       ),
@@ -485,16 +522,63 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                     color: AppColors.textSecondary,
                     child: const Icon(Icons.person, size: 100),
                   )
-                : PageView.builder(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: photoUrls.length,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    itemBuilder: (context, index) => Image.network(
-                      photoUrls[index],
-                      fit: BoxFit.cover,
+                : ColorFiltered(
+                    colorFilter: ColorFilter.matrix([
+                      1.08, 0,    0,    0, 0,
+                      0,    1.05, 0,    0, 0,
+                      0,    0,    1.02, 0, 0,
+                      0,    0,    0,    1, 0,
+                    ]),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: photoUrls.length,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      itemBuilder: (context, index) => Image.network(
+                        photoUrls[index],
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
+          ),
+        ),
+
+        // Layer 2 — Vignette รอบขอบ
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.3,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.10),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Layer 3 — Gradient ด้านล่าง
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.15),
+                    Colors.black.withOpacity(0.52),
+                  ],
+                  stops: const [0.0, 0.50, 0.75, 1.0],
+                ),
+              ),
+            ),
           ),
         ),
 
@@ -523,55 +607,23 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
             ),
           ),
 
-        // ── ปุ่มกล้อง (แก้รูป) ──
+        // ── โปรไฟล์ Avatar ──
         Positioned(
           top: 60,
-          right: 20,
-          child: GestureDetector(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      PhotoManagerScreen(userId: widget.user.id),
-                ),
-              );
-              widget.onPhotosUpdated();
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.background.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.background.withValues(alpha: 0.3)),
-              ),
-              child: ClipRRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: const Icon(Icons.camera_alt_rounded,
-                      color: AppColors.background, size: 24),
-                ),
-              ),
-            ),
+          right: 16,
+          child: _ProfileAvatarButton(
+            photoUrl: widget.user.primaryPhoto,
           ),
         ),
 
         // ── bio overlay ──
         if (user.bio.isNotEmpty)
           Positioned(
-            bottom: 37,
+            bottom: 44,
             left: 20,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.68,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.textPrimary.withValues(alpha: 0.3),
-                border: Border.all(
-                    color: AppColors.background.withValues(alpha: 0.15)),
               ),
               child: Text(
                 user.bio,
@@ -579,8 +631,21 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.background.withValues(alpha: 0.85),
+                  color: AppColors.background.withValues(alpha: 0.92),
                   height: 1.4,
+                  fontWeight: FontWeight.w500,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.8),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                    Shadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -605,25 +670,37 @@ class _ProfileInfoCard extends StatelessWidget {
           topRight: Radius.circular(32),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ชื่อ + อายุ
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Flexible(
                 child: Text(
-                  '${user.name}, ${user.age}',
+                  user.name,
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: -0.5,
                     color: AppColors.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 10),
+              Text(
+                '${user.age} ปี',
+                style: const TextStyle(
+                  fontSize: 24,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const _SettingsIconButton(),
             ],
           ),
           const SizedBox(height: 16),
@@ -893,3 +970,427 @@ class _SocialInfoTile extends StatelessWidget {
   }
 }
 
+class _ProfileChatButton extends StatefulWidget {
+  final bool isOnline;
+
+  const _ProfileChatButton({required this.isOnline});
+
+  @override
+  State<_ProfileChatButton> createState() => _ProfileChatButtonState();
+}
+
+class _ProfileChatButtonState extends State<_ProfileChatButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.1), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.1, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTap: () {
+          _controller.forward(from: 0.0);
+          // Logic เปิดแชท
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: widget.isOnline
+                  ? [const Color(0xFF00E676), const Color(0xFF00C853)]
+                  : [AppColors.brandPink, const Color(0xFFE91E63)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: (widget.isOnline
+                        ? const Color(0xFF00C853)
+                        : AppColors.brandPink)
+                    .withValues(alpha: 0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.chat_bubble_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'แชท',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              if (widget.isOnline) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileActionButton extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isFilled;
+
+  const _ProfileActionButton({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.isFilled = false,
+  });
+
+  @override
+  State<_ProfileActionButton> createState() => _ProfileActionButtonState();
+}
+
+class _ProfileActionButtonState extends State<_ProfileActionButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.2), weight: 50),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.2, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTap: () {
+          _controller.forward(from: 0.0);
+          widget.onTap();
+        },
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: widget.isFilled ? widget.color : AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: widget.isFilled ? Colors.transparent : AppColors.border,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.icon,
+            color: widget.isFilled ? AppColors.background : widget.color,
+            size: 32,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsIconButton extends StatefulWidget {
+  const _SettingsIconButton();
+
+  @override
+  State<_SettingsIconButton> createState() => _SettingsIconButtonState();
+}
+
+class _SettingsIconButtonState extends State<_SettingsIconButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _rotateAnim;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _rotateAnim = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 60),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _ctrl.forward(from: 0.0),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: Transform.rotate(
+            angle: _rotateAnim.value * 3.14159,
+            child: child,
+          ),
+        ),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          child: const Icon(
+            Icons.settings_rounded,
+            size: 18,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileAvatarButton extends StatefulWidget {
+  final String photoUrl;
+  const _ProfileAvatarButton({required this.photoUrl});
+
+  @override
+  State<_ProfileAvatarButton> createState() => _ProfileAvatarButtonState();
+}
+
+class _ProfileAvatarButtonState extends State<_ProfileAvatarButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1750),
+    );
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.12), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.12, end: 0.95), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.06), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 1.06, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _glowAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 80),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _ctrl.forward(from: 0.0),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.brandPink.withOpacity(0.5 * _glowAnim.value),
+                  blurRadius: 20,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        ),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.background.withOpacity(0.9),
+              width: 2.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: widget.photoUrl.isNotEmpty
+                ? Image.network(
+                    widget.photoUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: AppColors.textSecondary,
+                      child: const Icon(Icons.person,
+                          color: Colors.white, size: 28),
+                    ),
+                  )
+                : Container(
+                    color: AppColors.textSecondary,
+                    child:
+                        const Icon(Icons.person, color: Colors.white, size: 28),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionSettingsButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _SectionSettingsButton({required this.onTap});
+
+  @override
+  State<_SectionSettingsButton> createState() => _SectionSettingsButtonState();
+}
+
+class _SectionSettingsButtonState extends State<_SectionSettingsButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _rotateAnim;
+  late Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _rotateAnim = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 60),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        _ctrl.forward(from: 0.0);
+        widget.onTap();
+      },
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: Transform.rotate(
+            angle: _rotateAnim.value * 3.14159,
+            child: child,
+          ),
+        ),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          child: const Icon(
+            Icons.settings_rounded,
+            size: 18,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
