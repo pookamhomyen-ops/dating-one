@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import 'profile_setup_step3_screen.dart';
@@ -7,12 +8,14 @@ class ProfileSetupStep2Screen extends StatefulWidget {
   final String name;
   final Gender gender;
   final DateTime birthDate;
+  final bool isEditMode;
 
   const ProfileSetupStep2Screen({
     super.key,
     required this.name,
     required this.gender,
     required this.birthDate,
+    this.isEditMode = false,
   });
 
   @override
@@ -195,39 +198,70 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
               ),
               const SizedBox(height: 40),
 
-              ElevatedButton(
-                onPressed: () {
-                  if (_provinceCtrl.text.isEmpty || _districtCtrl.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('กรุณากรอกจังหวัดและอำเภอ')),
-                    );
-                    return;
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileSetupStep3Screen(
-                        name: widget.name,
-                        gender: widget.gender,
-                        birthDate: widget.birthDate,
-                        province: _provinceCtrl.text,
-                        district: _districtCtrl.text,
-                        status: _status,
-                        brokenHeartDays: _status == 'อกหัก' ? _brokenHeartDays.round() : 0,
-                        activity: _activity,
-                        bio: _bioCtrl.text,
+              if (widget.isEditMode)
+                OutlinedButton(
+                  onPressed: () async {
+                    if (_provinceCtrl.text.isEmpty || _districtCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('กรุณากรอกจังหวัดและอำเภอ')),
+                      );
+                      return;
+                    }
+                    final user = Supabase.instance.client.auth.currentUser;
+                    if (user == null) return;
+                    await Supabase.instance.client.from('profiles').upsert({
+                      'id': user.id,
+                      'province': _provinceCtrl.text.trim(),
+                      'district': _districtCtrl.text.trim(),
+                      'relationship_status': _status,
+                      'broken_heart_days': _status == 'อกหัก' ? _brokenHeartDays.round() : 0,
+                      'current_activity': _activity,
+                      'bio': _bioCtrl.text.trim(),
+                    });
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.brandPink),
+                    foregroundColor: AppColors.brandPink,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('บันทึก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                )
+              else
+                ElevatedButton(
+                  onPressed: () {
+                    if (_provinceCtrl.text.isEmpty || _districtCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('กรุณากรอกจังหวัดและอำเภอ')),
+                      );
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfileSetupStep3Screen(
+                          name: widget.name,
+                          gender: widget.gender,
+                          birthDate: widget.birthDate,
+                          province: _provinceCtrl.text,
+                          district: _districtCtrl.text,
+                          status: _status,
+                          brokenHeartDays: _status == 'อกหัก' ? _brokenHeartDays.round() : 0,
+                          activity: _activity,
+                          bio: _bioCtrl.text,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brandPink,
-                  foregroundColor: AppColors.background,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPink,
+                    foregroundColor: AppColors.background,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('ถัดไป', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-                child: const Text('ถัดไป', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
             ],
           ),
         ),

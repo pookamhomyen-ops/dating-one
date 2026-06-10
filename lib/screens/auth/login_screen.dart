@@ -5,6 +5,7 @@ import '../../constants.dart';
 import '../../theme/app_colors.dart';
 import 'package:dating_one/screens/main_shell.dart';
 import '../profile/profile_setup_screen.dart';
+import '../profile/profile_setup_step1_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -77,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (profile == null) {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
+            MaterialPageRoute(builder: (_) => const ProfileSetupStep1Screen()),
             (route) => false,
           );
         } else {

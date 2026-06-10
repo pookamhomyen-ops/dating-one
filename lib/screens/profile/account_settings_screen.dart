@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
 import 'profile_setup_screen.dart';
+import 'profile_setup_step1_screen.dart';
+import 'profile_setup_step2_screen.dart';
+import 'profile_setup_step3_screen.dart';
+import '../../models/gender.dart';
 import '../auth/login_screen.dart';
-
-// ✅ เรียกพาร์ทตรงจากโฟลเดอร์จริงของโปรเจกต์
-import 'package:dating_one/screens/discover/discover_screen.dart';
-import 'package:dating_one/screens/discover/member_profile_screen.dart';
 
 class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
@@ -45,146 +45,380 @@ class AccountSettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<Map<String, dynamic>?> _loadProfile() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return null;
+    return Supabase.instance.client
+        .from('profiles')
+        .select('display_name, gender, birth_date, province, district, relationship_status, broken_heart_days, current_activity, bio, hated_type, interests, line_id, instagram, twitter, facebook')
+        .eq('id', user.id)
+        .maybeSingle();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'บัญชีของฉัน',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          // 1. เมนูตั้งค่าโปรไฟล์เดิม
-          _buildMenuTile(
-            icon: Icons.person_outline_rounded,
-            title: 'ตั้งค่าโปรไฟล์',
-            subtitle: 'แก้ไขข้อมูล รูปภาพ และสิ่งที่คุณสนใจ',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _loadProfile(),
+        builder: (context, snapshot) {
+          final profile = snapshot.data;
+          final name = profile?['display_name'] as String? ?? '';
+          final genderStr = profile?['gender'] as String? ?? '';
+          final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-          // 🌟 ── เพิ่มเมนูใหม่แบบกระชับ (ต่อจากตั้งค่าโปรไฟล์ตามบรีฟ) ──
-          
-          // 2. เมนูค้นหา
-          _buildMenuTile(
-            icon: Icons.explore_outlined,
-            title: 'ค้นหา',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => DiscoverScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // 3. เมนูโปรไฟล์สมาชิก
-          _buildMenuTile(
-            icon: Icons.account_box_outlined,
-            title: 'โปรไฟล์สมาชิก',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MemberProfileScreen(
-                    memberId: '00000000-0000-0000-0000-000000000000', 
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _ProfileHeroHeader(
+                  initials: initials,
+                  name: name,
+                  genderStr: genderStr,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionLabel(label: 'ข้อมูลส่วนตัว'),
+                      const SizedBox(height: 8),
+                      _MenuGroup(
+                        items: [
+                          _MenuItem(
+                            iconData: Icons.person_outline_rounded,
+                            iconBg: AppColors.brandPink.withValues(alpha: 0.12),
+                            iconColor: AppColors.brandPink,
+                            title: 'โปรไฟล์หลัก',
+                            subtitle: 'ชื่อ, เพศ, วันเกิด',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileSetupStep1Screen(isEditMode: true),
+                              ),
+                            ),
+                          ),
+                          _MenuItem(
+                            iconData: Icons.location_on_outlined,
+                            iconBg: AppColors.iconPurple.withValues(alpha: 0.12),
+                            iconColor: AppColors.iconPurple,
+                            title: 'ที่อยู่และสถานะ',
+                            subtitle: 'อำเภอ, จังหวัด, สถานะหัวใจ',
+                            onTap: () {
+                              if (profile == null) return;
+                              Gender gender = Gender.values.firstWhere(
+                                (e) => e.name == genderStr,
+                                orElse: () => Gender.other,
+                              );
+                              DateTime birthDate = DateTime(2000);
+                              if (profile['birth_date'] != null) {
+                                birthDate = DateTime.parse(profile['birth_date']);
+                              }
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProfileSetupStep2Screen(
+                                    name: name,
+                                    gender: gender,
+                                    birthDate: birthDate,
+                                    isEditMode: true,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          _MenuItem(
+                            iconData: Icons.interests_outlined,
+                            iconBg: AppColors.iconTeal.withValues(alpha: 0.12),
+                            iconColor: AppColors.iconTeal,
+                            title: 'ความสนใจและโซเชียล',
+                            subtitle: 'Line, IG, X, Facebook, สิ่งที่ชอบ/ไม่ชอบ',
+                            onTap: () {
+                              if (profile == null) return;
+                              Gender gender = Gender.values.firstWhere(
+                                (e) => e.name == genderStr,
+                                orElse: () => Gender.other,
+                              );
+                              DateTime birthDate = DateTime(2000);
+                              if (profile['birth_date'] != null) {
+                                birthDate = DateTime.parse(profile['birth_date']);
+                              }
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProfileSetupStep3Screen(
+                                    name: name,
+                                    gender: gender,
+                                    birthDate: birthDate,
+                                    province: profile['province'] ?? '',
+                                    district: profile['district'] ?? '',
+                                    status: profile['relationship_status'] ?? 'โสด',
+                                    brokenHeartDays: profile['broken_heart_days'] ?? 0,
+                                    activity: profile['current_activity'] ?? 'ทำงาน',
+                                    bio: profile['bio'] ?? '',
+                                    isEditMode: true,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _SectionLabel(label: 'บัญชี'),
+                      const SizedBox(height: 8),
+                      _MenuGroup(
+                        items: [
+                          _MenuItem(
+                            iconData: Icons.logout_rounded,
+                            iconBg: AppColors.destructive.withValues(alpha: 0.12),
+                            iconColor: AppColors.destructive,
+                            title: 'ออกจากระบบ',
+                            titleColor: AppColors.destructive,
+                            onTap: () => _handleLogout(context),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // 4. เมนูถูกใจล่าสุด
-          _buildMenuTile(
-            icon: Icons.stars_outlined,
-            title: 'ถูกใจล่าสุด',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => DiscoverScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // ───────────────────────────────────────────────
-
-          // 5. เมนูออกจากระบบเดิม
-          _buildMenuTile(
-            icon: Icons.logout_rounded,
-            title: 'ออกจากระบบ',
-            textColor: AppColors.destructive,
-            iconColor: AppColors.destructive,
-            onTap: () => _handleLogout(context),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildMenuTile({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    required VoidCallback onTap,
-    Color? textColor,
-    Color? iconColor,
-  }) {
+class _ProfileHeroHeader extends StatelessWidget {
+  final String initials;
+  final String name;
+  final String genderStr;
+
+  const _ProfileHeroHeader({
+    required this.initials,
+    required this.name,
+    required this.genderStr,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.brandPink,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'บัญชีของฉัน',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 40),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.25),
+                  border: Border.all(color: Colors.white, width: 2.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (name.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  genderStr == 'female'
+                      ? 'หญิง'
+                      : genderStr == 'male'
+                          ? 'ชาย'
+                          : 'อื่นๆ',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 0),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuGroup extends StatelessWidget {
+  final List<_MenuItem> items;
+  const _MenuGroup({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.textPrimary.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: (iconColor ?? AppColors.brandPink).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: iconColor ?? AppColors.brandPink),
+      child: Column(
+        children: items.asMap().entries.map((entry) {
+          final isLast = entry.key == items.length - 1;
+          return Column(
+            children: [
+              entry.value,
+              if (!isLast)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(height: 1, color: AppColors.border),
+                ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  final IconData iconData;
+  final Color iconBg;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final Color? titleColor;
+
+  const _MenuItem({
+    required this.iconData,
+    required this.iconBg,
+    required this.iconColor,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+    this.titleColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(iconData, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: titleColor ?? AppColors.textPrimary,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 15,
+              color: AppColors.textSecondary.withValues(alpha: 0.5),
+            ),
+          ],
         ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 16,
-            color: textColor ?? AppColors.textPrimary,
-          ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              )
-            : null,
-        trailing: Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 16,
-          color: AppColors.textSecondary.withOpacity(0.5),
-        ),
-        onTap: onTap,
       ),
     );
   }

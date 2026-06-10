@@ -14,6 +14,7 @@ class ProfileSetupStep3Screen extends StatefulWidget {
   final int brokenHeartDays;
   final String activity;
   final String bio;
+  final bool isEditMode;
 
   const ProfileSetupStep3Screen({
     super.key,
@@ -26,6 +27,7 @@ class ProfileSetupStep3Screen extends StatefulWidget {
     required this.brokenHeartDays,
     required this.activity,
     required this.bio,
+    this.isEditMode = false,
   });
 
   @override
@@ -78,7 +80,7 @@ class _ProfileSetupStep3ScreenState extends State<ProfileSetupStep3Screen> {
         'id': user.id,
         'display_name': widget.name,
         'gender': widget.gender.name,
-        'birthday': widget.birthDate.toIso8601String(),
+        'birth_date': widget.birthDate.toIso8601String().split('T')[0],
         'province': widget.province,
         'district': widget.district,
         'relationship_status': widget.status,
@@ -95,11 +97,15 @@ class _ProfileSetupStep3ScreenState extends State<ProfileSetupStep3Screen> {
       });
 
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainShell()),
-          (route) => false,
-        );
+        if (widget.isEditMode) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MainShell()),
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -228,18 +234,32 @@ class _ProfileSetupStep3ScreenState extends State<ProfileSetupStep3Screen> {
               const SizedBox(height: 32),
 
               // 4. ปุ่ม Submit บันทึกโปรไฟล์
-              ElevatedButton(
-                onPressed: _loading ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brandPink,
-                  foregroundColor: AppColors.background,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              if (widget.isEditMode)
+                OutlinedButton(
+                  onPressed: _loading ? null : _saveProfile,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.brandPink),
+                    foregroundColor: AppColors.brandPink,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _loading
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.brandPink, strokeWidth: 2))
+                      : const Text('บันทึก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                )
+              else
+                ElevatedButton(
+                  onPressed: _loading ? null : _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPink,
+                    foregroundColor: AppColors.background,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _loading
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('บันทึกโปรไฟล์สำเร็จ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-                child: _loading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('บันทึกโปรไฟล์สำเร็จ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
             ],
           ),
         ),
