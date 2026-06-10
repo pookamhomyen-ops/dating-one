@@ -349,7 +349,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     }
 
     final age = _calculateAge(_profileData!['birth_date']);
-    final isOnline = _profileData!['is_online'] ?? false;
     final isVerified = _profileData!['is_verified'] ?? false;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -446,6 +445,31 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       ),
                     ),
                     Positioned(
+                      bottom: 20,
+                      right: 16,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _AnimatedActionButton(
+                            icon: Icons.close_rounded,
+                            color: AppColors.textSecondary,
+                            size: 64,
+                            onTap: () => Navigator.pop(context),
+                          ),
+                          const SizedBox(width: 10),
+                          _AnimatedActionButton(
+                            icon: _isLiked
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: AppColors.brandPink,
+                            isFilled: _isLiked,
+                            size: 64,
+                            onTap: () => setState(() => _isLiked = !_isLiked),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
                       bottom: 5,
                       left: 20,
                       child: Container(
@@ -495,10 +519,10 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [ 
+                children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center, // 🔒 จัดให้ชื่อ อายุ และปุ่มแชท อยู่กึ่งกลางแนวตั้งร่วมกับปุ่มกดใจ/กากบาท
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Row(
@@ -524,34 +548,6 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                   size: 24,
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
-                      // ── ส่วนปุ่ม Action ปรับปรุงขนาดและระยะห่างใหม่ ──
-                      Padding(
-                        padding: const EdgeInsets.only(right: 5), // 📍 เว้นระยะห่างจากขอบรูปภาพด้านขวา 5px ไม่ให้ปุ่มไปชนขอบพอดี
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center, // 🔒 ล็อกปุ่มแชทให้อยู่กึ่งกลางแนวตั้งเดียวกับปุ่มกดใจ/กากบาท
-                          children: [
-                            _AnimatedActionButton(
-                              icon: Icons.close_rounded,
-                              color: AppColors.textSecondary,
-                              onTap: () {
-                                Navigator.pop(context);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _AnimatedActionButton(
-                              icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: AppColors.brandPink,
-                              isFilled: _isLiked,
-                              onTap: () {
-                                setState(() => _isLiked = !_isLiked);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            _ModernChatButton(isOnline: isOnline), // 🔒 ขนาดปุ่มแชทเท่าเดิม ไม่ขยายตาม
                           ],
                         ),
                       ),
@@ -744,19 +740,19 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   }
 }
 
-// 🔍 ค้นหาคอมโพเนนต์ _AnimatedActionButton ด้านล่างของไฟล์ แล้วเปลี่ยนเป็นบล็อกนี้ครับ:
-
 class _AnimatedActionButton extends StatefulWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
   final bool isFilled;
+  final double size;
 
   const _AnimatedActionButton({
     required this.icon,
     required this.color,
     required this.onTap,
     this.isFilled = false,
+    this.size = 56,
   });
 
   @override
@@ -797,8 +793,8 @@ class _AnimatedActionButtonState extends State<_AnimatedActionButton>
           widget.onTap();
         },
         child: Container(
-          width: 56,  // ✅ เพิ่มขนาดปุ่มกากบาทและกดใจให้ใหญ่ขึ้นเป็น 56
-          height: 56, // ✅ เพิ่มขนาดปุ่มกากบาทและกดใจให้ใหญ่ขึ้นเป็น 56
+          width: widget.size,
+          height: widget.size,
           decoration: BoxDecoration(
             color: widget.isFilled ? widget.color : AppColors.surface,
             shape: BoxShape.circle,
@@ -817,107 +813,7 @@ class _AnimatedActionButtonState extends State<_AnimatedActionButton>
           child: Icon(
             widget.icon,
             color: widget.isFilled ? AppColors.background : widget.color,
-            size: 28, // ✅ เพิ่มขนาดไอคอนข้างในตามขนาดปุ่มเพื่อให้สมดุลสวยงาม
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── ปุ่ม "แชท" ดีไซน์ใหม่ ทันสมัย วัยรุ่นชอบ ──
-class _ModernChatButton extends StatefulWidget {
-  final bool isOnline;
-
-  const _ModernChatButton({required this.isOnline});
-
-  @override
-  State<_ModernChatButton> createState() => _ModernChatButtonState();
-}
-
-class _ModernChatButtonState extends State<_ModernChatButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.1), weight: 50),
-      TweenSequenceItem(tween: Tween<double>(begin: 1.1, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: GestureDetector(
-        onTap: () {
-          _controller.forward(from: 0.0);
-          // Logic เปิดแชท
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: widget.isOnline
-                  ? [const Color(0xFF00E676), const Color(0xFF00C853)] // เขียวนีออนวัยรุ่นชอบ
-                  : [AppColors.brandPink, const Color(0xFFE91E63)], // ชมพูสดใส
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: (widget.isOnline ? const Color(0xFF00C853) : AppColors.brandPink)
-                    .withValues(alpha: 0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.chat_bubble_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'แชท',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              if (widget.isOnline) ...[
-                const SizedBox(width: 6),
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ],
+            size: widget.size * 0.5,
           ),
         ),
       ),
@@ -936,48 +832,134 @@ class _VerticalActionButtons extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SideBarButton(
-          icon: Icons.person_pin_rounded,
-          label: 'ติดตาม',
-          color: AppColors.iconPurple,
+        _AnimatedSideBarButton(
+          icon: Icons.chat_bubble_rounded,
+          label: 'แชท',
+          color: const Color(0xFF00BCD4),
+          animType: _SideBarAnimType.bounce,
           onTap: onFollowTap ?? () {},
         ),
         const SizedBox(height: 12),
-        _SideBarButton(
-          icon: Icons.favorite_rounded,
-          label: 'ส่งใจ',
-          color: AppColors.brandPink,
+        _AnimatedSideBarButton(
+          icon: Icons.add_circle_rounded,
+          label: 'ติดตาม',
+          color: AppColors.iconPurple,
+          animType: _SideBarAnimType.spin,
+          onTap: onFollowTap ?? () {},
+        ),
+        const SizedBox(height: 12),
+        _AnimatedSideBarButton(
+          icon: Icons.directions_walk_rounded,
+          label: 'จะไป',
+          color: const Color(0xFFFF7043),
+          animType: _SideBarAnimType.shake,
           onTap: () {},
         ),
         const SizedBox(height: 12),
-        _SideBarButton(
-          icon: Icons.eco_rounded,
-          label: 'ใบไม้',
-          color: AppColors.iconGreen,
-          onTap: onLeafTap ?? () {},
-        ),
+        _LeafButton(onTap: onLeafTap ?? () {}),
       ],
     );
   }
 }
 
-class _SideBarButton extends StatelessWidget {
+enum _SideBarAnimType { bounce, spin, shake }
+
+class _AnimatedSideBarButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final _SideBarAnimType animType;
   final VoidCallback onTap;
 
-  const _SideBarButton({
+  const _AnimatedSideBarButton({
     required this.icon,
     required this.label,
     required this.color,
+    required this.animType,
     required this.onTap,
   });
 
   @override
+  State<_AnimatedSideBarButton> createState() => _AnimatedSideBarButtonState();
+}
+
+class _AnimatedSideBarButtonState extends State<_AnimatedSideBarButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    switch (widget.animType) {
+      case _SideBarAnimType.bounce:
+        _anim = TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 1.4, end: 0.85), weight: 25),
+          TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.1), weight: 25),
+          TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 20),
+        ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+        break;
+      case _SideBarAnimType.spin:
+        _anim = Tween<double>(begin: 0.0, end: 1.0)
+            .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+        break;
+      case _SideBarAnimType.shake:
+        _anim = TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.15), weight: 20),
+          TweenSequenceItem(tween: Tween(begin: -0.15, end: 0.15), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 0.15, end: -0.1), weight: 25),
+          TweenSequenceItem(tween: Tween(begin: -0.1, end: 0.0), weight: 25),
+        ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Widget _buildAnimatedIcon() {
+    switch (widget.animType) {
+      case _SideBarAnimType.bounce:
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) =>
+              Transform.scale(scale: _anim.value, child: child),
+          child: Icon(widget.icon, color: widget.color, size: 20),
+        );
+      case _SideBarAnimType.spin:
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) => Transform.rotate(
+            angle: _anim.value * 2 * 3.14159,
+            child: child,
+          ),
+          child: Icon(widget.icon, color: widget.color, size: 20),
+        );
+      case _SideBarAnimType.shake:
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) =>
+              Transform.rotate(angle: _anim.value, child: child),
+          child: Icon(widget.icon, color: widget.color, size: 20),
+        );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        _ctrl.forward(from: 0.0);
+        widget.onTap();
+      },
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: 68,
@@ -985,7 +967,7 @@ class _SideBarButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
+          border: Border.all(color: widget.color.withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
               color: AppColors.textPrimary.withValues(alpha: 0.03),
@@ -1000,18 +982,220 @@ class _SideBarButton extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: widget.color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: _buildAnimatedIcon(),
             ),
             const SizedBox(height: 4),
             Text(
-              label,
+              widget.label,
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: color,
+                color: widget.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LeafButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _LeafButton({required this.onTap});
+
+  @override
+  State<_LeafButton> createState() => _LeafButtonState();
+}
+
+class _LeafButtonState extends State<_LeafButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _iconAnim;
+  late Animation<double> _popupAnim;
+  bool _showPopup = false;
+  OverlayEntry? _overlayEntry;
+  final GlobalKey _btnKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 350));
+    _iconAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 35),
+      TweenSequenceItem(tween: Tween(begin: 1.35, end: 0.9), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 35),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _popupAnim = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _showPopup = false;
+  }
+
+  void _togglePopup() {
+    if (_showPopup) {
+      _ctrl.reverse().then((_) => _removeOverlay());
+      return;
+    }
+
+    _ctrl.forward(from: 0.0);
+    _showPopup = true;
+
+    final box = _btnKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final pos = box.localToGlobal(Offset.zero);
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Stack(
+        children: [
+          // พื้นที่โปร่งใส กดปิด popup
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => _ctrl.reverse().then((_) => _removeOverlay()),
+              behavior: HitTestBehavior.translucent,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          Positioned(
+            top: pos.dy + box.size.height / 2 - 28,
+            left: pos.dx - 230,
+            child: AnimatedBuilder(
+              animation: _popupAnim,
+              builder: (_, child) => Transform.scale(
+                scale: _popupAnim.value,
+                alignment: Alignment.centerRight,
+                child: Opacity(
+                    opacity: (_popupAnim.value).clamp(0.0, 1.0), child: child),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 220,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                        color: Colors.black.withOpacity(0.12), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.iconGreen.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.eco_rounded,
+                                color: AppColors.iconGreen, size: 14),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'สถานะใบไม้',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'จะไป บิ๊กซี เอ็กส์ต้าส์\nตอน บ่ายโมงครึ่ง\nและกลับตอนหัวค่ำ',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF20212B),
+                          fontWeight: FontWeight.w500,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(_btnKey.currentContext!).insert(_overlayEntry!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: _btnKey,
+      onTap: _togglePopup,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 68,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.iconGreen.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.iconGreen.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: AnimatedBuilder(
+                animation: _iconAnim,
+                builder: (_, child) => Transform.scale(
+                  scale: _showPopup ? 1.0 : _iconAnim.value,
+                  child: child,
+                ),
+                child: Icon(Icons.eco_rounded,
+                    color: AppColors.iconGreen, size: 20),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ใบไม้',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppColors.iconGreen,
               ),
             ),
           ],

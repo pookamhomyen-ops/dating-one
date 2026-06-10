@@ -4,6 +4,10 @@ import '../../theme/app_colors.dart';
 import 'profile_setup_screen.dart';
 import '../auth/login_screen.dart';
 
+// ✅ เรียกพาร์ทตรงจากโฟลเดอร์จริงของโปรเจกต์
+import 'package:dating_one/screens/discover/discover_screen.dart';
+import 'package:dating_one/screens/discover/member_profile_screen.dart';
+
 class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
 
@@ -47,47 +51,91 @@ class AccountSettingsScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'ตั้งค่าบัญชี',
-          style: TextStyle(fontWeight: FontWeight.w500),
+          'บัญชีของฉัน',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _buildSettingsItem(
-              context,
-              icon: Icons.person_outline_rounded,
-              title: 'ตั้งค่าโปรไฟล์',
-              subtitle: 'แก้ไขข้อมูลส่วนตัว',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSettingsItem(
-              context,
-              icon: Icons.logout_rounded,
-              title: 'ออกจากระบบ',
-              textColor: AppColors.destructiveAccent,
-              iconColor: AppColors.destructiveAccent,
-              onTap: () => _handleLogout(context),
-            ),
-          ],
-        ),
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          // 1. เมนูตั้งค่าโปรไฟล์เดิม
+          _buildMenuTile(
+            icon: Icons.person_outline_rounded,
+            title: 'ตั้งค่าโปรไฟล์',
+            subtitle: 'แก้ไขข้อมูล รูปภาพ และสิ่งที่คุณสนใจ',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // 🌟 ── เพิ่มเมนูใหม่แบบกระชับ (ต่อจากตั้งค่าโปรไฟล์ตามบรีฟ) ──
+          
+          // 2. เมนูค้นหา
+          _buildMenuTile(
+            icon: Icons.explore_outlined,
+            title: 'ค้นหา',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DiscoverScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // 3. เมนูโปรไฟล์สมาชิก
+          _buildMenuTile(
+            icon: Icons.account_box_outlined,
+            title: 'โปรไฟล์สมาชิก',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MemberProfileScreen(
+                    memberId: '00000000-0000-0000-0000-000000000000', 
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // 4. เมนูถูกใจล่าสุด
+          _buildMenuTile(
+            icon: Icons.stars_outlined,
+            title: 'ถูกใจล่าสุด',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DiscoverScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          
+          // ───────────────────────────────────────────────
+
+          // 5. เมนูออกจากระบบเดิม
+          _buildMenuTile(
+            icon: Icons.logout_rounded,
+            title: 'ออกจากระบบ',
+            textColor: AppColors.destructive,
+            iconColor: AppColors.destructive,
+            onTap: () => _handleLogout(context),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSettingsItem(
-    BuildContext context, {
+  Widget _buildMenuTile({
     required IconData icon,
     required String title,
     String? subtitle,
@@ -131,7 +179,11 @@ class AccountSettingsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               )
             : null,
-        trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+        trailing: Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: 16,
+          color: AppColors.textSecondary.withOpacity(0.5),
+        ),
         onTap: onTap,
       ),
     );

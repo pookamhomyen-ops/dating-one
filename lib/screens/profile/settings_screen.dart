@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/gender.dart';
 import '../../models/user_profile.dart';
 import '../../theme/app_colors.dart';
+import '../discover/discover_screen.dart';
+import '../discover/member_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.profile});
@@ -72,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> _save() async {
+  Future<void> _saveProfile() async {
     setState(() => _loading = true);
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -113,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('ตั้งค่าโปรไฟล์'),
         actions: [
           TextButton(
-            onPressed: _loading ? null : _save,
+            onPressed: _loading ? null : _saveProfile,
             child: const Text(
               'บันทึก',
               style: TextStyle(
@@ -211,6 +213,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 .toList(),
           ),
           const SizedBox(height: 40),
+
+          // ── ปุ่มบันทึกเดิม ──
+          ElevatedButton(
+            onPressed: _saveProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brandPink,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: const Text('บันทึกตั้งค่าโปรไฟล์', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 20),
+
+          // ── เริ่มต้นเมนูทางลัดที่เพิ่มใหม่สำหรับนักพัฒนา ──
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'เมนูทดสอบระบบ (Developer Shortcuts)',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const DiscoverScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.explore_outlined, color: AppColors.brandPink),
+                  label: const Text('หน้าค้นหา', style: TextStyle(color: AppColors.textPrimary)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MemberProfileScreen(
+                          memberId: '00000000-0000-0000-0000-000000000000', // ใส่ UUID ตัวอย่างสำหรับทดสอบในระบบของคุณ
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.account_box_outlined, color: AppColors.brandPink),
+                  label: const Text('ดูโปรไฟล์', style: TextStyle(color: AppColors.textPrimary)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // ── สิ้นสุดเมนูทางลัดที่เพิ่มใหม่ ──
+
+          const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 12),
           OutlinedButton.icon(
