@@ -99,70 +99,58 @@ class AccountSettingsScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          _MenuItem(
-                            iconData: Icons.location_on_outlined,
-                            iconBg: AppColors.iconPurple.withValues(alpha: 0.12),
-                            iconColor: AppColors.iconPurple,
-                            title: 'ที่อยู่และสถานะ',
-                            subtitle: 'อำเภอ, จังหวัด, สถานะหัวใจ',
-                            onTap: () {
-                              if (profile == null) return;
-                              Gender gender = Gender.values.firstWhere(
-                                (e) => e.name == genderStr,
-                                orElse: () => Gender.other,
-                              );
-                              DateTime birthDate = DateTime(2000);
-                              if (profile['birth_date'] != null) {
-                                birthDate = DateTime.parse(profile['birth_date']);
-                              }
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ProfileSetupStep2Screen(
-                                    name: name,
-                                    gender: gender,
-                                    birthDate: birthDate,
-                                    isEditMode: true,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          _MenuItem(
-                            iconData: Icons.interests_outlined,
-                            iconBg: AppColors.iconTeal.withValues(alpha: 0.12),
-                            iconColor: AppColors.iconTeal,
-                            title: 'ความสนใจและโซเชียล',
-                            subtitle: 'Line, IG, X, Facebook, สิ่งที่ชอบ/ไม่ชอบ',
-                            onTap: () {
-                              if (profile == null) return;
-                              Gender gender = Gender.values.firstWhere(
-                                (e) => e.name == genderStr,
-                                orElse: () => Gender.other,
-                              );
-                              DateTime birthDate = DateTime(2000);
-                              if (profile['birth_date'] != null) {
-                                birthDate = DateTime.parse(profile['birth_date']);
-                              }
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ProfileSetupStep3Screen(
-                                    name: name,
-                                    gender: gender,
-                                    birthDate: birthDate,
-                                    province: profile['province'] ?? '',
-                                    district: profile['district'] ?? '',
-                                    status: profile['relationship_status'] ?? 'โสด',
-                                    brokenHeartDays: profile['broken_heart_days'] ?? 0,
-                                    activity: profile['current_activity'] ?? 'ทำงาน',
-                                    bio: profile['bio'] ?? '',
-                                    isEditMode: true,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                         _MenuItem(
+  iconData: Icons.location_on_outlined,
+  iconBg: AppColors.iconPurple.withValues(alpha: 0.12),
+  iconColor: AppColors.iconPurple,
+  title: 'ที่อยู่และสถานะ',
+  subtitle: 'อำเภอ, จังหวัด, สถานะหัวใจ',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileSetupStep2Screen(
+          name: name,
+          gender: Gender.values.firstWhere(
+            (e) => e.name == genderStr,
+            orElse: () => Gender.other,
+          ),
+          birthDate: DateTime(2000),
+          isEditMode: true,
+        ),
+      ),
+    );
+  },
+),
+                         _MenuItem(
+  iconData: Icons.interests_outlined,
+  iconBg: AppColors.iconTeal.withValues(alpha: 0.12),
+  iconColor: AppColors.iconTeal,
+  title: 'ความสนใจและโซเชียล',
+  subtitle: 'Line, IG, X, Facebook, สิ่งที่ชอบ/ไม่ชอบ',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileSetupStep3Screen(
+          name: name,
+          gender: Gender.values.firstWhere(
+            (e) => e.name == genderStr,
+            orElse: () => Gender.other,
+          ),
+          birthDate: DateTime(2000),
+          province: '',
+          district: '',
+          status: 'โสด',
+          brokenHeartDays: 0,
+          activity: 'ทำงาน',
+          bio: '',
+          isEditMode: true,
+        ),
+      ),
+    );
+  },
+),
                         ],
                       ),
                       const SizedBox(height: 24),
