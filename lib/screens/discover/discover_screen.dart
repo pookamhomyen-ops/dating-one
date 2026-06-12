@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'member_profile_screen.dart';
+import 'swipe_screen.dart';
 import '../../models/member.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
@@ -289,7 +290,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         genderLabel: _genderFilter,
                         onNearMe: () =>
                             setState(() => _nearMeActive = !_nearMeActive),
-                        onFilter: () {},
+                        onFilter: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SwipeScreen()),
+                          );
+                        },
                         onGender: () => _showGenderSheet(),
                         onSearch: () {},
                       ),
