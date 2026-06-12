@@ -22,6 +22,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
   bool _nearMeActive = true;
   String _genderFilter = 'ทุกเพศ';
   final Set<String> _likedIds = {};
+  final Set<String> _passedIds = {};
+  final List<Member> _likedMembers = []; // แยก list สำหรับ "ถูกใจล่าสุด"
   final Map<String, AnimationController> _dismissControllers = {};
   final Map<String, Animation<Offset>> _slideAnimations = {};
   final Map<String, Animation<double>> _fadeAnimations = {};
@@ -40,15 +42,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _loadMembers();
-    _loadLikedIds();
+    _loadExcludedIds().then((_) => _loadMembers());
   }
 
   void _registerCard(String id) {
     if (_dismissControllers.containsKey(id)) return;
     final ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 300),
     );
     _dismissControllers[id] = ctrl;
     _slideAnimations[id] = Tween<Offset>(
@@ -86,23 +87,64 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
     }
   }
 
-  Future<void> _loadLikedIds() async {
+  Future<void> _loadExcludedIds() async {
     try {
       final me = Supabase.instance.client.auth.currentUser;
       if (me == null) return;
-      final data = await Supabase.instance.client
+
+      // โหลด liked IDs
+      final likesData = await Supabase.instance.client
           .from('profile_likes')
-          .select('liked_id')
-          .eq('liker_id', me.id);
+          .select('liked_id, profiles!profile_likes_liked_id_fkey(id, display_name, profile_photos(public_url, is_primary, sort_order))')
+          .eq('liker_id', me.id)
+          .order('created_at', ascending: false);
+
+      // โหลด passed IDs
+      final passesData = await Supabase.instance.client
+          .from('profile_passes')
+          .select('passed_id')
+          .eq('passer_id', me.id);
+
       if (mounted) {
         setState(() {
-          for (var row in data as List) {
-            _likedIds.add(row['liked_id'] as String);
+          for (var row in likesData as List) {
+            final id = row['liked_id'] as String;
+            _likedIds.add(id);
+            // สร้าง Member สำหรับ "ถูกใจล่าสุด"
+            final profile = row['profiles'] as Map<String, dynamic>?;
+            if (profile != null) {
+              final photos = (profile['profile_photos'] as List? ?? []);
+              String photoUrl = '';
+              if (photos.isNotEmpty) {
+                final sorted = List.from(photos)
+                  ..sort((a, b) {
+                    if (a['is_primary'] == true) return -1;
+                    if (b['is_primary'] == true) return 1;
+                    return (a['sort_order'] ?? 999).compareTo(b['sort_order'] ?? 999);
+                  });
+                photoUrl = sorted.first['public_url'] ?? '';
+              }
+              _likedMembers.add(Member(
+                id: id,
+                name: profile['display_name'] ?? '',
+                gender: Gender.other,
+                age: 0,
+                province: '',
+                district: '',
+                distanceKm: 0,
+                photoUrl: photoUrl,
+                university: '',
+                occupation: '',
+              ));
+            }
+          }
+          for (var row in passesData as List) {
+            _passedIds.add(row['passed_id'] as String);
           }
         });
       }
     } catch (e) {
-      debugPrint('Load liked IDs error: $e');
+      debugPrint('Load excluded IDs error: $e');
     }
   }
 
@@ -114,8 +156,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
     final me = client.auth.currentUser;
     if (me == null) return;
 
-    // update UI + เริ่ม dismiss animation ทันที
-    setState(() => _likedIds.add(member.id));
+    // update UI + เพิ่มเข้า liked members row + เริ่ม dismiss animation
+    setState(() {
+      _likedIds.add(member.id);
+      if (!_likedMembers.any((m) => m.id == member.id)) {
+        _likedMembers.insert(0, member); // เพิ่มหัวสุด = ล่าสุดก่อน
+      }
+    });
     _dismissCard(member, toRight: true);
 
     // like: insert ลง DB
@@ -147,7 +194,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
   }
 
   Future<void> _handlePass(Member member) async {
-    await _dismissCard(member, toRight: false);
+    setState(() => _passedIds.add(member.id));
+    _dismissCard(member, toRight: false);
+    // บันทึกลง DB
+    try {
+      final me = Supabase.instance.client.auth.currentUser;
+      if (me == null) return;
+      await Supabase.instance.client.from('profile_passes').upsert({
+        'passer_id': me.id,
+        'passed_id': member.id,
+      });
+    } catch (e) {
+      debugPrint('Pass error: $e');
+    }
   }
 
   Future<void> _createConversation(String myId, String targetId) async {
@@ -300,7 +359,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
       loadedMembers.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
 
       setState(() {
-        _members = loadedMembers;
+        // filter คนที่กดใจแล้ว และกดผ่านแล้วออก
+        _members = loadedMembers
+            .where((m) => !_likedIds.contains(m.id) && !_passedIds.contains(m.id))
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -335,8 +397,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final likedMembers = _members.where((m) => _likedIds.contains(m.id)).toList();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -361,7 +421,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
                             ),
                           ),
                           const SizedBox(height: 10),
-                          likedMembers.isEmpty
+                          _likedMembers.isEmpty
                               ? const SizedBox(
                                   height: 90,
                                   child: Center(
@@ -375,9 +435,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
                                   height: 90,
                                   child: ListView.builder(
                                     scrollDirection: Axis.horizontal,
-                                    itemCount: likedMembers.length,
+                                    itemCount: _likedMembers.length,
                                     itemBuilder: (context, index) {
-                                      final member = likedMembers[index];
+                                      final member = _likedMembers[index];
                                       return GestureDetector(
                                         onTap: () {
                                           Navigator.push(
@@ -477,24 +537,30 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
                         _registerCard(member.id);
                         final slideAnim = _slideAnimations[member.id]!;
                         final fadeAnim = _fadeAnimations[member.id]!;
-                        return SlideTransition(
-                          position: slideAnim,
-                          child: FadeTransition(
-                            opacity: fadeAnim,
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MemberProfileScreen(memberId: member.id),
-                                  ),
-                                );
-                              },
-                              child: _MemberCard(
-                                member: member,
-                                liked: _likedIds.contains(member.id),
-                                onLike: () => _handleLike(member),
-                                onPass: () => _handlePass(member),
+                        final isAnimating = _dismissControllers[member.id]?.isAnimating ?? false;
+                        return AnimatedSize(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeOutCubic,
+                          child: SlideTransition(
+                            position: slideAnim,
+                            child: FadeTransition(
+                              opacity: fadeAnim,
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (isAnimating) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => MemberProfileScreen(memberId: member.id),
+                                    ),
+                                  );
+                                },
+                                child: _MemberCard(
+                                  member: member,
+                                  liked: _likedIds.contains(member.id),
+                                  onLike: () => _handleLike(member),
+                                  onPass: () => _handlePass(member),
+                                ),
                               ),
                             ),
                           ),
@@ -704,7 +770,7 @@ class _SearchButton extends StatelessWidget {
 
 // ── MemberCard ───────────────────────────────────────────
 
-class _MemberCard extends StatelessWidget {
+class _MemberCard extends StatefulWidget {
   const _MemberCard({
     required this.member,
     required this.liked,
@@ -717,167 +783,199 @@ class _MemberCard extends StatelessWidget {
   final VoidCallback onPass;
 
   @override
+  State<_MemberCard> createState() => _MemberCardState();
+}
+
+class _MemberCardState extends State<_MemberCard> {
+  double _dragDx = 0;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textPrimary.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    final Member member = widget.member;
+    final bool liked = widget.liked;
+
+    return GestureDetector(
+      onHorizontalDragUpdate: (d) {
+        setState(() => _dragDx += d.delta.dx);
+      },
+      onHorizontalDragEnd: (d) {
+        if (_dragDx > 80) {
+          widget.onLike();
+        } else if (_dragDx < -80) {
+          widget.onPass();
+        }
+        setState(() => _dragDx = 0);
+      },
+      child: Transform.translate(
+        offset: Offset(_dragDx * 0.15, 0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(
+              color: _dragDx > 40
+                  ? AppColors.brandPink.withValues(alpha: 0.5)
+                  : _dragDx < -40
+                      ? AppColors.destructive.withValues(alpha: 0.4)
+                      : AppColors.border.withValues(alpha: 0.6),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.textPrimary.withValues(alpha: 0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _ProfilePhoto(member: member),
-            const SizedBox(width: 14),
-            Expanded(
-              child: SizedBox(
-                height: 110, // 🔒 ล็อกความสูงให้เท่ากับรูปภาพเป๊ะ เพื่อไม่ให้ตำแหน่งกระโดด
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // 🔒 ตรึงชื่อไว้บนสุด ตรึงสเตตัสไว้ล่างสุด
-                  children: [
-                    // บรรทัดบนสุด: ชื่อและอายุ
-                    Row(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _ProfilePhoto(member: member),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: SizedBox(
+                    height: 110, // 🔒 ล็อกความสูงให้เท่ากับรูปภาพเป๊ะ เพื่อไม่ให้ตำแหน่งกระโดด
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween, // 🔒 ตรึงชื่อไว้บนสุด ตรึงสเตตัสไว้ล่างสุด
                       children: [
-                        Flexible(
-                          child: Text(
-                            member.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.cake_outlined,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${member.age}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    // บรรทัดกลาง: แยก อำเภอ และ จังหวัด พร้อมใส่ Emoji สวยๆ นำหน้า
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (member.district.isNotEmpty) ...[
-                                Row(
-                                  children: [
-                                    const Text('📍 ', style: TextStyle(fontSize: 11)),
-                                    Expanded(
-                                      child: Text(
-                                        member.district,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2), // ระยะห่างกระชับพิเศษไม่ให้เบียดบนล่าง
-                              ],
-                              if (member.province.isNotEmpty)
-                                Row(
-                                  children: [
-                                    const Text('🗺️ ', style: TextStyle(fontSize: 11)),
-                                    Expanded(
-                                      child: Text(
-                                        member.province,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                        ),
-                        
-                        // 🔒 ตรึงตำแหน่งปุ่มกดให้อยู่ที่เดิม ไม่ขยับตามบรรทัดข้อความ
+                        // บรรทัดบนสุด: ชื่อและอายุ
                         Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Material(
-                              color: AppColors.surface,
-                              shape: const CircleBorder(),
-                              elevation: 1,
-                              shadowColor: AppColors.textPrimary,
-                              child: InkWell(
-                                onTap: onPass,
-                                customBorder: const CircleBorder(),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: const Icon(
-                                    Icons.close_rounded,
-                                    color: AppColors.textSecondary,
-                                    size: 20,
-                                  ),
+                            Flexible(
+                              child: Text(
+                                member.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            _LikeButton(liked: liked, onTap: onLike),
+                            const Icon(
+                              Icons.cake_outlined,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${member.age}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           ],
+                        ),
+                        
+                        // บรรทัดกลาง: แยก อำเภอ และ จังหวัด พร้อมใส่ Emoji สวยๆ นำหน้า
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (member.district.isNotEmpty) ...[
+                                    Row(
+                                      children: [
+                                        const Text('📍 ', style: TextStyle(fontSize: 11)),
+                                        Expanded(
+                                          child: Text(
+                                            member.district,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2), // ระยะห่างกระชับพิเศษไม่ให้เบียดบนล่าง
+                                  ],
+                                  if (member.province.isNotEmpty)
+                                    Row(
+                                      children: [
+                                        const Text('🗺️ ', style: TextStyle(fontSize: 11)),
+                                        Expanded(
+                                          child: Text(
+                                            member.province,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                            
+                            // 🔒 ตรึงตำแหน่งปุ่มกดให้อยู่ที่เดิม ไม่ขยับตามบรรทัดข้อความ
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Material(
+                                  color: AppColors.surface,
+                                  shape: const CircleBorder(),
+                                  elevation: 1,
+                                  shadowColor: AppColors.textPrimary,
+                                  child: InkWell(
+                                    onTap: widget.onPass,
+                                    customBorder: const CircleBorder(),
+                                    child: Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        color: AppColors.textSecondary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _LikeButton(liked: liked, onTap: widget.onLike),
+                              ],
+                            ),
+                          ],
+                        ),
+                        
+                        // บรรทัดล่างสุด: สเตตัส (Bio) ตรึงไว้ขอบล่างของรูปภาพพอดี
+                        Text(
+                          member.bio,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ],
                     ),
-                    
-                    // บรรทัดล่างสุด: สเตตัส (Bio) ตรึงไว้ขอบล่างของรูปภาพพอดี
-                    Text(
-                      member.bio,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

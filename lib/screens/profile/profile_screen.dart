@@ -9,6 +9,7 @@ import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
 import '../../widgets/full_screen_image_viewer.dart';
+import 'liked_me_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -96,24 +97,41 @@ class ProfileScreenState extends State<ProfileScreen> {
 
         setState(() {
           _secretPhotoUrls = secretUrls;
-          _user = UserProfile(
-            id: data['id'],
-            name: data['display_name'] ?? 'ไม่มีชื่อ',
-            gender: gender,
-            age: age,
-            province: data['province'] ?? '',
-            district: data['district'] ?? '',
-            photoUrls: photoUrls,
-            bio: data['bio'] ?? '',
-            interests: [],
-            profileViews: data['profile_views_count'] ?? 0,
-            likesReceived: data['likes_received_count'] ?? 0,
-            lineId: data['line_id'] ?? '',
-            instagram: data['instagram'] ?? '',
-            xHandle: data['x_handle'] ?? '',
-            facebook: data['facebook'] ?? '',
-          );
         });
+
+        final likedMeResult = await Supabase.instance.client
+            .from('profile_likes')
+            .select()
+            .eq('liked_id', authUser.id);
+        final myLikesResult = await Supabase.instance.client
+            .from('profile_likes')
+            .select()
+            .eq('liker_id', authUser.id);
+
+        final likedMeCount = (likedMeResult as List).length;
+        final myLikesCount = (myLikesResult as List).length;
+
+        if (mounted) {
+          setState(() {
+            _user = UserProfile(
+              id: data['id'],
+              name: data['display_name'] ?? 'ไม่มีชื่อ',
+              gender: gender,
+              age: age,
+              province: data['province'] ?? '',
+              district: data['district'] ?? '',
+              photoUrls: photoUrls,
+              bio: data['bio'] ?? '',
+              interests: [],
+              profileViews: likedMeCount,
+              likesReceived: myLikesCount,
+              lineId: data['line_id'] ?? '',
+              instagram: data['instagram'] ?? '',
+              xHandle: data['x_handle'] ?? '',
+              facebook: data['facebook'] ?? '',
+            );
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading profile: $e');
@@ -385,8 +403,16 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 24),
                       _StatsRow(
-                        views: _user!.profileViews,
-                        likes: _user!.likesReceived,
+                        likedMeCount: _user!.profileViews,
+                        myLikesCount: _user!.likesReceived,
+                        onLikedMeTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LikedMeScreen()),
+                        ),
+                        onMyLikesTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MyLikesScreen()),
+                        ),
                       ),
                       const SizedBox(height: 120),
                     ],
@@ -769,30 +795,43 @@ class _ProfileInfoCard extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.views, required this.likes});
+  const _StatsRow({
+    required this.likedMeCount,
+    required this.myLikesCount,
+    required this.onLikedMeTap,
+    required this.onMyLikesTap,
+  });
 
-  final int views;
-  final int likes;
+  final int likedMeCount;
+  final int myLikesCount;
+  final VoidCallback onLikedMeTap;
+  final VoidCallback onMyLikesTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: _StatCard(
-            icon: Icons.visibility_outlined,
-            label: 'คนเข้ามาดู',
-            value: _formatCount(views),
-            color: AppColors.primary,
+          child: GestureDetector(
+            onTap: onLikedMeTap,
+            child: _StatCard(
+              icon: Icons.favorite_rounded,
+              label: 'กดใจคุณ',
+              value: _formatCount(likedMeCount),
+              color: AppColors.iconPurple,
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(
-            icon: Icons.favorite_outline,
-            label: 'กดใจ',
-            value: _formatCount(likes),
-            color: AppColors.accent,
+          child: GestureDetector(
+            onTap: onMyLikesTap,
+            child: _StatCard(
+              icon: Icons.thumb_up_rounded,
+              label: 'คุณกดใจ',
+              value: _formatCount(myLikesCount),
+              color: AppColors.brandPink,
+            ),
           ),
         ),
       ],
