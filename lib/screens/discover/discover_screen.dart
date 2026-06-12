@@ -16,21 +16,74 @@ class DiscoverScreen extends StatefulWidget {
   State<DiscoverScreen> createState() => _DiscoverScreenState();
 }
 
-class _DiscoverScreenState extends State<DiscoverScreen> {
+class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStateMixin {
   List<Member> _members = [];
   bool _isLoading = true;
   bool _nearMeActive = true;
   String _genderFilter = 'ทุกเพศ';
   final Set<String> _likedIds = {};
+  final Map<String, AnimationController> _dismissControllers = {};
+  final Map<String, Animation<Offset>> _slideAnimations = {};
+  final Map<String, Animation<double>> _fadeAnimations = {};
 
   // ── config: true = ทดสอบ (like แล้วแชทได้เลย), false = ต้อง match ก่อน ──
   static const bool _testMode = true;
+
+  @override
+  void dispose() {
+    for (final c in _dismissControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _loadMembers();
     _loadLikedIds();
+  }
+
+  void _registerCard(String id) {
+    if (_dismissControllers.containsKey(id)) return;
+    final ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _dismissControllers[id] = ctrl;
+    _slideAnimations[id] = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero, // จะ set ก่อน animate
+    ).animate(CurvedAnimation(parent: ctrl, curve: Curves.easeInOut));
+    _fadeAnimations[id] = Tween<double>(begin: 1.0, end: 0.0)
+        .animate(CurvedAnimation(parent: ctrl, curve: Curves.easeIn));
+  }
+
+  Future<void> _dismissCard(Member member, {required bool toRight}) async {
+    final id = member.id;
+    _registerCard(id);
+
+    final ctrl = _dismissControllers[id]!;
+    // ตั้ง slide direction
+    _slideAnimations[id] = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset(toRight ? 1.5 : -1.5, 0),
+    ).animate(CurvedAnimation(parent: ctrl, curve: Curves.easeInOut));
+
+    if (mounted) setState(() {});
+
+    await ctrl.forward();
+
+    // ลบออกจาก list หลัง animate เสร็จ
+    if (mounted) {
+      setState(() {
+        _members.removeWhere((m) => m.id == id);
+      });
+      ctrl.dispose();
+      _dismissControllers.remove(id);
+      _slideAnimations.remove(id);
+      _fadeAnimations.remove(id);
+    }
   }
 
   Future<void> _loadLikedIds() async {
@@ -54,33 +107,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Future<void> _handleLike(Member member) async {
+    // ถ้ากดแล้วไม่ให้กดซ้ำ
+    if (_likedIds.contains(member.id)) return;
+
     final client = Supabase.instance.client;
     final me = client.auth.currentUser;
     if (me == null) return;
 
-    final alreadyLiked = _likedIds.contains(member.id);
-
-    // toggle UI ทันที
-    setState(() {
-      if (alreadyLiked) {
-        _likedIds.remove(member.id);
-      } else {
-        _likedIds.add(member.id);
-      }
-    });
-
-    if (alreadyLiked) {
-      // unlike: ลบออกจาก DB
-      try {
-        await client.from('profile_likes')
-            .delete()
-            .eq('liker_id', me.id)
-            .eq('liked_id', member.id);
-      } catch (e) {
-        debugPrint('Unlike error: $e');
-      }
-      return;
-    }
+    // update UI + เริ่ม dismiss animation ทันที
+    setState(() => _likedIds.add(member.id));
+    _dismissCard(member, toRight: true);
 
     // like: insert ลง DB
     try {
@@ -108,6 +144,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     } catch (e) {
       debugPrint('Like error: $e');
     }
+  }
+
+  Future<void> _handlePass(Member member) async {
+    await _dismissCard(member, toRight: false);
   }
 
   Future<void> _createConversation(String myId, String targetId) async {
@@ -434,20 +474,29 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final member = _members[index];
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    MemberProfileScreen(memberId: member.id),
+                        _registerCard(member.id);
+                        final slideAnim = _slideAnimations[member.id]!;
+                        final fadeAnim = _fadeAnimations[member.id]!;
+                        return SlideTransition(
+                          position: slideAnim,
+                          child: FadeTransition(
+                            opacity: fadeAnim,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MemberProfileScreen(memberId: member.id),
+                                  ),
+                                );
+                              },
+                              child: _MemberCard(
+                                member: member,
+                                liked: _likedIds.contains(member.id),
+                                onLike: () => _handleLike(member),
+                                onPass: () => _handlePass(member),
                               ),
-                            );
-                          },
-                          child: _MemberCard(
-                            member: member,
-                            liked: _likedIds.contains(member.id),
-                            onLike: () => _handleLike(member),
+                            ),
                           ),
                         );
                       },
@@ -660,10 +709,12 @@ class _MemberCard extends StatelessWidget {
     required this.member,
     required this.liked,
     required this.onLike,
+    required this.onPass,
   });
   final Member member;
   final bool liked;
   final VoidCallback onLike;
+  final VoidCallback onPass;
 
   @override
   Widget build(BuildContext context) {
@@ -788,7 +839,7 @@ class _MemberCard extends StatelessWidget {
                               elevation: 1,
                               shadowColor: AppColors.textPrimary,
                               child: InkWell(
-                                onTap: () {},
+                                onTap: onPass,
                                 customBorder: const CircleBorder(),
                                 child: Container(
                                   width: 44,
