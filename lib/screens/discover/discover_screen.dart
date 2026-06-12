@@ -400,9 +400,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : CustomScrollView(
+  child: _isLoading
+      ? const Center(child: CircularProgressIndicator())
+      : RefreshIndicator(
+          onRefresh: () async {
+            _likedMembers.clear();
+            _likedIds.clear();
+            _passedIds.clear();
+            await _loadExcludedIds();
+            await _loadMembers();
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   const SliverToBoxAdapter(child: SouliveHeader()),
                   
@@ -570,6 +579,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
                   ),
                 ],
               ),
+            ),
       ),
     );
   }

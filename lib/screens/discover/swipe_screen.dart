@@ -53,6 +53,26 @@ class _SwipeScreenState extends State<SwipeScreen>
       final me = client.auth.currentUser;
       if (me == null) return;
 
+      final likesData = await client
+          .from('profile_likes')
+          .select('liked_id')
+          .eq('liker_id', me.id);
+
+      final passesData = await client
+          .from('profile_passes')
+          .select('passed_id')
+          .eq('passer_id', me.id);
+
+      final excludedIds = <String>{};
+
+      for (final row in likesData as List) {
+        excludedIds.add(row['liked_id'] as String);
+      }
+
+      for (final row in passesData as List) {
+        excludedIds.add(row['passed_id'] as String);
+      }
+
       final response = await client
           .from('profiles')
           .select('id, display_name, gender, birth_date, province, district, bio, is_online, is_verified, profile_photos(public_url, is_primary, sort_order)')
@@ -62,6 +82,9 @@ class _SwipeScreenState extends State<SwipeScreen>
       if (!mounted) return;
       final List<Map<String, dynamic>> loaded = [];
       for (var row in response as List) {
+        if (excludedIds.contains(row['id'])) {
+          continue;
+        }
         final photos = List<Map<String, dynamic>>.from(row['profile_photos'] ?? []);
         photos.sort((a, b) {
           if (a['is_primary'] == true) return -1;
