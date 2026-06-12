@@ -35,6 +35,19 @@ class ProfileScreenState extends State<ProfileScreen> {
       final authUser = Supabase.instance.client.auth.currentUser;
       if (authUser == null) return;
 
+      final likesReceivedRes = await Supabase.instance.client
+          .from('profile_likes')
+          .select('id')
+          .eq('liked_id', authUser.id);
+
+      final likesGivenRes = await Supabase.instance.client
+          .from('profile_likes')
+          .select('id')
+          .eq('liker_id', authUser.id);
+
+      final likesReceived = (likesReceivedRes as List).length;
+      final likesGiven = (likesGivenRes as List).length;
+
       final data = await Supabase.instance.client
           .from('profiles')
           .select()
@@ -123,8 +136,8 @@ class ProfileScreenState extends State<ProfileScreen> {
               photoUrls: photoUrls,
               bio: data['bio'] ?? '',
               interests: [],
-              profileViews: likedMeCount,
-              likesReceived: myLikesCount,
+              profileViews: likesReceived,
+              likesReceived: likesGiven,
               lineId: data['line_id'] ?? '',
               instagram: data['instagram'] ?? '',
               xHandle: data['x_handle'] ?? '',
@@ -809,30 +822,56 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: onLikedMeTap,
-            child: _StatCard(
-              icon: Icons.favorite_rounded,
-              label: 'กดใจคุณ',
-              value: _formatCount(likedMeCount),
-              color: AppColors.iconPurple,
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: onLikedMeTap,
+                child: _StatCard(
+                  icon: Icons.favorite_rounded,
+                  label: 'คนเข้ามาดู',
+                  value: _formatCount(likedMeCount),
+                  color: AppColors.iconPurple,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GestureDetector(
+                onTap: onMyLikesTap,
+                child: _StatCard(
+                  icon: Icons.thumb_up_rounded,
+                  label: 'กดใจ',
+                  value: _formatCount(myLikesCount),
+                  color: AppColors.brandPink,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: onMyLikesTap,
-            child: _StatCard(
-              icon: Icons.thumb_up_rounded,
-              label: 'คุณกดใจ',
-              value: _formatCount(myLikesCount),
-              color: AppColors.brandPink,
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.close_rounded,
+                label: 'คุณกดผ่าน',
+                value: '0',
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.visibility_outlined,
+                label: 'เข้ามาดูคุณ',
+                value: '0',
+                color: AppColors.primary,
+              ),
+            ),
+          ],
         ),
       ],
     );
