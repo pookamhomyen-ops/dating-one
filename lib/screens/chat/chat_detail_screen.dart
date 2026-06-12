@@ -1,254 +1,359 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/chat_thread.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/time_format.dart';
+import '../../widgets/avatar_image.dart';
 
 class ChatDetailScreen extends StatefulWidget {
-  final String name;
-  final String age;
-  final String image;
-
-  const ChatDetailScreen({
-    super.key,
-    required this.name,
-    required this.age,
-    required this.image,
-  });
+  const ChatDetailScreen({super.key, required this.thread});
+  final ChatThread thread;
 
   @override
   State<ChatDetailScreen> createState() => _ChatDetailScreenState();
 }
 
-class _ChatDetailScreenState extends State<ChatDetailScreen> with TickerProviderStateMixin {
-  final TextEditingController _textController = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {'text': 'หวัดดีครับ ทำอะไรอยู่เอ่ย? 😊', 'isMe': true, 'time': '12:40'},
-    {'text': 'หวัดดีค่ะ กำลังหาของกินอยู่เลย เธอมีร้านแนะนำไหม', 'isMe': false, 'time': '12:42'},
-    {'text': 'วันนี้ไปคาเฟ่แถวอารีย์กันไหมเธอ? ☕️', 'isMe': true, 'time': '12:45'},
-  ];
-
-  late AnimationController _btnCtrl;
-  late Animation<double> _btnScale;
+class _ChatDetailScreenState extends State<ChatDetailScreen> {
+  final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  List<Map<String, dynamic>> _messages = [];
+  bool _isLoading = true;
+  bool _isSending = false;
+  String? _myId;
+  RealtimeChannel? _channel;
 
   @override
   void initState() {
     super.initState();
-    _btnCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
-    _btnScale = Tween<double>(begin: 1.0, end: 0.9).animate(_btnCtrl);
+    _myId = Supabase.instance.client.auth.currentUser?.id;
+    _loadMessages();
+    _subscribeRealtime();
+    _markAsRead();
   }
 
   @override
   void dispose() {
-    _textController.dispose();
-    _btnCtrl.dispose();
+    _channel?.unsubscribe();
+    _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _sendMessage() {
-    if (_textController.text.trim().isEmpty) return;
-    
-    _btnCtrl.forward().then((_) => _btnCtrl.reverse());
-    
-    setState(() {
-      _messages.add({
-        'text': _textController.text.trim(),
-        'isMe': true,
-        'time': '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+  Future<void> _loadMessages() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await Supabase.instance.client
+          .from('messages')
+          .select()
+          .eq('conversation_id', widget.thread.id)
+          .isFilter('deleted_at', null)
+          .order('created_at', ascending: true);
+
+      if (mounted) {
+        setState(() {
+          _messages = List<Map<String, dynamic>>.from(data);
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      debugPrint('Messages error: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _subscribeRealtime() {
+    _channel = Supabase.instance.client
+        .channel('messages_${widget.thread.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'conversation_id',
+            value: widget.thread.id,
+          ),
+          callback: (payload) {
+            final newMsg = payload.newRecord;
+            if (mounted) {
+              setState(() => _messages.add(newMsg));
+              _scrollToBottom();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _markAsRead() async {
+    try {
+      final me = Supabase.instance.client.auth.currentUser;
+      if (me == null) return;
+      await Supabase.instance.client
+          .from('conversation_members')
+          .update({'unread_count': 0, 'last_read_at': DateTime.now().toIso8601String()})
+          .eq('conversation_id', widget.thread.id)
+          .eq('profile_id', me.id);
+    } catch (e) {
+      debugPrint('markAsRead error: $e');
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _isSending || _myId == null) return;
+
+    setState(() => _isSending = true);
+    _controller.clear();
+
+    try {
+      await Supabase.instance.client.from('messages').insert({
+        'conversation_id': widget.thread.id,
+        'sender_id': _myId,
+        'message_type': 'text',
+        'body': text,
       });
-      _textController.clear();
+
+      await Supabase.instance.client
+          .from('conversations')
+          .update({
+            'last_message_at': DateTime.now().toIso8601String(),
+            'last_message_preview': text.length > 50 ? '${text.substring(0, 50)}...' : text,
+          })
+          .eq('id', widget.thread.id);
+    } catch (e) {
+      debugPrint('Send error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ส่งข้อความไม่สำเร็จ'), backgroundColor: AppColors.destructive),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFBFB), // ขาวคลีนสไตล์สตรีทมินิมอล
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_sharp), // ไอคอนทรงเหลี่ยมคม
-          onPressed: () => Navigator.pop(context),
-        ),
+        titleSpacing: 0,
         title: Row(
           children: [
-            // รูปโปรไฟล์สี่เหลี่ยมจัตุรัสตามคอนเซปต์
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.zero,
-                border: Border.all(color: Colors.black, width: 1.5),
-              ),
-              child: Image.network(
-                widget.image,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) => Container(color: Colors.grey[200]),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // ชื่อและอายุ ไม่มีคอมม่าคั่น
+            AvatarImage(url: widget.thread.partnerPhotoUrl, size: 38),
+            const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${widget.name.toUpperCase()} ${widget.age}',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                  widget.thread.partnerName,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
-                Row( // ✅ เอา const ออกแล้ว
-  children: [
-    Container(
-      width: 6,
-      height: 6,
-      color: const Color(0xFF00E676), // ใส่ const ที่สีแทน (ถ้าต้องการ)
-    ),
-    const SizedBox(width: 4), // ใส่ const ที่นี่แทน
-    const Text('ONLINE', style: TextStyle(fontSize: 10, color: Colors.black38, fontWeight: FontWeight.bold)), // ใส่ const ที่นี่แทน
-  ],
-),
+                Text(
+                  widget.thread.isOnline ? 'ออนไลน์' : 'ออฟไลน์',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: widget.thread.isOnline ? Colors.green : AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.phone_sharp, color: Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert_sharp, color: Colors.black),
+            icon: const Icon(Icons.more_vert_rounded),
             onPressed: () {},
           ),
         ],
       ),
       body: Column(
         children: [
-          const Divider(color: Colors.black, thickness: 1, height: 1),
-          
-          // 1. พื้นที่แสดงข้อความแชท
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isMe = msg['isMe'] as bool;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: Row(
-                    mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (!isMe) ...[
-                        Text(
-                          msg['time'],
-                          style: const TextStyle(fontSize: 10, color: Colors.black26, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      
-                      // กล่องข้อความทรงเหลี่ยมจัด (No Border Radius)
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: isMe ? AppColors.brandPink : Colors.white,
-                            borderRadius: BorderRadius.zero, // 🛑 ลบขอบมนออกทั้งหมด เป็นทรงเหลี่ยมคม
-                            border: Border.all(
-                              color: isMe ? Colors.transparent : Colors.black,
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: isMe 
-                                    ? AppColors.brandPink.withValues(alpha: 0.2) 
-                                    : Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 0,
-                                offset: const Offset(4, 4), // เงา Hard Shadow สไตล์งานกราฟิกสตรีท
-                              )
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.brandPink))
+                : _messages.isEmpty
+                    ? _buildEmptyChat()
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          final isMine = msg['sender_id'] == _myId;
+                          final prevMsg = index > 0 ? _messages[index - 1] : null;
+                          final showDate = prevMsg == null ||
+                              _isDifferentDay(
+                                DateTime.parse(prevMsg['created_at']),
+                                DateTime.parse(msg['created_at']),
+                              );
+                          return Column(
+                            children: [
+                              if (showDate) _buildDateDivider(DateTime.parse(msg['created_at'])),
+                              _MessageBubble(
+                                text: msg['body'] ?? '',
+                                isMine: isMine,
+                                sentAt: DateTime.parse(msg['created_at']),
+                              ),
                             ],
-                          ),
-                          child: Text(
-                            msg['text'],
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black,
-                              fontSize: 14,
-                              fontWeight: isMe ? FontWeight.w600 : Alignment.centerLeft != null ? FontWeight.w500 : FontWeight.normal,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                      
-                      if (isMe) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          msg['time'],
-                          style: const TextStyle(fontSize: 10, color: Colors.black26, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              },
+          ),
+          _buildInputBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyChat() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('👋', style: const TextStyle(fontSize: 48)),
+          const SizedBox(height: 12),
+          Text(
+            'เริ่มคุยกับ ${widget.thread.partnerName} เลย!',
+            style: const TextStyle(fontSize: 15, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateDivider(DateTime date) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(child: Divider()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              formatChatTime(date),
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ),
+          const Expanded(child: Divider()),
+        ],
+      ),
+    );
+  }
 
-          // 2. แถบพิมพ์ข้อความด้านล่าง (Input Bar) ดีไซน์บล็อกเหลี่ยมสตรีท
-          Container(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.black, width: 2)),
+  Widget _buildInputBar() {
+    return Container(
+      color: AppColors.surface,
+      padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).padding.bottom),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: 'พิมพ์ข้อความ...',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onSubmitted: (_) => _sendMessage(),
+              textInputAction: TextInputAction.send,
+              maxLines: null,
             ),
-            child: Row(
-              children: [
-                // ช่องกรอกข้อความขอบเหลี่ยม
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.zero,
-                      border: Border.all(color: Colors.black12, width: 1),
-                    ),
-                    child: TextField(
-                      controller: _textController,
-                      decoration: const InputDecoration(
-                        hintText: 'พิมพ์ข้อความแทงใจที่นี่...',
-                        hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      style: const TextStyle(fontSize: 14, color: Colors.black),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                // ปุ่มส่ง (Send Button) ทรงสี่เหลี่ยมจัตุรัสสีดำดุดัน พร้อมอนิเมชั่นยุบตัวตอนกด
-                ScaleTransition(
-                  scale: _btnScale,
-                  child: GestureDetector(
-                    onTap: _sendMessage,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.zero, // เหลี่ยมฉาก 90 องศา
-                      ),
-                      child: const Icon(
-                        Icons.send_sharp, // ไอคอนส่งทรงเหลี่ยมคม
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          ),
+          const SizedBox(width: 8),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            child: IconButton.filled(
+              onPressed: _isSending ? null : _sendMessage,
+              icon: _isSending
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.send_rounded, size: 20),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.brandPink,
+                foregroundColor: Colors.white,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  bool _isDifferentDay(DateTime a, DateTime b) {
+    return a.year != b.year || a.month != b.month || a.day != b.day;
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  final String text;
+  final bool isMine;
+  final DateTime sentAt;
+
+  const _MessageBubble({required this.text, required this.isMine, required this.sentAt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMine ? AppColors.brandPink : AppColors.surface,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isMine ? 18 : 4),
+            bottomRight: Radius.circular(isMine ? 4 : 18),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: isMine ? Colors.white : AppColors.textPrimary,
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              formatChatTime(sentAt),
+              style: TextStyle(
+                fontSize: 10,
+                color: isMine ? Colors.white.withValues(alpha: 0.75) : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

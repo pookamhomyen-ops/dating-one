@@ -8,6 +8,7 @@ import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
 import '../../widgets/soulive_header.dart';
+import 'match_popup.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -22,10 +23,135 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   String _genderFilter = 'ทุกเพศ';
   final Set<String> _likedIds = {};
 
+  // ── config: true = ทดสอบ (like แล้วแชทได้เลย), false = ต้อง match ก่อน ──
+  static const bool _testMode = true;
+
   @override
   void initState() {
     super.initState();
     _loadMembers();
+    _loadLikedIds();
+  }
+
+  Future<void> _loadLikedIds() async {
+    try {
+      final me = Supabase.instance.client.auth.currentUser;
+      if (me == null) return;
+      final data = await Supabase.instance.client
+          .from('profile_likes')
+          .select('liked_id')
+          .eq('liker_id', me.id);
+      if (mounted) {
+        setState(() {
+          for (var row in data as List) {
+            _likedIds.add(row['liked_id'] as String);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Load liked IDs error: $e');
+    }
+  }
+
+  Future<void> _handleLike(Member member) async {
+    final client = Supabase.instance.client;
+    final me = client.auth.currentUser;
+    if (me == null) return;
+
+    final alreadyLiked = _likedIds.contains(member.id);
+
+    // toggle UI ทันที
+    setState(() {
+      if (alreadyLiked) {
+        _likedIds.remove(member.id);
+      } else {
+        _likedIds.add(member.id);
+      }
+    });
+
+    if (alreadyLiked) {
+      // unlike: ลบออกจาก DB
+      try {
+        await client.from('profile_likes')
+            .delete()
+            .eq('liker_id', me.id)
+            .eq('liked_id', member.id);
+      } catch (e) {
+        debugPrint('Unlike error: $e');
+      }
+      return;
+    }
+
+    // like: insert ลง DB
+    try {
+      await client.from('profile_likes').upsert({
+        'liker_id': me.id,
+        'liked_id': member.id,
+      });
+
+      // สร้าง conversation ทันที (test mode) หรือ รอ match (production mode)
+      if (_testMode) {
+        await _createConversation(me.id, member.id);
+      } else {
+        // เช็ค mutual like
+        final mutual = await client
+            .from('profile_likes')
+            .select()
+            .eq('liker_id', member.id)
+            .eq('liked_id', me.id)
+            .maybeSingle();
+
+        if (mutual != null) {
+          await _createMatchAndConversation(me.id, member.id, member);
+        }
+      }
+    } catch (e) {
+      debugPrint('Like error: $e');
+    }
+  }
+
+  Future<void> _createConversation(String myId, String targetId) async {
+    try {
+      final ids = [myId, targetId]..sort();
+      await Supabase.instance.client.from('conversations').upsert({
+        'user_low_id': ids[0],
+        'user_high_id': ids[1],
+      });
+    } catch (e) {
+      debugPrint('Create conversation error: $e');
+    }
+  }
+
+  Future<void> _createMatchAndConversation(String myId, String targetId, Member member) async {
+    try {
+      final ids = [myId, targetId]..sort();
+
+      await Supabase.instance.client.from('matches').upsert({
+        'user_a_id': ids[0],
+        'user_b_id': ids[1],
+        'matched_at': DateTime.now().toIso8601String(),
+      });
+
+      await Supabase.instance.client.from('conversations').upsert({
+        'user_low_id': ids[0],
+        'user_high_id': ids[1],
+      });
+
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.black.withValues(alpha: 0.85),
+          builder: (_) => MatchPopup(
+            myPhotoUrl: '',
+            matchPhotoUrl: member.photoUrl,
+            matchName: member.name,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Match error: $e');
+    }
   }
 
   Future<void> _loadMembers() async {
@@ -321,15 +447,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           child: _MemberCard(
                             member: member,
                             liked: _likedIds.contains(member.id),
-                            onLike: () {
-                              setState(() {
-                                if (_likedIds.contains(member.id)) {
-                                  _likedIds.remove(member.id);
-                                } else {
-                                  _likedIds.add(member.id);
-                                }
-                              });
-                            },
+                            onLike: () => _handleLike(member),
                           ),
                         );
                       },
