@@ -22,11 +22,53 @@ class ProfileScreenState extends State<ProfileScreen> {
   UserProfile? _user;
   List<String> _secretPhotoUrls = [];
   bool _isLoading = true;
+  RealtimeChannel? _likesChannel;
+  int _likedMeCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _subscribeToLikes();
+  }
+
+  void _subscribeToLikes() {
+    final authUser = Supabase.instance.client.auth.currentUser;
+    if (authUser == null) return;
+
+    _likesChannel = Supabase.instance.client
+        .channel('profile_likes_${authUser.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'profile_likes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'liked_id',
+            value: authUser.id,
+          ),
+          callback: (payload) async {
+            final res = await Supabase.instance.client
+                .from('profile_likes')
+                .select('id')
+                .eq('liked_id', authUser.id);
+            if (mounted) {
+              setState(() {
+                _likedMeCount = (res as List).length;
+                if (_user != null) {
+                  _user = _user!.copyWith(profileViews: _likedMeCount);
+                }
+              });
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    _likesChannel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -136,13 +178,14 @@ class ProfileScreenState extends State<ProfileScreen> {
               photoUrls: photoUrls,
               bio: data['bio'] ?? '',
               interests: [],
-              profileViews: likesReceived,
-              likesReceived: likesGiven,
+              profileViews: likedMeCount,
+              likesReceived: myLikesCount,
               lineId: data['line_id'] ?? '',
               instagram: data['instagram'] ?? '',
               xHandle: data['x_handle'] ?? '',
               facebook: data['facebook'] ?? '',
             );
+            _likedMeCount = likedMeCount;
           });
         }
       }
