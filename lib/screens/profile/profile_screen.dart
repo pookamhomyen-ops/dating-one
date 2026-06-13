@@ -32,12 +32,17 @@ class ProfileScreenState extends State<ProfileScreen> {
     _subscribeToLikes();
   }
 
+  @override
+  void dispose() {
+    _likesChannel?.unsubscribe();
+    super.dispose();
+  }
+
   void _subscribeToLikes() {
     final authUser = Supabase.instance.client.auth.currentUser;
     if (authUser == null) return;
-
     _likesChannel = Supabase.instance.client
-        .channel('profile_likes_${authUser.id}')
+        .channel('profile_likes_realtime_${authUser.id}')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
@@ -52,11 +57,12 @@ class ProfileScreenState extends State<ProfileScreen> {
                 .from('profile_likes')
                 .select('id')
                 .eq('liked_id', authUser.id);
+            final count = (res as List).length;
             if (mounted) {
               setState(() {
-                _likedMeCount = (res as List).length;
+                _likedMeCount = count;
                 if (_user != null) {
-                  _user = _user!.copyWith(profileViews: _likedMeCount);
+                  _user = _user!.copyWith(likesReceived: count);
                 }
               });
             }
@@ -65,30 +71,11 @@ class ProfileScreenState extends State<ProfileScreen> {
         .subscribe();
   }
 
-  @override
-  void dispose() {
-    _likesChannel?.unsubscribe();
-    super.dispose();
-  }
-
   Future<void> _loadUserData() async {
     setState(() => _isLoading = true);
     try {
       final authUser = Supabase.instance.client.auth.currentUser;
       if (authUser == null) return;
-
-      final likesReceivedRes = await Supabase.instance.client
-          .from('profile_likes')
-          .select('id')
-          .eq('liked_id', authUser.id);
-
-      final likesGivenRes = await Supabase.instance.client
-          .from('profile_likes')
-          .select('id')
-          .eq('liker_id', authUser.id);
-
-      final likesReceived = (likesReceivedRes as List).length;
-      final likesGiven = (likesGivenRes as List).length;
 
       final data = await Supabase.instance.client
           .from('profiles')
