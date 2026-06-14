@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/feed_post.dart';
@@ -19,10 +20,10 @@ class _FeedScreenState extends State<FeedScreen> {
   List<FeedPost> _posts = [];
   bool _isLoading = true;
   int _filterIndex = 0;
+  String _genderFilter = 'ทั้งหมด'; // all, female, male
 
   static const Color lavenderDark = Color(0xFF7C4DFF);
   static const Color lavenderLight = Color(0xFFA78BFA);
-  static const _filters = [' ทั้งหมด', '⚡ ใหม่', '🔥 ยอดนิยม', '📍 ใกล้เคียง'];
 
   @override
   void initState() {
@@ -30,54 +31,135 @@ class _FeedScreenState extends State<FeedScreen> {
     _fetchRealtimeFeed();
   }
 
-  // 🛠️ แก้ไขฟังก์ชันดึงข้อมูลให้ถูกต้องตามไวยากรณ์ Supabase Dart SDK
   Future<void> _fetchRealtimeFeed() async {
     try {
       setState(() => _isLoading = true);
-      
-      // ปรับปรุงการดึงข้อมูลสัมพันธ์ (Relation JOIN) ให้ถูกต้อง
-      final response = await _supabase
-          .from('posts')
-          .select('id, author_id, content, created_at, likes_count, comments_count, profiles(display_name, gender, province, is_verified, is_online)')
-          .order('created_at', ascending: false);
 
-      final List<FeedPost> loadedPosts = [];
-      for (var item in response as List) {
-        final authorId = item['author_id'] as String?;
-        final postId = item['id'] as String;
-        final profile = item['profiles'] as Map<String, dynamic>?;
-
-        final authorPhotoUrl = authorId != null 
-            ? _supabase.storage.from('profiles').getPublicUrl('$authorId.jpg')
-            : 'https://i.pravatar.cc/200';
-            
-        final postImageUrl = _supabase.storage.from('posts').getPublicUrl('$postId.jpg');
-
-        loadedPosts.add(
-          FeedPost(
-            id: postId,
-            authorId: authorId ?? '',
-            authorName: profile?['display_name'] ?? 'ผู้ใช้งานไม่มีชื่อ',
-            authorGender: profile?['gender'] == 'female' ? Gender.female : Gender.male,
-            authorPhotoUrl: authorPhotoUrl,
-            content: item['content'] ?? '(ไม่มีเนื้อหาข้อความ)',
-            postedAt: item['created_at'] != null ? DateTime.parse(item['created_at']) : DateTime.now(),
-            imageUrl: postImageUrl,
-            likes: item['likes_count'] ?? 0,
-            comments: item['comments_count'] ?? 0,
-            likedByMe: false,
-          ),
-        );
+      var query = _supabase.from('feed_posts_v').select();
+      if (_filterIndex == 0 && _genderFilter != 'ทั้งหมด') {
+        query = query.eq('author_gender', _genderFilter);
+      } else if (_filterIndex == 1) {
+        query = query.eq('is_following', true);
+      } else if (_filterIndex == 2) {
+        query = query.eq('is_matching_preference', true);
       }
+
+      final response = await query.order('created_at', ascending: false);
+
+      final userId = _supabase.auth.currentUser?.id;
+      List<String> likedPostIds = [];
+      if (userId != null) {
+        final liked = await _supabase
+            .from('post_reactions')
+            .select('post_id')
+            .eq('profile_id', userId)
+            .eq('reaction', 'like');
+        likedPostIds = (liked as List).map((e) => e['post_id'] as String).toList();
+      }
+
+      final List<FeedPost> loadedPosts = (response as List).map((item) {
+        return FeedPost(
+          id: item['post_id'] as String,
+          authorId: item['author_id'] as String? ?? '',
+          authorName: item['author_name'] as String? ?? 'ผู้ใช้',
+          authorGender: item['author_gender'] == 'female' ? Gender.female : Gender.male,
+          authorPhotoUrl: item['author_photo_url'] as String? ?? '',
+          content: item['content'] as String? ?? '',
+          postedAt: item['created_at'] != null
+              ? DateTime.parse(item['created_at'])
+              : DateTime.now(),
+          imageUrl: item['image_url'] as String?,
+          likes: item['likes_count'] as int? ?? 0,
+          comments: item['comments_count'] as int? ?? 0,
+          likedByMe: likedPostIds.contains(item['post_id'] as String),
+        );
+      }).toList();
 
       setState(() {
         _posts = loadedPosts;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Supabase Error: $e');
+      debugPrint('Feed Error: $e');
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _toggleLike(int index) async {
+    final post = _posts[index];
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final alreadyLiked = post.likedByMe;
+
+    setState(() {
+      _posts[index] = post.copyWith(
+        likedByMe: !alreadyLiked,
+        likes: alreadyLiked ? post.likes - 1 : post.likes + 1,
+      );
+    });
+
+    try {
+      if (alreadyLiked) {
+        await _supabase
+            .from('post_reactions')
+            .delete()
+            .eq('post_id', post.id)
+            .eq('profile_id', userId)
+            .eq('reaction', 'like');
+      } else {
+        await _supabase.from('post_reactions').upsert({
+          'post_id': post.id,
+          'profile_id': userId,
+          'reaction': 'like',
+        });
+      }
+    } catch (e) {
+      debugPrint('Like Error: $e');
+      setState(() {
+        _posts[index] = _posts[index].copyWith(
+          likedByMe: alreadyLiked,
+          likes: post.likes,
+        );
+      });
+    } finally {
+      final fresh = await _supabase
+          .from('feed_posts_v')
+          .select('likes_count, comments_count')
+          .eq('post_id', post.id)
+          .maybeSingle();
+      if (fresh != null && mounted) {
+        setState(() {
+          _posts[index] = _posts[index].copyWith(
+            likes: fresh['likes_count'] as int? ?? _posts[index].likes,
+            comments: fresh['comments_count'] as int? ?? _posts[index].comments,
+          );
+        });
+      }
+    }
+  }
+
+  void _openComments(BuildContext context, int index) {
+    final post = _posts[index];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      isDismissible: true,
+      enableDrag: true,
+      builder: (_) => _CommentsSheet(
+        post: post,
+        supabase: _supabase,
+        onCommentCountChanged: (newCount) {
+          if (mounted) {
+            setState(() {
+              _posts[index] = _posts[index].copyWith(comments: newCount);
+            });
+          }
+        },
+      ),
+    );
   }
 
   @override
@@ -100,32 +182,74 @@ class _FeedScreenState extends State<FeedScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: SizedBox(
                     height: 38,
-                    child: ListView.separated(
+                    child: ListView(
                       scrollDirection: Axis.horizontal,
-                      itemCount: _filters.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) {
-                        final selected = _filterIndex == i;
-                        return GestureDetector(
-                          onTap: () => setState(() => _filterIndex = i),
+                      children: [
+                        // ปุ่ม ทั้งหมด + dropdown gender
+                        _FilterDropdown(
+                          selected: _filterIndex == 0,
+                          label: 'ทั้งหมด',
+                          genderFilter: _genderFilter,
+                          lavenderDark: lavenderDark,
+                          lavenderLight: lavenderLight,
+                          onTap: () => setState(() => _filterIndex = 0),
+                          onGenderSelect: (g) => setState(() {
+                            _filterIndex = 0;
+                            _genderFilter = g;
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        // ปุ่ม ติดตาม
+                        GestureDetector(
+                          onTap: () => setState(() => _filterIndex = 1),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              gradient: selected ? const LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
-                              color: selected ? null : AppColors.surface,
+                              gradient: _filterIndex == 1 ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+                              color: _filterIndex == 1 ? null : AppColors.surface,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: selected ? Colors.transparent : AppColors.border),
+                              border: Border.all(color: _filterIndex == 1 ? Colors.transparent : AppColors.border),
+                            ),
+                            child: Text('ติดตาม', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 1 ? Colors.white : AppColors.textPrimary)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ปุ่ม สเป็ก + ไอคอนตั้งค่า
+                        GestureDetector(
+                          onTap: () => setState(() => _filterIndex = 2),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: _filterIndex == 2 ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+                              color: _filterIndex == 2 ? null : AppColors.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _filterIndex == 2 ? Colors.transparent : AppColors.border),
                             ),
                             child: Row(
                               children: [
-                                if (i == 0) Icon(Icons.auto_awesome_rounded, size: 14, color: selected ? Colors.white : lavenderDark),
-                                if (i == 0) const SizedBox(width: 4),
-                                Text(_filters[i], style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : AppColors.textPrimary)),
+                                Text('สเป็ก', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 2 ? Colors.white : AppColors.textPrimary)),
+                                const SizedBox(width: 6),
+                                Icon(Icons.tune_rounded, size: 15, color: _filterIndex == 2 ? Colors.white : lavenderDark),
                               ],
                             ),
                           ),
-                        );
-                      },
+                        ),
+                        const SizedBox(width: 8),
+                        // ปุ่ม ใกล้เคียง
+                        GestureDetector(
+                          onTap: () => setState(() => _filterIndex = 3),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: _filterIndex == 3 ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+                              color: _filterIndex == 3 ? null : AppColors.surface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _filterIndex == 3 ? Colors.transparent : AppColors.border),
+                            ),
+                            child: Text('📍 ใกล้เคียง', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 3 ? Colors.white : AppColors.textPrimary)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -146,6 +270,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                 post: _posts[index],
                                 lavenderDark: lavenderDark,
                                 lavenderLight: lavenderLight,
+                                onLike: () => _toggleLike(index),
+                                onComment: () => _openComments(context, index),
                               );
                             },
                           ),
@@ -170,7 +296,7 @@ class _StoriesRow extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         scrollDirection: Axis.horizontal,
-        itemCount: 4,
+        itemCount: 1,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, i) {
           final isMe = i == 0;
@@ -200,9 +326,25 @@ class _StoriesRow extends StatelessWidget {
 
 // ส่วนแสดงผลโพสต์การ์ด (ดึงข้อมูลจากตัวแปรโมเดลเรียลไทม์)
 class _FeedPostCard extends StatelessWidget {
-  const _FeedPostCard({required this.post, required this.lavenderDark, required this.lavenderLight});
+  const _FeedPostCard({
+    required this.post,
+    required this.lavenderDark,
+    required this.lavenderLight,
+    required this.onLike,
+    required this.onComment,
+  });
   final FeedPost post;
   final Color lavenderDark, lavenderLight;
+  final VoidCallback onLike;
+  final VoidCallback onComment;
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'เมื่อกี้';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
+    if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
+    return '${diff.inDays} วันที่แล้ว';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +374,10 @@ class _FeedPostCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      const Text('25 • กรุงเทพฯ • ออนไลน์', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(
+                        _timeAgo(post.postedAt),
+                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
                     ],
                   ),
                 ),
@@ -243,29 +388,398 @@ class _FeedPostCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(post.content, style: const TextStyle(fontSize: 15, height: 1.45, color: AppColors.textPrimary)),
           ),
-          if (post.imageUrl != null)
+          if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: NetworkImageBox(url: post.imageUrl!, height: 340, width: double.infinity),
+                child: CachedNetworkImage(
+                  imageUrl: post.imageUrl!,
+                  height: 340,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    height: 340,
+                    color: AppColors.border,
+                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  errorWidget: (context, url, error) => const SizedBox.shrink(),
+                ),
               ),
             ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                _ReactionBtn(emoji: '💜', count: '${post.likes}', color: const Color(0xFF6366F1)),
-                const SizedBox(width: 14),
-                const _ReactionBtn(emoji: '🔥', count: '12', color: Color(0xFFEA580C)),
-                const SizedBox(width: 14),
-                _ReactionBtn(emoji: '✨', count: '6', color: lavenderDark),
+                GestureDetector(
+                  onTap: onLike,
+                  child: Row(
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                        child: Icon(
+                          post.likedByMe ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          key: ValueKey(post.likedByMe),
+                          size: 22,
+                          color: post.likedByMe ? const Color(0xFFEC4899) : const Color(0xFF7C4DFF),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: post.likedByMe ? const Color(0xFFEC4899) : AppColors.textSecondary,
+                        ),
+                        child: Text('${post.likes}'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: onComment,
+                  child: Row(
+                    children: [
+                      const Text('💬', style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${post.comments}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _CommentsSheet extends StatefulWidget {
+  final FeedPost post;
+  final SupabaseClient supabase;
+  final ValueChanged<int> onCommentCountChanged;
+  const _CommentsSheet({required this.post, required this.supabase, required this.onCommentCountChanged});
+
+  @override
+  State<_CommentsSheet> createState() => _CommentsSheetState();
+}
+
+class _CommentsSheetState extends State<_CommentsSheet> {
+  final _ctrl = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  bool _loading = true;
+  bool _sending = false;
+  late int _localCommentCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _localCommentCount = widget.post.comments;
+    _fetchComments();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchComments() async {
+    try {
+      final res = await widget.supabase
+          .from('post_comments')
+          .select('id, content, created_at, author_id, profiles(display_name, profile_photos(public_url, is_primary, sort_order))')
+          .eq('post_id', widget.post.id)
+          .isFilter('parent_id', null)
+          .order('created_at', ascending: true);
+      setState(() {
+        _comments = List<Map<String, dynamic>>.from(res as List);
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('Comments Error: $e');
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _sendComment() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    final userId = widget.supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    setState(() {
+      _sending = true;
+      _localCommentCount++;
+    });
+    try {
+      await widget.supabase.from('post_comments').insert({
+        'post_id': widget.post.id,
+        'author_id': userId,
+        'content': text,
+      });
+      _ctrl.clear();
+      FocusScope.of(context).unfocus();
+      await _fetchComments();
+    } catch (e) {
+      debugPrint('Send Comment Error: $e');
+    } finally {
+      setState(() => _sending = false);
+    }
+  }
+
+  Widget _avatarFallback(String name) {
+    return Container(
+      color: const Color(0xFFEDE9FE),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0] : '?',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF7C4DFF)),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                children: [
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('💬', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Text('ความคิดเห็น', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
+                        child: Text('$_localCommentCount', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF7C4DFF))),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Divider(height: 1),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _comments.isEmpty
+                      ? const Center(child: Text('ยังไม่มีความคิดเห็น', style: TextStyle(color: AppColors.textSecondary)))
+                      : ListView.builder(
+                          controller: scrollCtrl,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          itemCount: _comments.length,
+                          itemBuilder: (_, i) {
+                            final c = _comments[i];
+                            final profile = c['profiles'] as Map<String, dynamic>?;
+                            final name = profile?['display_name'] as String? ?? 'ผู้ใช้';
+                            final photos = profile?['profile_photos'] as List?;
+                            String? photoUrl;
+                            if (photos != null && photos.isNotEmpty) {
+                              final primary = photos.where((p) => p['is_primary'] == true).toList();
+                              if (primary.isNotEmpty) {
+                                photoUrl = primary.first['public_url'] as String?;
+                              } else {
+                                final sorted = [...photos]..sort((a, b) => (a['sort_order'] as int).compareTo(b['sort_order'] as int));
+                                photoUrl = sorted.first['public_url'] as String?;
+                              }
+                            }
+                            final diff = DateTime.now().difference(DateTime.parse(c['created_at']));
+                            final timeStr = diff.inMinutes < 1 ? 'เมื่อกี้' : diff.inHours < 1 ? '${diff.inMinutes} นาที' : diff.inDays < 1 ? '${diff.inHours} ชม.' : '${diff.inDays} วัน';
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: const Color(0xFFEDE9FE), width: 2),
+                                    ),
+                                    child: ClipOval(
+                                      child: photoUrl != null && photoUrl.isNotEmpty
+                                          ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _avatarFallback(name))
+                                          : _avatarFallback(name),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF7F8FC),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
+                                              const SizedBox(width: 6),
+                                              Text(timeStr, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(c['content'] ?? '', style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.4)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+            ),
+            const Divider(height: 1),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+              ),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7F8FC),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: TextField(
+                        controller: _ctrl,
+                        maxLines: 4,
+                        minLines: 1,
+                        textInputAction: TextInputAction.newline,
+                        style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                        decoration: const InputDecoration(
+                          hintText: 'แสดงความคิดเห็น...',
+                          hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: _sendComment,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: [Color(0xFF7C4DFF), Color(0xFFA78BFA)]),
+                        shape: BoxShape.circle,
+                      ),
+                      child: _sending
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class _FilterDropdown extends StatelessWidget {
+  final bool selected;
+  final String label;
+  final String genderFilter;
+  final Color lavenderDark, lavenderLight;
+  final VoidCallback onTap;
+  final ValueChanged<String> onGenderSelect;
+
+  const _FilterDropdown({
+    required this.selected,
+    required this.label,
+    required this.genderFilter,
+    required this.lavenderDark,
+    required this.lavenderLight,
+    required this.onTap,
+    required this.onGenderSelect,
+  });
+
+  String get _genderLabel {
+    if (genderFilter == 'female') return 'ผู้หญิง';
+    if (genderFilter == 'male') return 'ผู้ชาย';
+    return 'ทั้งหมด';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: () => _showDropdown(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: selected ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+          color: selected ? null : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? Colors.transparent : AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome_rounded, size: 14, color: selected ? Colors.white : lavenderDark),
+            const SizedBox(width: 4),
+            Text(_genderLabel, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : AppColors.textPrimary)),
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_drop_down_rounded, size: 18, color: selected ? Colors.white : lavenderDark),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDropdown(BuildContext context) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset offset = box.localToGlobal(Offset.zero);
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(offset.dx, offset.dy + box.size.height + 4, offset.dx + 160, 0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      items: [
+        PopupMenuItem(value: 'ทั้งหมด', child: Row(children: [const Text('👥'), const SizedBox(width: 8), const Text('ทั้งหมด')])),
+        PopupMenuItem(value: 'female', child: Row(children: [const Text('👩'), const SizedBox(width: 8), const Text('ผู้หญิง')])),
+        PopupMenuItem(value: 'male', child: Row(children: [const Text('👨'), const SizedBox(width: 8), const Text('ผู้ชาย')])),
+      ],
+    ).then((val) { if (val != null) onGenderSelect(val); });
   }
 }
 
