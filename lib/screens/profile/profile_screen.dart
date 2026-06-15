@@ -10,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
 import '../../widgets/full_screen_image_viewer.dart';
 import 'liked_me_screen.dart';
+import 'my_posts_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,6 +25,7 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   RealtimeChannel? _likesChannel;
   int _likedMeCount = 0;
+  int _myPostsCount = 0;
 
   @override
   void initState() {
@@ -149,9 +151,15 @@ class ProfileScreenState extends State<ProfileScreen> {
             .from('profile_likes')
             .select()
             .eq('liker_id', authUser.id);
+        final myPostsResult = await Supabase.instance.client
+            .from('posts')
+            .select('id')
+            .eq('author_id', authUser.id)
+            .eq('is_published', true);
 
         final likedMeCount = (likedMeResult as List).length;
         final myLikesCount = (myLikesResult as List).length;
+        final myPostsCount = (myPostsResult as List).length;
 
         if (mounted) {
           setState(() {
@@ -173,6 +181,7 @@ class ProfileScreenState extends State<ProfileScreen> {
               facebook: data['facebook'] ?? '',
             );
             _likedMeCount = likedMeCount;
+            _myPostsCount = myPostsCount;
           });
         }
       }
@@ -448,6 +457,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                       _StatsRow(
                         likedMeCount: _user!.profileViews,
                         myLikesCount: _user!.likesReceived,
+                        myPostsCount: _myPostsCount,
                         onLikedMeTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const LikedMeScreen()),
@@ -456,6 +466,10 @@ class ProfileScreenState extends State<ProfileScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => const MyLikesScreen()),
                         ),
+                        onMyPostsTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MyPostsScreen()),
+                        ).then((_) => _loadUserData()),
                       ),
                       const SizedBox(height: 120),
                     ],
@@ -841,14 +855,18 @@ class _StatsRow extends StatelessWidget {
   const _StatsRow({
     required this.likedMeCount,
     required this.myLikesCount,
+    required this.myPostsCount,
     required this.onLikedMeTap,
     required this.onMyLikesTap,
+    required this.onMyPostsTap,
   });
 
   final int likedMeCount;
   final int myLikesCount;
+  final int myPostsCount;
   final VoidCallback onLikedMeTap;
   final VoidCallback onMyLikesTap;
+  final VoidCallback onMyPostsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -902,6 +920,45 @@ class _StatsRow extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: onMyPostsTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: AppColors.textPrimary.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.auto_stories_rounded, color: Color(0xFF7C4DFF), size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('โพสของคุณ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                      const SizedBox(height: 2),
+                      Text('ดูและจัดการโพสทั้งหมด', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                Text(_formatCount(myPostsCount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
+              ],
+            ),
+          ),
         ),
       ],
     );

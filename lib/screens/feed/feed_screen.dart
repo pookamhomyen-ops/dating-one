@@ -7,6 +7,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/avatar_image.dart';
 import '../../widgets/network_image_box.dart';
 import '../../widgets/soulive_header.dart';
+import 'create_post_sheet.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -36,12 +37,10 @@ class _FeedScreenState extends State<FeedScreen> {
       setState(() => _isLoading = true);
 
       var query = _supabase.from('feed_posts_v').select();
-      if (_filterIndex == 0 && _genderFilter != 'ทั้งหมด') {
-        query = query.eq('author_gender', _genderFilter);
-      } else if (_filterIndex == 1) {
-        query = query.eq('is_following', true);
-      } else if (_filterIndex == 2) {
-        query = query.eq('is_matching_preference', true);
+      if (_genderFilter == 'female') {
+        query = query.eq('author_gender', 'female');
+      } else if (_genderFilter == 'male') {
+        query = query.eq('author_gender', 'male');
       }
 
       final response = await query.order('created_at', ascending: false);
@@ -162,10 +161,61 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  void _showSpecDropdown(BuildContext context) {
+    showMenu<String>(
+      context: context,
+      position: const RelativeRect.fromLTRB(16, 160, 0, 0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      items: [
+        PopupMenuItem(value: 'fit', child: Row(children: [const Text('💪', style: TextStyle(fontSize: 18)), const SizedBox(width: 10), const Text('หุ่นดี')])),
+        PopupMenuItem(value: 'chubby', child: Row(children: [const Text('🧸', style: TextStyle(fontSize: 18)), const SizedBox(width: 10), const Text('อวบ')])),
+        PopupMenuItem(value: 'very_chubby', child: Row(children: [const Text('🍑', style: TextStyle(fontSize: 18)), const SizedBox(width: 10), const Text('อวบระยะสุดท้าย')])),
+        PopupMenuItem(value: 'fat', child: Row(children: [const Text('🐻', style: TextStyle(fontSize: 18)), const SizedBox(width: 10), const Text('อ้วน')])),
+      ],
+    ).then((val) {
+      // ยังไม่ต้องทำระบบ
+    });
+  }
+
+  Widget _buildFAB(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => CreatePostSheet(
+            onPosted: () {
+              setState(() => _genderFilter = 'ทั้งหมด');
+              _fetchRealtimeFeed();
+            },
+          ),
+        );
+      },
+      child: Container(
+        width: 58,
+        height: 58,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF7C4DFF), Color(0xFFEC4899)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: Color(0x557C4DFF), blurRadius: 16, offset: Offset(0, 6)),
+          ],
+        ),
+        child: const Icon(Icons.edit_rounded, color: Colors.white, size: 26),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: _buildFAB(context),
       body: SafeArea(
         child: RefreshIndicator(
           color: lavenderDark,
@@ -193,43 +243,57 @@ class _FeedScreenState extends State<FeedScreen> {
                           lavenderDark: lavenderDark,
                           lavenderLight: lavenderLight,
                           onTap: () => setState(() => _filterIndex = 0),
-                          onGenderSelect: (g) => setState(() {
-                            _filterIndex = 0;
-                            _genderFilter = g;
-                          }),
+                          onGenderSelect: (g) {
+                            setState(() {
+                              _filterIndex = 0;
+                              _genderFilter = g;
+                            });
+                            _fetchRealtimeFeed();
+                          },
                         ),
                         const SizedBox(width: 8),
                         // ปุ่ม ติดตาม
                         GestureDetector(
                           onTap: () => setState(() => _filterIndex = 1),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
-                              gradient: _filterIndex == 1 ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+                              gradient: _filterIndex == 1 ? const LinearGradient(colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)]) : null,
                               color: _filterIndex == 1 ? null : AppColors.surface,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: _filterIndex == 1 ? Colors.transparent : AppColors.border),
                             ),
-                            child: Text('ติดตาม', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 1 ? Colors.white : AppColors.textPrimary)),
+                            child: Row(
+                              children: [
+                                Icon(Icons.favorite_rounded, size: 14, color: _filterIndex == 1 ? Colors.white : const Color(0xFF06B6D4)),
+                                const SizedBox(width: 5),
+                                Text('ติดตาม', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 1 ? Colors.white : AppColors.textPrimary)),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         // ปุ่ม สเป็ก + ไอคอนตั้งค่า
                         GestureDetector(
-                          onTap: () => setState(() => _filterIndex = 2),
+                          onTap: () {
+                            setState(() => _filterIndex = 2);
+                            _showSpecDropdown(context);
+                          },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
-                              gradient: _filterIndex == 2 ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+                              gradient: _filterIndex == 2 ? const LinearGradient(colors: [Color(0xFFF97316), Color(0xFFFBBF24)]) : null,
                               color: _filterIndex == 2 ? null : AppColors.surface,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: _filterIndex == 2 ? Colors.transparent : AppColors.border),
                             ),
                             child: Row(
                               children: [
+                                Icon(Icons.local_fire_department_rounded, size: 14, color: _filterIndex == 2 ? Colors.white : const Color(0xFFF97316)),
+                                const SizedBox(width: 5),
                                 Text('สเป็ก', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 2 ? Colors.white : AppColors.textPrimary)),
-                                const SizedBox(width: 6),
-                                Icon(Icons.tune_rounded, size: 15, color: _filterIndex == 2 ? Colors.white : lavenderDark),
+                                const SizedBox(width: 4),
+                                Icon(Icons.arrow_drop_down_rounded, size: 18, color: _filterIndex == 2 ? Colors.white : const Color(0xFFF97316)),
                               ],
                             ),
                           ),
@@ -239,14 +303,20 @@ class _FeedScreenState extends State<FeedScreen> {
                         GestureDetector(
                           onTap: () => setState(() => _filterIndex = 3),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
-                              gradient: _filterIndex == 3 ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+                              gradient: _filterIndex == 3 ? const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF34D399)]) : null,
                               color: _filterIndex == 3 ? null : AppColors.surface,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: _filterIndex == 3 ? Colors.transparent : AppColors.border),
                             ),
-                            child: Text('📍 ใกล้เคียง', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 3 ? Colors.white : AppColors.textPrimary)),
+                            child: Row(
+                              children: [
+                                Icon(Icons.location_on_rounded, size: 14, color: _filterIndex == 3 ? Colors.white : const Color(0xFF10B981)),
+                                const SizedBox(width: 5),
+                                Text('ใกล้เคียง', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _filterIndex == 3 ? Colors.white : AppColors.textPrimary)),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -740,15 +810,32 @@ class _FilterDropdown extends StatelessWidget {
     return 'ทั้งหมด';
   }
 
+  List<Color> get _gradientColors {
+    if (genderFilter == 'female') return [const Color(0xFFEC4899), const Color(0xFFF472B6)];
+    if (genderFilter == 'male') return [const Color(0xFF3B82F6), const Color(0xFF60A5FA)];
+    return [const Color(0xFF7C4DFF), const Color(0xFFA78BFA)];
+  }
+
+  Color get _accentColor {
+    if (genderFilter == 'female') return const Color(0xFFEC4899);
+    if (genderFilter == 'male') return const Color(0xFF3B82F6);
+    return const Color(0xFF7C4DFF);
+  }
+
+  IconData get _leadingIcon {
+    if (genderFilter == 'female') return Icons.female_rounded;
+    if (genderFilter == 'male') return Icons.male_rounded;
+    return Icons.people_alt_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: () => _showDropdown(context),
+      onTap: () => _showDropdown(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          gradient: selected ? LinearGradient(colors: [lavenderDark, lavenderLight]) : null,
+          gradient: selected ? LinearGradient(colors: _gradientColors) : null,
           color: selected ? null : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: selected ? Colors.transparent : AppColors.border),
@@ -756,11 +843,11 @@ class _FilterDropdown extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_awesome_rounded, size: 14, color: selected ? Colors.white : lavenderDark),
+            Icon(_leadingIcon, size: 14, color: selected ? Colors.white : _accentColor),
             const SizedBox(width: 4),
             Text(_genderLabel, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: selected ? Colors.white : AppColors.textPrimary)),
             const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down_rounded, size: 18, color: selected ? Colors.white : lavenderDark),
+            Icon(Icons.arrow_drop_down_rounded, size: 18, color: selected ? Colors.white : _accentColor),
           ],
         ),
       ),
@@ -775,11 +862,34 @@ class _FilterDropdown extends StatelessWidget {
       position: RelativeRect.fromLTRB(offset.dx, offset.dy + box.size.height + 4, offset.dx + 160, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       items: [
-        PopupMenuItem(value: 'ทั้งหมด', child: Row(children: [const Text('👥'), const SizedBox(width: 8), const Text('ทั้งหมด')])),
-        PopupMenuItem(value: 'female', child: Row(children: [const Text('👩'), const SizedBox(width: 8), const Text('ผู้หญิง')])),
-        PopupMenuItem(value: 'male', child: Row(children: [const Text('👨'), const SizedBox(width: 8), const Text('ผู้ชาย')])),
+        PopupMenuItem(
+          value: 'ทั้งหมด',
+          child: Row(children: [
+            Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.people_alt_rounded, size: 16, color: Color(0xFF7C4DFF))),
+            const SizedBox(width: 10),
+            const Text('ทั้งหมด', style: TextStyle(fontWeight: FontWeight.w500)),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'female',
+          child: Row(children: [
+            Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFFCE7F3), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.female_rounded, size: 16, color: Color(0xFFEC4899))),
+            const SizedBox(width: 10),
+            const Text('ผู้หญิง', style: TextStyle(fontWeight: FontWeight.w500)),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'male',
+          child: Row(children: [
+            Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.male_rounded, size: 16, color: Color(0xFF3B82F6))),
+            const SizedBox(width: 10),
+            const Text('ผู้ชาย', style: TextStyle(fontWeight: FontWeight.w500)),
+          ]),
+        ),
       ],
-    ).then((val) { if (val != null) onGenderSelect(val); });
+    ).then((val) {
+      if (val != null) onGenderSelect(val);
+    });
   }
 }
 
