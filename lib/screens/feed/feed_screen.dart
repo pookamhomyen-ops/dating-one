@@ -395,7 +395,7 @@ class _StoriesRow extends StatelessWidget {
 }
 
 // ส่วนแสดงผลโพสต์การ์ด (ดึงข้อมูลจากตัวแปรโมเดลเรียลไทม์)
-class _FeedPostCard extends StatelessWidget {
+class _FeedPostCard extends StatefulWidget {
   const _FeedPostCard({
     required this.post,
     required this.lavenderDark,
@@ -408,12 +408,23 @@ class _FeedPostCard extends StatelessWidget {
   final VoidCallback onLike;
   final VoidCallback onComment;
 
+  @override
+  State<_FeedPostCard> createState() => _FeedPostCardState();
+}
+
+class _FeedPostCardState extends State<_FeedPostCard> {
+  bool _showComments = false;
+
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) return 'เมื่อกี้';
     if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
     if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
     return '${diff.inDays} วันที่แล้ว';
+  }
+
+  void _goToProfile(BuildContext context) {
+    Navigator.pushNamed(context, '/profile', arguments: widget.post.authorId);
   }
 
   @override
@@ -430,22 +441,28 @@ class _FeedPostCard extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                AvatarImage(url: post.authorPhotoUrl, size: 48),
+                GestureDetector(
+                  onTap: () => _goToProfile(context),
+                  child: AvatarImage(url: widget.post.authorPhotoUrl, size: 48),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: AppColors.textPrimary)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.verified, size: 16, color: Color(0xFF3B82F6)),
-                        ],
+                      GestureDetector(
+                        onTap: () => _goToProfile(context),
+                        child: Row(
+                          children: [
+                            Text(widget.post.authorName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: AppColors.textPrimary)),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.verified, size: 16, color: Color(0xFF3B82F6)),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _timeAgo(post.postedAt),
+                        _timeAgo(widget.post.postedAt),
                         style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                       ),
                     ],
@@ -456,15 +473,15 @@ class _FeedPostCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(post.content, style: const TextStyle(fontSize: 15, height: 1.45, color: AppColors.textPrimary)),
+            child: Text(widget.post.content, style: const TextStyle(fontSize: 15, height: 1.45, color: AppColors.textPrimary)),
           ),
-          if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
+          if (widget.post.imageUrl != null && widget.post.imageUrl!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: CachedNetworkImage(
-                  imageUrl: post.imageUrl!,
+                  imageUrl: widget.post.imageUrl!,
                   height: 340,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -482,17 +499,17 @@ class _FeedPostCard extends StatelessWidget {
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: onLike,
+                  onTap: widget.onLike,
                   child: Row(
                     children: [
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
                         transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
                         child: Icon(
-                          post.likedByMe ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                          key: ValueKey(post.likedByMe),
+                          widget.post.likedByMe ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          key: ValueKey(widget.post.likedByMe),
                           size: 22,
-                          color: post.likedByMe ? const Color(0xFFEC4899) : const Color(0xFF7C4DFF),
+                          color: widget.post.likedByMe ? const Color(0xFFEC4899) : const Color(0xFF7C4DFF),
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -501,22 +518,31 @@ class _FeedPostCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: post.likedByMe ? const Color(0xFFEC4899) : AppColors.textSecondary,
+                          color: widget.post.likedByMe ? const Color(0xFFEC4899) : AppColors.textSecondary,
                         ),
-                        child: Text('${post.likes}'),
+                        child: Text('${widget.post.likes}'),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: onComment,
+                  onTap: () {
+                    setState(() => _showComments = !_showComments);
+                  },
                   child: Row(
                     children: [
-                      const Text('💬', style: TextStyle(fontSize: 22)),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          _showComments ? '🔽' : '💬',
+                          key: ValueKey(_showComments),
+                          style: const TextStyle(fontSize: 22),
+                        ),
+                      ),
                       const SizedBox(width: 5),
                       Text(
-                        '${post.comments}',
+                        '${widget.post.comments}',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                       ),
                     ],
@@ -524,6 +550,13 @@ class _FeedPostCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _showComments
+                ? _InlineCommentSection(postId: widget.post.id)
+                : const SizedBox.shrink(),
           ),
         ],
       ),
@@ -912,6 +945,150 @@ class _ReactionBtn extends StatelessWidget {
           Text(emoji, style: const TextStyle(fontSize: 15)),
           const SizedBox(width: 6),
           Text(count, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineCommentSection extends StatefulWidget {
+  final String postId;
+  const _InlineCommentSection({required this.postId});
+
+  @override
+  State<_InlineCommentSection> createState() => _InlineCommentSectionState();
+}
+
+class _InlineCommentSectionState extends State<_InlineCommentSection> {
+  final _supabase = Supabase.instance.client;
+  final _ctrl = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  bool _loading = true;
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchComments();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchComments() async {
+    try {
+      final res = await _supabase
+          .from('post_comments')
+          .select('id, content, created_at, author_id, profiles(display_name, profile_photos(public_url, is_primary, sort_order))')
+          .eq('post_id', widget.postId)
+          .isFilter('parent_id', null)
+          .order('created_at', ascending: true)
+          .limit(5); // Show only last 5 for inline
+      setState(() {
+        _comments = List<Map<String, dynamic>>.from(res as List);
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('Inline Comments Error: $e');
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _sendComment() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    setState(() => _sending = true);
+    try {
+      await _supabase.from('post_comments').insert({
+        'post_id': widget.postId,
+        'author_id': userId,
+        'content': text,
+      });
+      _ctrl.clear();
+      await _fetchComments();
+    } catch (e) {
+      debugPrint('Send Inline Comment Error: $e');
+    } finally {
+      setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB).withValues(alpha: 0.5),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)))
+          else if (_comments.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('ยังไม่มีความคิดเห็น', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            )
+          else
+            ..._comments.map((c) {
+              final profile = c['profiles'] as Map<String, dynamic>?;
+              final name = profile?['display_name'] as String? ?? 'ผู้ใช้';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(c['content'] ?? '', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'เขียนความคิดเห็น...',
+                    hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    fillColor: Colors.white,
+                    filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sendComment,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(color: Color(0xFF7C4DFF), shape: BoxShape.circle),
+                  child: _sending
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.send_rounded, color: Colors.white, size: 14),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
         ],
       ),
     );
