@@ -80,7 +80,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     return DateFormat('d MMM yyyy • HH:mm', 'th').format(dt);
   }
 
-  void _openPostDetail(BuildContext context, Map<String, dynamic> post) {
+  void _openLikersSheet(BuildContext context, Map<String, dynamic> post) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -161,86 +161,526 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                       final p = _posts[i];
                       final imageUrl = p['image_url'] as String?;
                       final hasImage = imageUrl != null && imageUrl.isNotEmpty;
-                      return GestureDetector(
-                        onTap: () => _openPostDetail(ctx, p),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
-                          ),
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            // Header row
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
-                              child: Row(children: [
-                                const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textSecondary),
-                                const SizedBox(width: 4),
-                                Text(_formatDate(p['created_at']), style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                                const Spacer(),
-                                // like icon tappable
-                                GestureDetector(
-                                  onTap: () => _openPostDetail(ctx, p),
-                                  child: Row(children: [
-                                    const Icon(Icons.favorite_rounded, size: 15, color: Color(0xFFEC4899)),
-                                    const SizedBox(width: 3),
-                                    Text('${p['likes_count'] ?? 0}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                                  ]),
-                                ),
-                                const SizedBox(width: 12),
-                                // comment icon tappable
-                                GestureDetector(
-                                  onTap: () => _openPostDetail(ctx, p),
-                                  child: Row(children: [
-                                    const Icon(Icons.chat_bubble_rounded, size: 15, color: Color(0xFF06B6D4)),
-                                    const SizedBox(width: 3),
-                                    Text('${p['comments_count'] ?? 0}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                                  ]),
-                                ),
-                                const SizedBox(width: 10),
-                                GestureDetector(
-                                  onTap: () => _deletePost(p['post_id'] as String),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(10)),
-                                    child: const Icon(Icons.delete_outline_rounded, size: 17, color: Colors.red),
-                                  ),
-                                ),
-                              ]),
-                            ),
-                            // Content
-                            if ((p['content'] as String? ?? '').isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                                child: Text(p['content'] ?? '', style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.5)),
-                              ),
-                            // Image 1:1
-                            if (hasImage)
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-                                child: GestureDetector(
-                                  onTap: () => _openFullImage(ctx, imageUrl),
-                                  child: AspectRatio(
-                                    aspectRatio: 1,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: CachedNetworkImage(
-                                        imageUrl: imageUrl,
-                                        fit: BoxFit.cover,
-                                        placeholder: (_, __) => Container(color: AppColors.border),
-                                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            if (!hasImage) const SizedBox(height: 4),
-                          ]),
-                        ),
+                      return _MyPostCard(
+                        post: p,
+                        hasImage: hasImage,
+                        imageUrl: imageUrl,
+                        formatDate: _formatDate,
+                        onDelete: () => _deletePost(p['post_id'] as String),
+                        onOpenLikers: () => _openLikersSheet(ctx, p),
+                        openFullImage: (url) => _openFullImage(ctx, url),
                       );
                     },
                   ),
                 ),
+    );
+  }
+}
+
+// ── การ์ดโพสแบบ StatefulWidget (มี inline comments) ──
+class _MyPostCard extends StatefulWidget {
+  final Map<String, dynamic> post;
+  final bool hasImage;
+  final String? imageUrl;
+  final String Function(String) formatDate;
+  final VoidCallback onDelete;
+  final VoidCallback onOpenLikers;
+  final void Function(String) openFullImage;
+
+  const _MyPostCard({
+    required this.post,
+    required this.hasImage,
+    required this.imageUrl,
+    required this.formatDate,
+    required this.onDelete,
+    required this.onOpenLikers,
+    required this.openFullImage,
+  });
+
+  @override
+  State<_MyPostCard> createState() => _MyPostCardState();
+}
+
+class _MyPostCardState extends State<_MyPostCard> {
+  final _supabase = Supabase.instance.client;
+  bool _showComments = false;
+  bool _showLikers = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.post;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
+          child: Row(children: [
+            const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textSecondary),
+            const SizedBox(width: 4),
+            Text(widget.formatDate(p['created_at']), style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => setState(() => _showLikers = !_showLikers),
+              child: Row(children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    _showLikers ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    key: ValueKey(_showLikers),
+                    size: 16,
+                    color: const Color(0xFFEC4899),
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Text('${p['likes_count'] ?? 0}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => setState(() => _showComments = !_showComments),
+              child: Row(children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    _showComments ? '🔽' : '💬',
+                    key: ValueKey(_showComments),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Text('${p['comments_count'] ?? 0}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: widget.onDelete,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.delete_outline_rounded, size: 17, color: Colors.red),
+              ),
+            ),
+          ]),
+        ),
+        if ((p['content'] as String? ?? '').isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Text(p['content'] ?? '', style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.5)),
+          ),
+        if (widget.hasImage && widget.imageUrl != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+            child: GestureDetector(
+              onTap: () => widget.openFullImage(widget.imageUrl!),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: widget.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: AppColors.border),
+                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (!widget.hasImage) const SizedBox(height: 4),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: _showComments
+              ? _MyPostInlineComments(postId: p['post_id'] as String)
+              : const SizedBox.shrink(),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: _showLikers
+              ? _MyPostInlineLikers(
+                  postId: p['post_id'] as String,
+                  supabase: _supabase,
+                )
+              : const SizedBox.shrink(),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── Inline Comments สำหรับหน้า MyPosts ──
+class _MyPostInlineComments extends StatefulWidget {
+  final String postId;
+  const _MyPostInlineComments({required this.postId});
+
+  @override
+  State<_MyPostInlineComments> createState() => _MyPostInlineCommentsState();
+}
+
+class _MyPostInlineCommentsState extends State<_MyPostInlineComments> {
+  final _supabase = Supabase.instance.client;
+  List<Map<String, dynamic>> _comments = [];
+  bool _loading = true;
+  bool _hasMore = false;
+  int _page = 0;
+  static const int _pageSize = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  int _calcAge(String? s) {
+    if (s == null) return 0;
+    try {
+      final b = DateTime.parse(s);
+      final n = DateTime.now();
+      int a = n.year - b.year;
+      if (n.month < b.month || (n.month == b.month && n.day < b.day)) a--;
+      return a;
+    } catch (_) { return 0; }
+  }
+
+  String _formatDate(String? s) {
+    if (s == null) return '';
+    try {
+      final dt = DateTime.parse(s).toLocal();
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) { return ''; }
+  }
+
+  Color _borderColor(String? gender) {
+    if (gender == 'male') return const Color(0xFFBFDBFE);
+    if (gender == 'female') return const Color(0xFFFCE7F3);
+    return const Color(0xFFEDE9FE);
+  }
+
+  String? _photoUrl(Map<String, dynamic>? profile) {
+    final photos = profile?['profile_photos'] as List?;
+    if (photos == null || photos.isEmpty) return null;
+    final sorted = [...photos]..sort((a, b) {
+      if (a['is_primary'] == true) return -1;
+      if (b['is_primary'] == true) return 1;
+      return (a['sort_order'] ?? 0).compareTo(b['sort_order'] ?? 0);
+    });
+    return sorted.first['public_url'] as String?;
+  }
+
+  Future<void> _fetch({bool more = false}) async {
+    if (!more) setState(() { _loading = true; _page = 0; });
+    try {
+      final offset = more ? (_page + 1) * _pageSize : 0;
+      final res = await _supabase
+          .from('post_comments')
+          .select('id, content, created_at, author_id, profiles(display_name, gender, birth_date, profile_photos(public_url, is_primary, sort_order))')
+          .eq('post_id', widget.postId)
+          .isFilter('parent_id', null)
+          .order('created_at', ascending: true)
+          .range(offset, offset + _pageSize - 1);
+      final list = List<Map<String, dynamic>>.from(res as List);
+      setState(() {
+        if (more) { _comments.addAll(list); _page++; }
+        else { _comments = list; _page = 0; }
+        _hasMore = list.length == _pageSize;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('MyPost Comments Error: $e');
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Divider(height: 1, color: AppColors.border),
+        const SizedBox(height: 10),
+        if (_loading)
+          const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C4DFF))))
+        else if (_comments.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('ยังไม่มีความคิดเห็น', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          )
+        else ...[
+          ..._comments.map((c) {
+            final profile = c['profiles'] as Map<String, dynamic>?;
+            final name = profile?['display_name'] as String? ?? 'ผู้ใช้';
+            final gender = profile?['gender'] as String?;
+            final age = _calcAge(profile?['birth_date'] as String?);
+            final dateStr = _formatDate(c['created_at'] as String?);
+            final photoUrl = _photoUrl(profile);
+            final borderColor = _borderColor(gender);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: borderColor, width: 2)),
+                  child: ClipOval(
+                    child: photoUrl != null
+                        ? CachedNetworkImage(imageUrl: photoUrl, width: 36, height: 36, fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)))
+                        : const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary)),
+                      if (age > 0) ...[
+                        const SizedBox(width: 4),
+                        Text('อายุ $age', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                      const Spacer(),
+                      Text(dateStr, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text(c['content'] ?? '', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                  ]),
+                ),
+              ]),
+            );
+          }),
+          if (_hasMore)
+            GestureDetector(
+              onTap: () => _fetch(more: true),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Text('แสดงความคิดเห็นเพิ่มเติม', style: TextStyle(fontSize: 13, color: Color(0xFF7C4DFF), fontWeight: FontWeight.w600)),
+              ),
+            ),
+        ],
+      ]),
+    );
+  }
+}
+
+// ── Inline Likers สำหรับหน้า MyPosts ──
+class _MyPostInlineLikers extends StatefulWidget {
+  final String postId;
+  final SupabaseClient supabase;
+  const _MyPostInlineLikers({required this.postId, required this.supabase});
+
+  @override
+  State<_MyPostInlineLikers> createState() => _MyPostInlineLikersState();
+}
+
+class _MyPostInlineLikersState extends State<_MyPostInlineLikers> {
+  List<Map<String, dynamic>> _likers = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final res = await widget.supabase
+          .from('post_reactions')
+          .select('profile_id, profiles(display_name, gender, profile_photos(public_url, is_primary, sort_order))')
+          .eq('post_id', widget.postId)
+          .eq('reaction', 'like');
+      setState(() {
+        _likers = List<Map<String, dynamic>>.from(res as List);
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('InlineLikers Error: $e');
+      setState(() => _loading = false);
+    }
+  }
+
+  String? _photoUrl(Map<String, dynamic>? profile) {
+    final photos = profile?['profile_photos'] as List?;
+    if (photos == null || photos.isEmpty) return null;
+    final sorted = [...photos]..sort((a, b) {
+      if (a['is_primary'] == true) return -1;
+      if (b['is_primary'] == true) return 1;
+      return (a['sort_order'] ?? 0).compareTo(b['sort_order'] ?? 0);
+    });
+    return sorted.first['public_url'] as String?;
+  }
+
+  Color _borderColor(String? gender) {
+    if (gender == 'female') return const Color(0xFFFCE7F3);
+    if (gender == 'male') return const Color(0xFFBFDBFE);
+    return const Color(0xFFEDE9FE);
+  }
+
+  void _openViewer(int index) {
+    final profile = _likers[index]['profiles'] as Map<String, dynamic>?;
+    final gender = profile?['gender'] as String?;
+    final name = profile?['display_name'] as String? ?? '?';
+    final photoUrl = _photoUrl(profile);
+    final bgColor = gender == 'female'
+        ? const Color(0xFFFCE7F3)
+        : gender == 'male'
+            ? const Color(0xFFDBEAFE)
+            : Colors.white;
+    final borderColor = _borderColor(gender);
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 80),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            // ปุ่มปิดมุมขวาบน
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 12, 12, 0),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(color: Colors.black12, shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded, size: 20, color: Colors.black54),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // รูปโปรไฟล์
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor, width: 3),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(17),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: photoUrl != null
+                      ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover)
+                      : Container(
+                          color: borderColor.withValues(alpha: 0.3),
+                          child: Center(child: Text(name.isNotEmpty ? name[0] : '?',
+                              style: TextStyle(fontSize: 48, fontWeight: FontWeight.w700, color: borderColor))),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: 16),
+            // ปุ่มดูโปรไฟล์
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  final authorId = _likers[index]['profile_id'] as String?;
+                  if (authorId != null) Navigator.pushNamed(context, '/profile', arguments: authorId);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF7C4DFF), Color(0xFFEC4899)]),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.person_rounded, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text('ดูโปรไฟล์ของ $name', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFF1F2),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Divider(height: 1, color: AppColors.border),
+        const SizedBox(height: 10),
+        if (_loading)
+          const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEC4899))))
+        else if (_likers.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('ยังไม่มีคนกดใจ', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.75,
+            ),
+            itemCount: _likers.length,
+            itemBuilder: (_, i) {
+              final profile = _likers[i]['profiles'] as Map<String, dynamic>?;
+              final name = profile?['display_name'] as String? ?? '?';
+              final gender = profile?['gender'] as String?;
+              final photoUrl = _photoUrl(profile);
+              final borderColor = _borderColor(gender);
+              return GestureDetector(
+                onTap: () => _openViewer(i),
+                child: Column(children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: borderColor, width: 2.5)),
+                    child: ClipOval(
+                      child: SizedBox(
+                        width: 56, height: 56,
+                        child: photoUrl != null
+                            ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(color: borderColor.withValues(alpha: 0.2),
+                                    child: Center(child: Text(name.isNotEmpty ? name[0] : '?', style: TextStyle(color: borderColor, fontWeight: FontWeight.w700)))))
+                            : Container(color: borderColor.withValues(alpha: 0.2),
+                                child: Center(child: Text(name.isNotEmpty ? name[0] : '?', style: TextStyle(color: borderColor, fontWeight: FontWeight.w700)))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                ]),
+              );
+            },
+          ),
+        const SizedBox(height: 4),
+      ]),
     );
   }
 }

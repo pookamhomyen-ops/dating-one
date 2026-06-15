@@ -508,7 +508,7 @@ class _FeedPostCardState extends State<_FeedPostCard> {
                         child: Icon(
                           widget.post.likedByMe ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                           key: ValueKey(widget.post.likedByMe),
-                          size: 22,
+                          size: widget.post.likedByMe ? 28 : 26,
                           color: widget.post.likedByMe ? const Color(0xFFEC4899) : const Color(0xFF7C4DFF),
                         ),
                       ),
@@ -965,6 +965,9 @@ class _InlineCommentSectionState extends State<_InlineCommentSection> {
   List<Map<String, dynamic>> _comments = [];
   bool _loading = true;
   bool _sending = false;
+  bool _hasMore = false;
+  int _page = 0;
+  static const int _pageSize = 10;
 
   @override
   void initState() {
@@ -978,17 +981,57 @@ class _InlineCommentSectionState extends State<_InlineCommentSection> {
     super.dispose();
   }
 
-  Future<void> _fetchComments() async {
+  int _calcAge(String? birthDateStr) {
+    if (birthDateStr == null) return 0;
     try {
+      final birth = DateTime.parse(birthDateStr);
+      final now = DateTime.now();
+      int age = now.year - birth.year;
+      if (now.month < birth.month || (now.month == birth.month && now.day < birth.day)) age--;
+      return age;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  String _formatDate(String? isoStr) {
+    if (isoStr == null) return '';
+    try {
+      final dt = DateTime.parse(isoStr).toLocal();
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Color _borderColor(String? gender) {
+    if (gender == 'male') return const Color(0xFFBFDBFE);   // น้ำเงินพาสเทล
+    if (gender == 'female') return const Color(0xFFFCE7F3); // ชมพู
+    return const Color(0xFFEDE9FE);                          // ม่วง
+  }
+
+  Future<void> _fetchComments({bool loadMore = false}) async {
+    if (!loadMore) setState(() { _loading = true; _page = 0; });
+    try {
+      final offset = loadMore ? (_page + 1) * _pageSize : 0;
       final res = await _supabase
           .from('post_comments')
-          .select('id, content, created_at, author_id, profiles(display_name, profile_photos(public_url, is_primary, sort_order))')
+          .select('id, content, created_at, author_id, profiles(display_name, gender, birth_date, profile_photos(public_url, is_primary, sort_order))')
           .eq('post_id', widget.postId)
           .isFilter('parent_id', null)
           .order('created_at', ascending: true)
-          .limit(5); // Show only last 5 for inline
+          .range(offset, offset + _pageSize - 1);
+
+      final list = List<Map<String, dynamic>>.from(res as List);
       setState(() {
-        _comments = List<Map<String, dynamic>>.from(res as List);
+        if (loadMore) {
+          _comments.addAll(list);
+          _page++;
+        } else {
+          _comments = list;
+          _page = 0;
+        }
+        _hasMore = list.length == _pageSize;
         _loading = false;
       });
     } catch (e) {
@@ -1019,6 +1062,19 @@ class _InlineCommentSectionState extends State<_InlineCommentSection> {
     }
   }
 
+  String _photoUrl(Map<String, dynamic>? profile) {
+    final photos = profile?['profile_photos'];
+    if (photos == null) return '';
+    final list = photos as List;
+    if (list.isEmpty) return '';
+    list.sort((a, b) {
+      if (a['is_primary'] == true) return -1;
+      if (b['is_primary'] == true) return 1;
+      return (a['sort_order'] ?? 0).compareTo(b['sort_order'] ?? 0);
+    });
+    return list.first['public_url'] as String? ?? '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1039,24 +1095,69 @@ class _InlineCommentSectionState extends State<_InlineCommentSection> {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('ยังไม่มีความคิดเห็น', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             )
-          else
+          else ...[
             ..._comments.map((c) {
               final profile = c['profiles'] as Map<String, dynamic>?;
               final name = profile?['display_name'] as String? ?? 'ผู้ใช้';
+              final gender = profile?['gender'] as String?;
+              final age = _calcAge(profile?['birth_date'] as String?);
+              final dateStr = _formatDate(c['created_at'] as String?);
+              final photoUrl = _photoUrl(profile);
+              final borderColor = _borderColor(gender);
+
               return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary)),
+                    // รูปวงกลม + กรอบสีตามเพศ
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: borderColor, width: 2),
+                      ),
+                      child: ClipOval(
+                        child: photoUrl.isNotEmpty
+                            ? CachedNetworkImage(imageUrl: photoUrl, width: 36, height: 36, fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)))
+                            : const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)),
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(c['content'] ?? '', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary)),
+                              if (age > 0) ...[
+                                const SizedBox(width: 4),
+                                Text('อายุ $age', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              ],
+                              const Spacer(),
+                              Text(dateStr, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(c['content'] ?? '', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               );
             }),
+            if (_hasMore)
+              GestureDetector(
+                onTap: () => _fetchComments(loadMore: true),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4),
+                  child: Text('แสดงความคิดเห็นเพิ่มเติม', style: TextStyle(fontSize: 13, color: Color(0xFF7C4DFF), fontWeight: FontWeight.w600)),
+                ),
+              ),
+          ],
           const SizedBox(height: 8),
           Row(
             children: [
