@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'match_popup.dart';
 import '../../models/gender.dart';
+import '../../models/chat_thread.dart';
+import '../chat/chat_detail_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
 
@@ -449,10 +451,9 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                     ),
                     Positioned(
                       bottom: -32,
-                      left: 0,
-                      right: 0,
+                      right: 16,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           _AnimatedActionButton(
                             icon: Icons.close_rounded,
@@ -475,7 +476,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                               if (mounted) Navigator.pop(context, 'passed');
                             },
                           ),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 12),
                           _AnimatedActionButton(
                             icon: _isLiked
                                 ? Icons.favorite
