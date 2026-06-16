@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'match_popup.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
@@ -22,6 +23,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   List<String> _secretPhotoUrls = [];
   int _currentImageIndex = 0;
   bool _isLiked = false; // สำหรับสถานะกดใจเบื้องต้น
+  bool _isPassed = false;
 
   @override
   void initState() {
@@ -37,7 +39,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       final response = await client
           .from('profiles')
           .select('''
-  *,
+  id, display_name, gender, birth_date, bio, province, district, occupation, relationship_status, current_activity, is_verified, line_id, instagram,
   profile_photos(public_url, is_primary, sort_order),
   profile_interests(interests:interest_id(name)) 
 ''')
@@ -454,7 +456,22 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             icon: Icons.close_rounded,
                             color: AppColors.textSecondary,
                             size: 64,
-                            onTap: () => Navigator.pop(context),
+                            onTap: () async {
+                              setState(() => _isPassed = true);
+                              final me =
+                                  Supabase.instance.client.auth.currentUser;
+                              if (me != null) {
+                                try {
+                                  await Supabase.instance.client
+                                      .from('profile_passes')
+                                      .upsert({
+                                    'passer_id': me.id,
+                                    'passed_id': widget.memberId,
+                                  });
+                                } catch (_) {}
+                              }
+                              if (mounted) Navigator.pop(context, 'passed');
+                            },
                           ),
                           const SizedBox(width: 10),
                           _AnimatedActionButton(
@@ -464,7 +481,59 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                             color: AppColors.brandPink,
                             isFilled: _isLiked,
                             size: 64,
-                            onTap: () => setState(() => _isLiked = !_isLiked),
+                            onTap: () async {
+                              if (_isLiked) return;
+                              setState(() => _isLiked = true);
+                              final me =
+                                  Supabase.instance.client.auth.currentUser;
+                              if (me == null) return;
+                              try {
+                                await Supabase.instance.client
+                                    .from('profile_likes')
+                                    .upsert({
+                                  'liker_id': me.id,
+                                  'liked_id': widget.memberId,
+                                });
+                                final ids = [me.id, widget.memberId]..sort();
+                                await Supabase.instance.client
+                                    .from('conversations')
+                                    .upsert({
+                                  'user_low_id': ids[0],
+                                  'user_high_id': ids[1],
+                                });
+                                final mutual = await Supabase.instance.client
+                                    .from('profile_likes')
+                                    .select()
+                                    .eq('liker_id', widget.memberId)
+                                    .eq('liked_id', me.id)
+                                    .maybeSingle();
+                                if (mutual != null && mounted) {
+                                  await Supabase.instance.client
+                                      .from('matches')
+                                      .upsert({
+                                    'user_a_id': ids[0],
+                                    'user_b_id': ids[1],
+                                    'matched_at':
+                                        DateTime.now().toIso8601String(),
+                                  });
+                                  await showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    barrierColor:
+                                        Colors.black.withValues(alpha: 0.85),
+                                    builder: (_) => MatchPopup(
+                                      myPhotoUrl: '',
+                                      matchPhotoUrl: _photoUrls.isNotEmpty
+                                          ? _photoUrls.first
+                                          : '',
+                                      matchName:
+                                          _profileData!['display_name'] ?? '',
+                                    ),
+                                  );
+                                }
+                              } catch (_) {}
+                              if (mounted) Navigator.pop(context, 'liked');
+                            },
                           ),
                         ],
                       ),
@@ -579,14 +648,28 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                   '${_profileData!['district']}, ${_profileData!['province']}',
                               iconColor: AppColors.iconOrange,
                             ),
-                            if (_profileData!['occupation'] != null) ...[
-                              const SizedBox(height: 12),
-                              _InfoLine(
-                                icon: Icons.work_rounded,
-                                text: _profileData!['occupation'],
-                                iconColor: AppColors.iconGreen,
-                              ),
-                            ],
+                            Builder(builder: (context) {
+                              final relStatus =
+                                  _profileData!['relationship_status']
+                                      as String?;
+                              final activity =
+                                  _profileData!['current_activity'] as String?;
+                              if (relStatus == null && activity == null) {
+                                return const SizedBox.shrink();
+                              }
+                              final parts = [
+                                if (relStatus != null) relStatus,
+                                if (activity != null) activity
+                              ];
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: _InfoLine(
+                                  icon: Icons.favorite_border_rounded,
+                                  text: parts.join(' · '),
+                                  iconColor: AppColors.iconPink,
+                                ),
+                              );
+                            }),
                             if (_interests.isNotEmpty) ...[
                               const SizedBox(height: 16),
                               Wrap(
