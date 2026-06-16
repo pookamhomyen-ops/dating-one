@@ -375,6 +375,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
               builder: (context, constraints) {
                 final double screenWidth = constraints.maxWidth;
                 return Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     GestureDetector(
                       onTapDown: (details) =>
@@ -447,10 +448,11 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       ),
                     ),
                     Positioned(
-                      bottom: 20,
-                      right: 16,
+                      bottom: -32,
+                      left: 0,
+                      right: 0,
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _AnimatedActionButton(
                             icon: Icons.close_rounded,
@@ -473,7 +475,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                               if (mounted) Navigator.pop(context, 'passed');
                             },
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 24),
                           _AnimatedActionButton(
                             icon: _isLiked
                                 ? Icons.favorite
@@ -539,35 +541,31 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       ),
                     ),
                     Positioned(
-                      bottom: 5,
+                      bottom: 44,
                       left: 20,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
+                      right: 100,
+                      child: Text(
+                        _profileData!['bio'] ?? 'ไม่มีข้อมูลประวัติ',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.background.withValues(alpha: 0.92),
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.9),
+                              blurRadius: 6,
+                              offset: Offset(0, 1),
+                            ),
+                            Shadow(
+                              color: Colors.black.withOpacity(0.6),
+                              blurRadius: 12,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.68,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.textPrimary.withValues(
-                            alpha: 0.3,
-                          ),
-                          border: Border.all(
-                            color: AppColors.background.withValues(alpha: 0.15),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          _profileData!['bio'] ?? 'ไม่มีข้อมูลประวัติ',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.background.withValues(alpha: 0.85),
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
