@@ -269,6 +269,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
       final double myLat = (myProfile['latitude'] as num?)?.toDouble() ?? 0.0;
       final double myLon = (myProfile['longitude'] as num?)?.toDouble() ?? 0.0;
 
+      final blockedData = await client
+          .from('blocked_users')
+          .select('blocker_id, blocked_id')
+          .or('blocker_id.eq.$currentUserId,blocked_id.eq.$currentUserId');
+
+      final Set<String> blockedIds = {};
+      for (final row in blockedData as List) {
+        if (row['blocker_id'] == currentUserId) {
+          blockedIds.add(row['blocked_id'] as String);
+        } else {
+          blockedIds.add(row['blocker_id'] as String);
+        }
+      }
+
       final response = await client
           .from('profiles')
           .select('''
@@ -281,6 +295,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
       final List<Member> loadedMembers = [];
 
       for (var row in response as List) {
+        if (blockedIds.contains(row['id'])) continue;
         Gender gender;
         switch (row['gender']) {
           case 'female':

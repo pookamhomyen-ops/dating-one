@@ -73,6 +73,20 @@ class _SwipeScreenState extends State<SwipeScreen>
         excludedIds.add(row['passed_id'] as String);
       }
 
+      final blockedData = await client
+          .from('blocked_users')
+          .select('blocker_id, blocked_id')
+          .or('blocker_id.eq.${me.id},blocked_id.eq.${me.id}');
+
+      final Set<String> blockedIds = {};
+      for (final row in blockedData as List) {
+        if (row['blocker_id'] == me.id) {
+          blockedIds.add(row['blocked_id'] as String);
+        } else {
+          blockedIds.add(row['blocker_id'] as String);
+        }
+      }
+
       final response = await client
           .from('profiles')
           .select('id, display_name, gender, birth_date, province, district, bio, is_online, is_verified, profile_photos(public_url, is_primary, sort_order)')
@@ -83,6 +97,9 @@ class _SwipeScreenState extends State<SwipeScreen>
       final List<Map<String, dynamic>> loaded = [];
       for (var row in response as List) {
         if (excludedIds.contains(row['id'])) {
+          continue;
+        }
+        if (blockedIds.contains(row['id'])) {
           continue;
         }
         final photos = List<Map<String, dynamic>>.from(row['profile_photos'] ?? []);

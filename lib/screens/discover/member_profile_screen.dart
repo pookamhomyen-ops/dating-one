@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'match_popup.dart';
 import '../../models/gender.dart';
@@ -26,6 +27,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   int _currentImageIndex = 0;
   bool _isLiked = false; // สำหรับสถานะกดใจเบื้องต้น
   bool _isPassed = false;
+  bool _isBlocked = false;
+  bool _isBlockedByThem = false;
 
   @override
   void initState() {
@@ -65,6 +68,20 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
         if (name != null) loadedInterests.add(name as String);
       }
 
+      final me = client.auth.currentUser;
+      bool isBlocked = false;
+      bool isBlockedByThem = false;
+      if (me != null) {
+        final blockCheck = await client
+            .from('blocked_users')
+            .select('blocker_id, blocked_id')
+            .or('and(blocker_id.eq.${me.id},blocked_id.eq.${widget.memberId}),and(blocker_id.eq.${widget.memberId},blocked_id.eq.${me.id})');
+        for (final row in blockCheck as List) {
+          if (row['blocker_id'] == me.id) isBlocked = true;
+          if (row['blocker_id'] == widget.memberId) isBlockedByThem = true;
+        }
+      }
+
       final secretData = await client
           .from('secret_photos')
           .select()
@@ -82,6 +99,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
         _interests = loadedInterests;
         _secretPhotoUrls = secretUrls;
         _isLoading = false;
+        _isBlocked = isBlocked;
+        _isBlockedByThem = isBlockedByThem;
       });
     } catch (e) {
       debugPrint('🔴 Supabase Detail Error: $e');
@@ -100,6 +119,64 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       age--;
     }
     return age;
+  }
+
+  bool _isNavigatingToChat = false;
+
+  Future<void> _navigateToChat() async {
+    if (_isNavigatingToChat) return;
+    _isNavigatingToChat = true;
+    try {
+      final me = Supabase.instance.client.auth.currentUser;
+      if (me == null) return;
+      final ids = [me.id, widget.memberId]..sort();
+
+      // เช็คก่อนว่ามี conversation อยู่แล้วหรือยัง
+      final existing = await Supabase.instance.client
+          .from('conversations')
+          .select('id')
+          .eq('user_low_id', ids[0])
+          .eq('user_high_id', ids[1])
+          .maybeSingle();
+
+      String convId;
+      if (existing != null) {
+        // มีอยู่แล้ว ใช้อันเดิม
+        convId = existing['id'] as String;
+      } else {
+        // ยังไม่มี สร้างใหม่
+        final created = await Supabase.instance.client
+            .from('conversations')
+            .insert({
+              'user_low_id': ids[0],
+              'user_high_id': ids[1],
+            })
+            .select('id')
+            .single();
+        convId = created['id'] as String;
+      }
+
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            thread: ChatThread(
+              id: convId,
+              partnerName: _profileData!['display_name'] as String? ?? '',
+              partnerPhotoUrl: _photoUrls.isNotEmpty ? _photoUrls.first : '',
+              lastMessage: '',
+              lastMessageAt: DateTime.now(),
+              isOnline: _profileData!['is_online'] as bool? ?? false,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Chat nav error: $e');
+    } finally {
+      _isNavigatingToChat = false;
+    }
   }
 
   void _handleImageTap(TapDownDetails details, double screenWidth) {
@@ -342,6 +419,226 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
     );
   }
 
+  void _showReportBlockMenu() {
+    final name = _profileData?['display_name'] ?? '';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.flag_outlined, color: AppColors.destructive),
+                title: Text('รายงาน $name', style: const TextStyle(color: AppColors.destructive)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showReportReasonSheet();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.block_rounded, color: AppColors.destructive),
+                title: Text('บล็อก $name', style: const TextStyle(color: AppColors.destructive)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmBlock();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showReportReasonSheet() {
+    String? selectedReason;
+    String? selectedSubtype;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final reasons = [
+            {'value': 'scam_money', 'label': 'หลอกโอนเงิน'},
+            {'value': 'rude_language', 'label': 'พูดจาหยาบคาย'},
+            {'value': 'nudity', 'label': 'ภาพโป๊เปลือย'},
+            {'value': 'just_block', 'label': 'อยากบล็อกเฉยๆ'},
+            {'value': 'gender_mismatch', 'label': 'เพศไม่ตรงตามจริง'},
+          ];
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'เลือกเหตุผลในการรายงาน',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 16),
+                    ...reasons.map((r) => RadioListTile<String>(
+                          value: r['value']!,
+                          groupValue: selectedReason,
+                          title: Text(r['label']!),
+                          activeColor: AppColors.brandPink,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (v) => setSheetState(() => selectedReason = v),
+                        )),
+                    if (selectedReason == 'gender_mismatch') ...[
+                      const Padding(
+                        padding: EdgeInsets.only(left: 16, top: 4, bottom: 4),
+                        child: Text('ระบุเพิ่มเติม', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ),
+                      RadioListTile<String>(
+                        value: 'is_ladyboy',
+                        groupValue: selectedSubtype,
+                        title: const Text('เขาเป็นกระเทย'),
+                        activeColor: AppColors.brandPink,
+                        contentPadding: const EdgeInsets.only(left: 16),
+                        onChanged: (v) => setSheetState(() => selectedSubtype = v),
+                      ),
+                      RadioListTile<String>(
+                        value: 'not_sure',
+                        groupValue: selectedSubtype,
+                        title: const Text('ไม่แน่ใจ'),
+                        activeColor: AppColors.brandPink,
+                        contentPadding: const EdgeInsets.only(left: 16),
+                        onChanged: (v) => setSheetState(() => selectedSubtype = v),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: selectedReason == null
+                            ? null
+                            : () {
+                                Navigator.pop(ctx);
+                                _submitReport(selectedReason!, selectedSubtype);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.brandPink,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('ส่งรายงาน'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _submitReport(String reason, String? subtype) async {
+    final me = Supabase.instance.client.auth.currentUser;
+    if (me == null) return;
+    try {
+      await Supabase.instance.client.from('reports').insert({
+        'reporter_id': me.id,
+        'reported_id': widget.memberId,
+        'reason': reason,
+        if (subtype != null) 'gender_mismatch_subtype': subtype,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ส่งรายงานเรียบร้อยแล้ว')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Report error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ส่งรายงานไม่สำเร็จ: $e'), backgroundColor: AppColors.destructive),
+        );
+      }
+    }
+  }
+
+  void _confirmBlock() {
+    final name = _profileData?['display_name'] ?? '';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ยืนยันการบล็อก'),
+        content: Text('คุณต้องการบล็อก $name ใช่หรือไม่? คุณจะไม่เห็นกันอีกต่อไป'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('บล็อก', style: TextStyle(color: AppColors.destructive)),
+          ),
+        ],
+      ),
+    ).then((confirm) {
+      if (confirm == true) _doBlock();
+    });
+  }
+
+  Future<void> _doBlock() async {
+    final me = Supabase.instance.client.auth.currentUser;
+    if (me == null) return;
+    try {
+      await Supabase.instance.client.from('blocked_users').insert({
+        'blocker_id': me.id,
+        'blocked_id': widget.memberId,
+      });
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      debugPrint('Block error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('บล็อกไม่สำเร็จ: $e'), backgroundColor: AppColors.destructive),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -443,6 +740,21 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                           backgroundColor: AppColors.textPrimary,
                           child: Icon(
                             Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.background,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 60,
+                      right: 10,
+                      child: IconButton(
+                        onPressed: _showReportBlockMenu,
+                        icon: const CircleAvatar(
+                          backgroundColor: AppColors.textPrimary,
+                          child: Icon(
+                            Icons.more_vert_rounded,
                             color: AppColors.background,
                             size: 20,
                           ),
@@ -715,7 +1027,11 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      _VerticalActionButtons(),
+                      _VerticalActionButtons(
+                        onChatTap: () {
+                          _navigateToChat();
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 32),
@@ -906,8 +1222,13 @@ class _AnimatedActionButtonState extends State<_AnimatedActionButton>
 class _VerticalActionButtons extends StatelessWidget {
   final VoidCallback? onFollowTap;
   final VoidCallback? onLeafTap;
+  final VoidCallback? onChatTap;
 
-  const _VerticalActionButtons({this.onFollowTap, this.onLeafTap});
+  const _VerticalActionButtons({
+    this.onFollowTap,
+    this.onLeafTap,
+    this.onChatTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -919,7 +1240,7 @@ class _VerticalActionButtons extends StatelessWidget {
           label: 'แชท',
           color: const Color(0xFF00BCD4),
           animType: _SideBarAnimType.bounce,
-          onTap: onFollowTap ?? () {},
+          onTap: onChatTap ?? () {},
         ),
         const SizedBox(height: 12),
         _AnimatedSideBarButton(
