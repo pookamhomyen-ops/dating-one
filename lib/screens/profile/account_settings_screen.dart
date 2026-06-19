@@ -7,6 +7,7 @@ import 'profile_setup_step2_screen.dart';
 import 'profile_setup_step3_screen.dart';
 import '../../models/gender.dart';
 import '../auth/login_screen.dart';
+import 'go_where_screen.dart';
 
 class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
@@ -151,6 +152,21 @@ class AccountSettingsScreen extends StatelessWidget {
     );
   },
 ),
+                          _MenuItem(
+                            iconData: Icons.directions_walk_outlined,
+                            iconBg: const Color(0xFFFF7043).withValues(alpha: 0.12),
+                            iconColor: const Color(0xFFFF7043),
+                            title: 'จะไปไหน',
+                            subtitle: 'ตั้งค่าสถานที่และเวลาที่จะไป',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const GoWhereScreen(),
+                                ),
+                              );
+                            },
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),

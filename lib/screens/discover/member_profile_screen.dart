@@ -29,6 +29,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
   bool _isPassed = false;
   bool _isBlocked = false;
   bool _isBlockedByThem = false;
+  bool _isFollowing = false;
+  Map<String, dynamic>? _goWhereData;
 
   @override
   void initState() {
@@ -71,6 +73,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       final me = client.auth.currentUser;
       bool isBlocked = false;
       bool isBlockedByThem = false;
+      bool isFollowing = false;
       if (me != null) {
         final blockCheck = await client
             .from('blocked_users')
@@ -80,6 +83,14 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
           if (row['blocker_id'] == me.id) isBlocked = true;
           if (row['blocker_id'] == widget.memberId) isBlockedByThem = true;
         }
+
+        final followCheck = await client
+            .from('follows')
+            .select('follower_id')
+            .eq('follower_id', me.id)
+            .eq('followed_id', widget.memberId)
+            .maybeSingle();
+        isFollowing = followCheck != null;
       }
 
       final secretData = await client
@@ -93,6 +104,12 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
           .where((url) => url.isNotEmpty)
           .toList();
 
+      final goWhereData = await client
+          .from('gowhere')
+          .select()
+          .eq('profile_id', widget.memberId)
+          .maybeSingle();
+
       setState(() {
         _profileData = response;
         _photoUrls = photos.map((p) => p['public_url'] as String).toList();
@@ -101,6 +118,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
         _isLoading = false;
         _isBlocked = isBlocked;
         _isBlockedByThem = isBlockedByThem;
+        _isFollowing = isFollowing;
+        _goWhereData = goWhereData;
       });
     } catch (e) {
       debugPrint('🔴 Supabase Detail Error: $e');
@@ -176,6 +195,30 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
       debugPrint('Chat nav error: $e');
     } finally {
       _isNavigatingToChat = false;
+    }
+  }
+
+  Future<void> _toggleFollow() async {
+    final me = Supabase.instance.client.auth.currentUser;
+    if (me == null) return;
+    final wasFollowing = _isFollowing;
+    setState(() => _isFollowing = !wasFollowing);
+    try {
+      if (wasFollowing) {
+        await Supabase.instance.client
+            .from('follows')
+            .delete()
+            .eq('follower_id', me.id)
+            .eq('followed_id', widget.memberId);
+      } else {
+        await Supabase.instance.client.from('follows').upsert({
+          'follower_id': me.id,
+          'followed_id': widget.memberId,
+        });
+      }
+    } catch (e) {
+      debugPrint('Follow error: $e');
+      if (mounted) setState(() => _isFollowing = wasFollowing);
     }
   }
 
@@ -1028,6 +1071,9 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       ),
                       const SizedBox(width: 16),
                       _VerticalActionButtons(
+                        isFollowing: _isFollowing,
+                        onFollowTap: _toggleFollow,
+                        goWhereData: _goWhereData,
                         onChatTap: () {
                           _navigateToChat();
                         },
@@ -1220,14 +1266,18 @@ class _AnimatedActionButtonState extends State<_AnimatedActionButton>
 }
 
 class _VerticalActionButtons extends StatelessWidget {
+  final bool isFollowing;
   final VoidCallback? onFollowTap;
   final VoidCallback? onLeafTap;
   final VoidCallback? onChatTap;
+  final Map<String, dynamic>? goWhereData;
 
   const _VerticalActionButtons({
+    this.isFollowing = false,
     this.onFollowTap,
     this.onLeafTap,
     this.onChatTap,
+    this.goWhereData,
   });
 
   @override
@@ -1244,20 +1294,16 @@ class _VerticalActionButtons extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _AnimatedSideBarButton(
-          icon: Icons.add_circle_rounded,
+          icon: isFollowing ? Icons.check_circle_rounded : Icons.add_circle_rounded,
           label: 'ติดตาม',
           color: AppColors.iconPurple,
+          labelColor: isFollowing ? const Color(0xFFB39DDB) : null,
+          iconColor: isFollowing ? AppColors.iconGreen : null,
           animType: _SideBarAnimType.spin,
           onTap: onFollowTap ?? () {},
         ),
         const SizedBox(height: 12),
-        _AnimatedSideBarButton(
-          icon: Icons.directions_walk_rounded,
-          label: 'จะไป',
-          color: const Color(0xFFFF7043),
-          animType: _SideBarAnimType.shake,
-          onTap: () {},
-        ),
+        _GoToButton(data: goWhereData),
         const SizedBox(height: 12),
         _LeafButton(onTap: onLeafTap ?? () {}),
       ],
@@ -1271,6 +1317,8 @@ class _AnimatedSideBarButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final Color? labelColor;
+  final Color? iconColor;
   final _SideBarAnimType animType;
   final VoidCallback onTap;
 
@@ -1278,6 +1326,8 @@ class _AnimatedSideBarButton extends StatefulWidget {
     required this.icon,
     required this.label,
     required this.color,
+    this.labelColor,
+    this.iconColor,
     required this.animType,
     required this.onTap,
   });
@@ -1344,7 +1394,7 @@ class _AnimatedSideBarButtonState extends State<_AnimatedSideBarButton>
             angle: _anim.value * 2 * 3.14159,
             child: child,
           ),
-          child: Icon(widget.icon, color: widget.color, size: 20),
+          child: Icon(widget.icon, color: widget.iconColor ?? widget.color, size: 20),
         );
       case _SideBarAnimType.shake:
         return AnimatedBuilder(
@@ -1396,7 +1446,287 @@ class _AnimatedSideBarButtonState extends State<_AnimatedSideBarButton>
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: widget.color,
+                color: widget.labelColor ?? widget.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GoToButton extends StatefulWidget {
+  final Map<String, dynamic>? data;
+  const _GoToButton({this.data});
+
+  @override
+  State<_GoToButton> createState() => _GoToButtonState();
+}
+
+class _GoToButtonState extends State<_GoToButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _iconAnim;
+  late Animation<double> _popupAnim;
+  bool _showPopup = false;
+  OverlayEntry? _overlayEntry;
+  final GlobalKey _btnKey = GlobalKey();
+
+  static const Color _goColor = Color(0xFFFF7043);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    _iconAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 35),
+      TweenSequenceItem(tween: Tween(begin: 1.35, end: 0.9), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 35),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _popupAnim = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _showPopup = false;
+  }
+
+  String _placeLine(Map<String, dynamic> data) {
+    final place = data['place'] as String? ?? '';
+    final period = data['period'] as String? ?? '';
+    final dateStr = data['go_date'] as String?;
+    String dayLabel = '';
+    if (dateStr != null) {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final targetDay = DateTime(date.year, date.month, date.day);
+      final diffDays = targetDay.difference(today).inDays;
+      if (diffDays == 0) {
+        dayLabel = 'วันนี้';
+      } else if (diffDays == 1) {
+        dayLabel = 'พรุ่งนี้';
+      } else if (diffDays == 2) {
+        dayLabel = 'มะรืนนี้';
+      } else {
+        dayLabel = '${date.day}/${date.month}/${date.year}';
+      }
+    }
+    return [place, dayLabel, period].where((s) => s.isNotEmpty).join(' ');
+  }
+
+  String _timeLine(Map<String, dynamic> data) {
+    final dateStr = data['go_date'] as String?;
+    final timeStr = data['go_time'] as String?;
+    if (dateStr == null || timeStr == null) return '';
+    final dateParts = dateStr.split('-');
+    final timeParts = timeStr.split(':');
+    final target = DateTime(
+      int.parse(dateParts[0]),
+      int.parse(dateParts[1]),
+      int.parse(dateParts[2]),
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+    );
+    final hh = timeParts[0].padLeft(2, '0');
+    final mm = timeParts[1].padLeft(2, '0');
+    final diff = target.difference(DateTime.now());
+    String countdown;
+    if (diff.isNegative) {
+      countdown = 'ถึงเวลานี้แล้ว';
+    } else {
+      final days = diff.inDays;
+      final hours = diff.inHours % 24;
+      final minutes = diff.inMinutes % 60;
+      countdown = days > 0
+          ? 'อีก $days วัน $hours ชั่วโมง'
+          : 'อีก $hours ชั่วโมง $minutes นาที';
+    }
+    return '$hh.$mm น. ($countdown)';
+  }
+
+  void _togglePopup() {
+    if (_showPopup) {
+      _ctrl.reverse().then((_) => _removeOverlay());
+      return;
+    }
+
+    _ctrl.forward(from: 0.0);
+    _showPopup = true;
+
+    final box = _btnKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final pos = box.localToGlobal(Offset.zero);
+    final data = widget.data;
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => _ctrl.reverse().then((_) => _removeOverlay()),
+              behavior: HitTestBehavior.translucent,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          Positioned(
+            top: pos.dy + box.size.height / 2 - 28,
+            left: pos.dx - 290,
+            child: AnimatedBuilder(
+              animation: _popupAnim,
+              builder: (_, child) => Transform.scale(
+                scale: _popupAnim.value,
+                alignment: Alignment.centerRight,
+                child: Opacity(
+                    opacity: (_popupAnim.value).clamp(0.0, 1.0), child: child),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 280,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                        color: Colors.black.withOpacity(0.12), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: _goColor.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.directions_walk_rounded,
+                                color: _goColor, size: 14),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'สถานที่จะไป',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (data == null)
+                        const Text(
+                          'ยังไม่ได้ระบุสถานะจะไป',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        )
+                      else ...[
+                        Text(
+                          _placeLine(data),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF20212B),
+                            fontWeight: FontWeight.bold,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _timeLine(data),
+                          softWrap: false,
+                          overflow: TextOverflow.visible,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(_btnKey.currentContext!).insert(_overlayEntry!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: _btnKey,
+      onTap: _togglePopup,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 68,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _goColor.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: _goColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: AnimatedBuilder(
+                animation: _iconAnim,
+                builder: (_, child) => Transform.scale(
+                  scale: _showPopup ? 1.0 : _iconAnim.value,
+                  child: child,
+                ),
+                child: Icon(Icons.directions_walk_rounded,
+                    color: _goColor, size: 20),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'จะไป',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: _goColor,
               ),
             ),
           ],
