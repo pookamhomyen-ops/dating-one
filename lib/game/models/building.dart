@@ -1,0 +1,122 @@
+class Building {
+  final String id;
+  final String settlementId;
+  final String buildingType;
+  final int level;
+  final int? houseVariant;
+  final bool isUpgrading;
+  final DateTime? upgradeFinishAt;
+  final DateTime createdAt;
+
+  const Building({
+    required this.id,
+    required this.settlementId,
+    required this.buildingType,
+    required this.level,
+    this.houseVariant,
+    required this.isUpgrading,
+    this.upgradeFinishAt,
+    required this.createdAt,
+  });
+
+  factory Building.fromJson(Map<String, dynamic> json) {
+    return Building(
+      id: json['id'],
+      settlementId: json['settlement_id'],
+      buildingType: json['building_type'],
+      level: json['level'],
+      houseVariant: json['house_variant'],
+      isUpgrading: json['is_upgrading'] ?? false,
+      upgradeFinishAt: json['upgrade_finish_at'] != null
+          ? DateTime.parse(json['upgrade_finish_at'])
+          : null,
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+
+  // เวลาที่เหลือในการอัปเกรด
+  Duration? get upgradeTimeRemaining {
+    if (!isUpgrading || upgradeFinishAt == null) return null;
+    final remaining = upgradeFinishAt!.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  bool get upgradeComplete {
+    if (!isUpgrading || upgradeFinishAt == null) return false;
+    return DateTime.now().isAfter(upgradeFinishAt!);
+  }
+
+  // ชื่อแสดงผล
+  String get displayName {
+    const names = {
+      'sawmill': 'โรงไม้',
+      'smelter': 'โรงหลอม',
+      'rice_farm': 'นาข้าว',
+      'distillery': 'โรงกลั่น',
+      'house': 'บ้านเรือน',
+      'tavern': 'ร้านเหล้าตอง',
+      'shrine': 'ศาลเจ้า',
+      'barracks': 'ค่ายทหาร',
+      'elephant_camp': 'โรงช้าง',
+      'smithy': 'โรงตีเหล็ก',
+      'wall': 'กำแพงเมือง',
+      'watchtower': 'หอสังเกตการณ์',
+      'town_hall': 'ศาลากลาง',
+    };
+    return names[buildingType] ?? buildingType;
+  }
+
+  // ต้นทุนอัปเกรด level ถัดไป
+  Map<String, int> get upgradeCost {
+    final multiplier = level; // level 1→2 = x1, 2→3 = x2 ...
+    const baseCosts = {
+      'sawmill':       {'wood': 30, 'iron': 10},
+      'smelter':       {'wood': 20, 'iron': 30},
+      'rice_farm':     {'wood': 40, 'iron': 10},
+      'distillery':    {'wood': 30, 'iron': 20},
+      'house':         {'wood': 50, 'iron': 10},
+      'tavern':        {'wood': 40, 'iron': 20},
+      'shrine':        {'wood': 60, 'iron': 30},
+      'barracks':      {'wood': 50, 'iron': 40},
+      'elephant_camp': {'wood': 80, 'iron': 60},
+      'smithy':        {'wood': 40, 'iron': 50},
+      'wall':          {'wood': 30, 'iron': 60},
+      'watchtower':    {'wood': 50, 'iron': 30},
+      'town_hall':     {'wood': 80, 'iron': 80},
+    };
+    final base = baseCosts[buildingType] ?? {'wood': 50, 'iron': 50};
+    return base.map((k, v) => MapEntry(k, v * multiplier));
+  }
+
+  // เวลาอัปเกรด (วินาที)
+  int get upgradeSeconds {
+    const baseSeconds = {
+      'sawmill': 180,       // 3 นาที
+      'smelter': 180,
+      'rice_farm': 240,
+      'distillery': 300,
+      'house': 120,
+      'tavern': 200,
+      'shrine': 360,
+      'barracks': 300,
+      'elephant_camp': 600,
+      'smithy': 400,
+      'wall': 500,
+      'watchtower': 350,
+      'town_hall': 600,
+    };
+    final base = baseSeconds[buildingType] ?? 300;
+    return base * level; // แต่ละ level นานขึ้นเรื่อยๆ
+  }
+
+  // production ต่อ tick (5 นาที)
+  Map<String, int> get productionPerTick {
+    switch (buildingType) {
+      case 'sawmill':    return {'wood': 4 + (level * 2)};
+      case 'smelter':    return {'iron': 3 + (level * 2)};
+      case 'rice_farm':  return {'rice': 4 + (level * 2)};
+      case 'distillery': return {'liquor': 2 + level};
+      default:           return {};
+    }
+  }
+}

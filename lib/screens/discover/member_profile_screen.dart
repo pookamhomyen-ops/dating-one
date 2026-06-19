@@ -8,6 +8,8 @@ import '../../models/chat_thread.dart';
 import '../chat/chat_detail_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
+import '../../game/ui/game_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MemberProfileScreen extends StatefulWidget {
   final String memberId;
@@ -1306,6 +1308,23 @@ class _VerticalActionButtons extends StatelessWidget {
         _GoToButton(data: goWhereData),
         const SizedBox(height: 12),
         _LeafButton(onTap: onLeafTap ?? () {}),
+        const SizedBox(height: 12),
+        _AnimatedSideBarButton(
+  icon: Icons.shield_rounded,
+  label: 'บรรลัยวอร์',
+  color: const Color(0xFFB91C1C),
+  animType: _SideBarAnimType.shake,
+  onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ProviderScope(
+        child: GameScreen(),
+      ),
+    ),
+  );
+},
+),
       ],
     );
   }
@@ -1465,8 +1484,9 @@ class _GoToButton extends StatefulWidget {
 }
 
 class _GoToButtonState extends State<_GoToButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _ctrl;
+  late AnimationController _popupCtrl;
   late Animation<double> _iconAnim;
   late Animation<double> _popupAnim;
   bool _showPopup = false;
@@ -1480,18 +1500,21 @@ class _GoToButtonState extends State<_GoToButton>
     super.initState();
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1000));
+    _popupCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 350));
     _iconAnim = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 35),
       TweenSequenceItem(tween: Tween(begin: 1.35, end: 0.9), weight: 30),
       TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 35),
     ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-    _popupAnim = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _popupAnim = CurvedAnimation(parent: _popupCtrl, curve: Curves.elasticOut);
   }
 
   @override
   void dispose() {
     _removeOverlay();
     _ctrl.dispose();
+    _popupCtrl.dispose();
     super.dispose();
   }
 
@@ -1557,11 +1580,12 @@ class _GoToButtonState extends State<_GoToButton>
 
   void _togglePopup() {
     if (_showPopup) {
-      _ctrl.reverse().then((_) => _removeOverlay());
+      _popupCtrl.reverse().then((_) => _removeOverlay());
       return;
     }
 
     _ctrl.forward(from: 0.0);
+    _popupCtrl.forward(from: 0.0);
     _showPopup = true;
 
     final box = _btnKey.currentContext?.findRenderObject() as RenderBox?;
@@ -1574,7 +1598,7 @@ class _GoToButtonState extends State<_GoToButton>
         children: [
           Positioned.fill(
             child: GestureDetector(
-              onTap: () => _ctrl.reverse().then((_) => _removeOverlay()),
+              onTap: () => _popupCtrl.reverse().then((_) => _removeOverlay()),
               behavior: HitTestBehavior.translucent,
               child: const SizedBox.expand(),
             ),
@@ -1713,7 +1737,7 @@ class _GoToButtonState extends State<_GoToButton>
               child: AnimatedBuilder(
                 animation: _iconAnim,
                 builder: (_, child) => Transform.scale(
-                  scale: _showPopup ? 1.0 : _iconAnim.value,
+                  scale: _iconAnim.value,
                   child: child,
                 ),
                 child: Icon(Icons.directions_walk_rounded,
