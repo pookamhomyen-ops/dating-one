@@ -13,9 +13,12 @@ Future<void> main() async {
   await initializeDateFormatting('th');
 
   await Supabase.initialize(
-    url: SupabaseConstants.url,
-    anonKey: SupabaseConstants.anonKey,
-  );
+  url: SupabaseConstants.url,
+  anonKey: SupabaseConstants.anonKey,
+  postgrestOptions: const PostgrestClientOptions(
+    schema: 'public',
+  ),
+);
 
   runApp(const DatingOneApp());
 }

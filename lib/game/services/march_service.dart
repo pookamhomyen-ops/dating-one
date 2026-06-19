@@ -20,7 +20,7 @@ class MarchService {
     final arriveAt = now.add(Duration(minutes: travelMinutes));
 
     final data = await _supabase
-        .from('game.march_queues')
+        .from('march_queues')
         .insert({
           'settlement_id': settlement.id,
           'march_type': 'attack',
@@ -63,7 +63,7 @@ class MarchService {
     final returnAt = DateTime.now().add(travelTime);
 
     // อัปเดต march → returning
-    await _supabase.from('game.march_queues').update({
+    await _supabase.from('march_queues').update({
       'status': 'returning',
       'march_type': 'return',
       'loot': loot,
@@ -91,14 +91,14 @@ class MarchService {
           .firstOrNull;
       if (troop == null) continue;
 
-      await _supabase.from('game.troops').update({
+      await _supabase.from('troops').update({
         'count': troop.count + entry.value,
       }).eq('id', troop.id);
     }
 
     // เพิ่ม loot เข้าคลัง
     if (march.loot.isNotEmpty) {
-      await _supabase.from('game.settlements').update({
+      await _supabase.from('settlements').update({
         'wood':   settlement.wood  + (march.loot['wood']   ?? 0),
         'iron':   settlement.iron  + (march.loot['iron']   ?? 0),
         'rice':   settlement.rice  + (march.loot['rice']   ?? 0),
@@ -107,7 +107,7 @@ class MarchService {
     }
 
     // mark completed
-    await _supabase.from('game.march_queues').update({
+    await _supabase.from('march_queues').update({
       'status': 'completed',
     }).eq('id', march.id);
   }
@@ -115,7 +115,7 @@ class MarchService {
   // ดึง march ที่กำลัง active อยู่
   Future<List<March>> getActiveMarches(String settlementId) async {
     final data = await _supabase
-        .from('game.march_queues')
+        .from('march_queues')
         .select()
         .eq('settlement_id', settlementId)
         .neq('status', 'completed')

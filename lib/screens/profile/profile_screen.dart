@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../game/ui/game_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'photo_manager_screen.dart';
@@ -690,12 +692,34 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
             ),
           ),
 
-        // ── โปรไฟล์ Avatar ──
+        // ── โปรไฟล์ Avatar + คอลัมน์ปุ่มด้านข้าง ──
         Positioned(
           top: 60,
           right: 16,
-          child: _ProfileAvatarButton(
-            photoUrl: widget.user.primaryPhoto,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ProfileAvatarButton(
+                photoUrl: widget.user.primaryPhoto,
+              ),
+              const SizedBox(height: 12),
+              _AnimatedSideBarButton(
+                icon: Icons.shield_rounded,
+                label: 'บรรลัยวอร์',
+                color: const Color(0xFFB91C1C),
+                animType: _SideBarAnimType.shake,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProviderScope(
+                        child: GameScreen(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
 
@@ -1559,3 +1583,149 @@ class _SectionSettingsButtonState extends State<_SectionSettingsButton>
     );
   }
 }
+
+enum _SideBarAnimType { bounce, spin, shake }
+
+class _AnimatedSideBarButton extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color? labelColor;
+  final Color? iconColor;
+  final _SideBarAnimType animType;
+  final VoidCallback onTap;
+
+  const _AnimatedSideBarButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.labelColor,
+    this.iconColor,
+    required this.animType,
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedSideBarButton> createState() => _AnimatedSideBarButtonState();
+}
+
+class _AnimatedSideBarButtonState extends State<_AnimatedSideBarButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    switch (widget.animType) {
+      case _SideBarAnimType.bounce:
+        _anim = TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 1.4, end: 0.85), weight: 25),
+          TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.1), weight: 25),
+          TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 20),
+        ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+        break;
+      case _SideBarAnimType.spin:
+        _anim = Tween<double>(begin: 0.0, end: 1.0)
+            .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+        break;
+      case _SideBarAnimType.shake:
+        _anim = TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.15), weight: 20),
+          TweenSequenceItem(tween: Tween(begin: -0.15, end: 0.15), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 0.15, end: -0.1), weight: 25),
+          TweenSequenceItem(tween: Tween(begin: -0.1, end: 0.0), weight: 25),
+        ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Widget _buildAnimatedIcon() {
+    switch (widget.animType) {
+      case _SideBarAnimType.bounce:
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) =>
+              Transform.scale(scale: _anim.value, child: child),
+          child: Icon(widget.icon, color: widget.color, size: 20),
+        );
+      case _SideBarAnimType.spin:
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) => Transform.rotate(
+            angle: _anim.value * 2 * 3.14159,
+            child: child,
+          ),
+          child: Icon(widget.icon, color: widget.iconColor ?? widget.color, size: 20),
+        );
+      case _SideBarAnimType.shake:
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) =>
+              Transform.rotate(angle: _anim.value, child: child),
+          child: Icon(widget.icon, color: widget.color, size: 20),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        _ctrl.forward(from: 0.0);
+        widget.onTap();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 68,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: widget.color.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: _buildAnimatedIcon(),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: widget.labelColor ?? widget.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

@@ -2,7 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/settlement.dart';
 
 class GameService {
-  final SupabaseClient _supabase;
+  final SupabaseClient _supabase; // รับตัวแปร Supabase.instance.client (ตัวหลัก) เข้ามา
   GameService(this._supabase);
 
   Future<Settlement> createSettlement({
@@ -10,15 +10,20 @@ class GameService {
     required int mapX,
     required int mapY,
   }) async {
-    final userId = _supabase.auth.currentUser!.id;
+    // ดึงค่า userId จาก Client หลักที่ล็อกอินอยู่ (ได้ค่าชัวร์ ไม่เป็น null แน่นอน)
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('ยังไม่ได้ล็อกอิน');
 
-    await _supabase.from('game.players').upsert({
+    // บันทึกโปรไฟล์ลงตาราง players ใน schema game
+    await _supabase.schema('game').from('players').upsert({
       'id': userId,
       'display_name': name,
     });
 
+    // บันทึกข้อมูลลงตาราง settlements ใน schema game
     final data = await _supabase
-        .from('game.settlements')
+        .schema('game')
+        .from('settlements')
         .insert({
           'player_id': userId,
           'name': name,
@@ -44,7 +49,7 @@ class GameService {
     ];
 
     for (final b in starterBuildings) {
-      await _supabase.from('game.buildings').insert({
+      await _supabase.schema('game').from('buildings').insert({
         ...b,
         'settlement_id': settlementId,
       });
@@ -56,7 +61,7 @@ class GameService {
       'swordsman', 'archer', 'spearman', 'cavalry', 'elephant'
     ];
     for (final type in troopTypes) {
-      await _supabase.from('game.troops').insert({
+      await _supabase.schema('game').from('troops').insert({
         'settlement_id': settlementId,
         'troop_type': type,
         'count': 0,
@@ -75,7 +80,8 @@ class GameService {
     if (liquor != null) updates['liquor'] = liquor;
 
     await _supabase
-        .from('game.settlements')
+        .schema('game')
+        .from('settlements')
         .update(updates)
         .eq('id', settlementId);
   }

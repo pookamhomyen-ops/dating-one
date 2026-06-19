@@ -29,7 +29,7 @@ class BuildingService {
         : null;
 
     final data = await _supabase
-        .from('game.buildings')
+        .from('buildings')
         .insert({
           'settlement_id': settlement.id,
           'building_type': buildingType,
@@ -58,7 +58,7 @@ class BuildingService {
     );
 
     await _supabase
-        .from('game.buildings')
+        .from('buildings')
         .update({
           'is_upgrading': true,
           'upgrade_finish_at': finishAt.toIso8601String(),
@@ -72,7 +72,7 @@ class BuildingService {
     if (!building.upgradeComplete) return null;
 
     final data = await _supabase
-        .from('game.buildings')
+        .from('buildings')
         .update({
           'level': building.level + 1,
           'is_upgrading': false,
@@ -100,7 +100,7 @@ class BuildingService {
     }
 
     await _supabase
-        .from('game.settlements')
+        .from('settlements')
         .update(updates)
         .eq('id', settlement.id);
   }

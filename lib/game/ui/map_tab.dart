@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
 import '../models/settlement.dart';
+import '../services/game_service.dart';
 
 class MapTab extends ConsumerWidget {
   const MapTab({super.key});
@@ -366,30 +367,184 @@ class _AttackBottomSheet extends StatelessWidget {
   }
 }
 
-class _CreateSettlementPrompt extends StatelessWidget {
+final settlementCreationLoadingProvider = AutoDisposeStateProvider<bool>((ref) => false);
+
+class _CreateSettlementPrompt extends ConsumerStatefulWidget {
   const _CreateSettlementPrompt();
 
   @override
+  ConsumerState<_CreateSettlementPrompt> createState() =>
+      _CreateSettlementPromptState();
+}
+
+class _CreateSettlementPromptState
+    extends ConsumerState<_CreateSettlementPrompt> {
+  final _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _showCreateDialog() {
+    _nameController.clear();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF5EFE6),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🏯 ตั้งชุมนุมใหม่',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'ตำแหน่งจะถูกสุ่มให้อัตโนมัติ',
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF888780),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'ชื่อชุมนุม',
+                hintText: 'เช่น อยุทธยาเหนือ',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF854F0B),
+                  ),
+                ),
+              ),
+              maxLength: 20,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3C2810),
+                  foregroundColor: const Color(0xFFFAC775),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  final name = _nameController.text.trim();
+                  if (name.isEmpty) return;
+                  Navigator.pop(ctx);
+                  _createSettlement(name);
+                },
+                child: const Text('สร้างชุมนุม'),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createSettlement(String name) async {
+    ref.read(settlementCreationLoadingProvider.notifier).state = true;
+    try {
+      // ส่ง Client ตัวหลักเข้าไป เพื่อให้ GameService ดึงสิทธิ์ auth.currentUser ได้แบบเสถียรที่สุด
+final service = GameService(ref.read(supabaseProvider));
+
+      // สุ่มตำแหน่งบนแผนที่
+      final random = DateTime.now().millisecondsSinceEpoch;
+      final mapX = (random % 50) + 1;
+      final mapY = (random ~/ 100 % 50) + 1;
+
+      await service.createSettlement(
+        name: name,
+        mapX: mapX,
+        mapY: mapY,
+      );
+
+      ref.invalidate(settlementProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('สร้างไม่สำเร็จ: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        ref.read(settlementCreationLoadingProvider.notifier).state = false;
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isLoading = ref.watch(settlementCreationLoadingProvider);
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🏯', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
+          const Text('🏯', style: TextStyle(fontSize: 56)),
+          const SizedBox(height: 16),
           const Text(
             'ยังไม่มีชุมนุม',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3C2810),
-              foregroundColor: const Color(0xFFFAC775),
+          const Text(
+            'สร้างชุมนุมแรกของคุณเพื่อเริ่มเกม',
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF888780),
             ),
-            onPressed: () {},
-            child: const Text('สร้างชุมนุม'),
           ),
+          const SizedBox(height: 20),
+          isLoading
+              ? const CircularProgressIndicator(
+                  color: Color(0xFF3C2810),
+                )
+              : ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3C2810),
+                    foregroundColor: const Color(0xFFFAC775),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: _showCreateDialog,
+                  child: const Text('⚔️ สร้างชุมนุม'),
+                ),
         ],
       ),
     );

@@ -31,7 +31,7 @@ class TroopService {
     if (settlement.iron < totalIron) throw Exception('เหล็กไม่พอ');
 
     // หักทรัพยากร
-    await _supabase.from('game.settlements').update({
+    await _supabase.from('settlements').update({
       'wood': settlement.wood - totalWood,
       'iron': settlement.iron - totalIron,
     }).eq('id', settlement.id);
@@ -41,7 +41,7 @@ class TroopService {
       Duration(seconds: troop.trainingSeconds),
     );
 
-    await _supabase.from('game.troops').update({
+    await _supabase.from('troops').update({
       'training_count': amount,
       'training_finish_at': finishAt.toIso8601String(),
     }).eq('id', troop.id);
@@ -54,7 +54,7 @@ class TroopService {
     if (DateTime.now().isBefore(troop.trainingFinishAt!)) return null;
 
     final data = await _supabase
-        .from('game.troops')
+        .from('troops')
         .update({
           'count': troop.count + troop.trainingCount,
           'training_count': 0,

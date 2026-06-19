@@ -228,7 +228,7 @@ class _TroopCard extends ConsumerWidget {
   Future<void> _train(BuildContext context, WidgetRef ref) async {
     if (troop.isTraining) return;
 
-    final service = TroopService(ref.read(supabaseProvider));
+    final service = TroopService(ref.read(gameSupabaseProvider));
     try {
       await service.trainTroops(
         troop: troop,

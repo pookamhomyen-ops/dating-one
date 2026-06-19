@@ -232,7 +232,7 @@ class _BuildingCard extends ConsumerWidget {
         settlement: settlement,
         onUpgrade: () async {
           final service = BuildingService(
-            ref.read(supabaseProvider),
+            ref.read(gameSupabaseProvider),
           );
           try {
             await service.startUpgrade(
