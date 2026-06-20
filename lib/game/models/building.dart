@@ -109,6 +109,24 @@ class Building {
     return base * level; // แต่ละ level นานขึ้นเรื่อยๆ
   }
 
+  // population ที่เพิ่มจากอาคาร
+  int get populationBonus {
+    switch (buildingType) {
+      case 'house': return 5 * level;
+      case 'tavern': return 2 * level;
+      default: return 0;
+    }
+  }
+
+  // defense power ที่เพิ่มจากอาคาร
+  int get defenseBonus {
+    switch (buildingType) {
+      case 'wall':        return 30 * level;
+      case 'watchtower':  return 15 * level;
+      default:            return 0;
+    }
+  }
+
   // production ต่อ tick (5 นาที)
   Map<String, int> get productionPerTick {
     switch (buildingType) {
@@ -119,4 +137,3 @@ class Building {
       default:           return {};
     }
   }
-}

@@ -57,7 +57,10 @@ class _BuildingList extends StatelessWidget {
           itemCount: buildings.length + 1,
           itemBuilder: (context, i) {
             if (i == buildings.length) {
-              return _AddBuildingCard(settlement: settlement);
+              return _AddBuildingCard(
+                settlement: settlement,
+                buildings: buildings,
+              );
             }
             return _BuildingCard(
               building: buildings[i],
@@ -379,42 +382,181 @@ class _CostChip extends StatelessWidget {
   }
 }
 
-class _AddBuildingCard extends StatelessWidget {
+class _AddBuildingCard extends ConsumerWidget {
   final Settlement settlement;
-  const _AddBuildingCard({required this.settlement});
+  final List<Building> buildings;
+  const _AddBuildingCard({
+    required this.settlement,
+    required this.buildings,
+  });
+
+  // อาคารทั้งหมดที่สร้างได้ (ยกเว้น town_hall ที่มีแค่ 1)
+  static const _buildable = [
+    'sawmill', 'smelter', 'rice_farm', 'distillery',
+    'house', 'tavern', 'shrine', 'barracks',
+    'elephant_camp', 'smithy', 'wall', 'watchtower',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => _showBuildSheet(context, ref),
+      child: DottedBorder(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add, color: Colors.grey[400], size: 20),
+              const SizedBox(height: 2),
+              Text('สร้างอาคาร',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBuildSheet(BuildContext context, WidgetRef ref) {
+    // กรองอาคารที่มีแล้ว (บ้านสร้างได้หลายหลัง)
+    final existing = buildings
+        .where((b) => b.buildingType != 'house')
+        .map((b) => b.buildingType)
+        .toSet();
+
+    final available = _buildable
+        .where((t) => !existing.contains(t))
+        .toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('สร้างอาคารครบทุกประเภทแล้ว')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _BuildSheet(
+        available: available,
+        settlement: settlement,
+        onBuild: (type) async {
+          final service = BuildingService(ref.read(gameSupabaseProvider));
+          try {
+            await service.constructBuilding(
+              settlement: settlement,
+              buildingType: type,
+            );
+            ref.invalidate(buildingsProvider);
+            ref.invalidate(settlementProvider);
+            if (context.mounted) Navigator.pop(context);
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$e')),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+}
+
+class _BuildSheet extends StatelessWidget {
+  final List<String> available;
+  final Settlement settlement;
+  final Future<void> Function(String) onBuild;
+
+  const _BuildSheet({
+    required this.available,
+    required this.settlement,
+    required this.onBuild,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.black.withOpacity(0.12),
-            width: 0.5,
-            style: BorderStyle.none,
-          ),
-        ),
-        child: DottedBorder(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add, color: Colors.grey[400], size: 20),
-                const SizedBox(height: 2),
-                Text(
-                  'สร้างอาคาร',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[500],
-                  ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('🏗️ สร้างอาคารใหม่',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          ...available.map((type) {
+            final dummy = Building(
+              id: '', settlementId: '', buildingType: type,
+              level: 1, isUpgrading: false,
+              createdAt: DateTime.now(),
+            );
+            final cost = dummy.upgradeCost;
+            final canAfford = settlement.wood >= (cost['wood'] ?? 0) &&
+                settlement.iron >= (cost['iron'] ?? 0);
+            return GestureDetector(
+              onTap: canAfford ? () => onBuild(type) : null,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: canAfford ? Colors.white : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.black.withOpacity(0.08), width: 0.5),
                 ),
-              ],
-            ),
-          ),
-        ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(dummy.displayName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: canAfford
+                                  ? Colors.black87
+                                  : Colors.grey[400],
+                            )),
+                          if (dummy.productionPerTick.isNotEmpty)
+                            Text(
+                              dummy.productionPerTick.entries
+                                  .map((e) => '+${e.value}/tick')
+                                  .join(' '),
+                              style: TextStyle(
+                                  fontSize: 10, color: Colors.grey[500]),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        _CostChip(
+                          icon: '🪵',
+                          need: cost['wood'] ?? 0,
+                          have: settlement.wood,
+                        ),
+                        const SizedBox(width: 4),
+                        _CostChip(
+                          icon: '⚙️',
+                          need: cost['iron'] ?? 0,
+                          have: settlement.iron,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

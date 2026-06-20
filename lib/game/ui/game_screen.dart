@@ -2,14 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
+import '../models/caravan.dart';
 import '../services/building_service.dart';
 import '../services/troop_service.dart';
 import '../services/march_service.dart';
+import '../services/production_service.dart';
 import 'map_tab.dart';
 import 'building_tab.dart';
 import 'troop_tab.dart';
 import 'caravan_tab.dart';
 import 'notification_tab.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 
 class GameScreen extends ConsumerStatefulWidget {
@@ -23,6 +27,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   int _currentTab = 0;
   Timer? _ticker;
   Timer? _completeChecker;
+  RealtimeChannel? _realtimeChannel;
+  DateTime _lastProductionTick = DateTime.now();
 
   final _tabs = const [
     _TabItem(label: 'แผนที่',    icon: Icons.map_outlined),
@@ -37,21 +43,82 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     super.initState();
     Future.microtask(() => ref.read(offlineProductionProvider));
 
-    // rebuild ทุก 1 วินาที เพื่อให้ countdown สด
+    // rebuild ทุก 1 วินาที เพื่อให้ countdown สด + เช็ค production tick
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      _checkProductionTick();
     });
 
     // เช็ค complete upgrade/training ทุก 10 วินาที
     _completeChecker = Timer.periodic(const Duration(seconds: 10), (_) {
       _checkCompletes();
     });
+
+    // Realtime — รอให้ settlement โหลดก่อนแล้วค่อย subscribe
+    _subscribeRealtime();
+  }
+
+  Future<void> _subscribeRealtime() async {
+    final settlement = await ref.read(settlementProvider.future);
+    if (settlement == null) return;
+
+    final client = ref.read(supabaseProvider);
+
+    _realtimeChannel = client
+        .channel('march_incoming_${settlement.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'game',
+          table: 'march_queues',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'target_settlement_id',
+            value: settlement.id,
+          ),
+          callback: (payload) {
+            if (!mounted) return;
+            // มีคนส่งกองทัพมาบุก!
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('⚔️ มีกองทัพกำลังบุกชุมนุมของคุณ!'),
+                backgroundColor: Color(0xFF993C1D),
+                duration: Duration(seconds: 5),
+              ),
+            );
+            ref.invalidate(notificationsProvider);
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'game',
+          table: 'caravans',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'to_settlement_id',
+            value: settlement.id,
+          ),
+          callback: (payload) {
+            if (!mounted) return;
+            // มีคาราวานส่งมาให้!
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('🚢 คาราวานจากแมทช์กำลังมา!'),
+                backgroundColor: Color(0xFF854F0B),
+                duration: Duration(seconds: 4),
+              ),
+            );
+            ref.invalidate(caravansProvider);
+          },
+        )
+        .subscribe();
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
     _completeChecker?.cancel();
+    _realtimeChannel?.unsubscribe();
     super.dispose();
   }
 
@@ -154,11 +221,102 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
     }
 
+    // เช็ค caravan ที่ถึงแล้ว
+    if (settlement != null) {
+      final gameClient2 = ref.read(gameSupabaseProvider);
+      final caravanData = await gameClient2
+          .from('caravans')
+          .select()
+          .eq('to_settlement_id', settlement.id)
+          .eq('status', 'traveling');
+
+      for (final c in caravanData) {
+        final arriveAt = DateTime.parse(c['arrive_at']);
+        if (DateTime.now().isBefore(arriveAt)) continue;
+
+        final payload = Map<String, int>.from(c['payload'] ?? {});
+        if (payload.isNotEmpty) {
+          await gameClient2.from('settlements').update({
+            'wood':   settlement.wood   + (payload['wood']   ?? 0),
+            'iron':   settlement.iron   + (payload['iron']   ?? 0),
+            'rice':   settlement.rice   + (payload['rice']   ?? 0),
+            'liquor': settlement.liquor + (payload['liquor'] ?? 0),
+          }).eq('id', settlement.id);
+
+          final payloadText = payload.entries
+              .map((e) => '${_resIcon(e.key)}${e.value}').join(' ');
+          await gameClient2.from('notifications').insert({
+            'settlement_id': settlement.id,
+            'icon': '🚢',
+            'text': 'คาราวานมาถึงแล้ว! ได้รับ $payloadText',
+            'accent_color': '#5DCAA5',
+          });
+        }
+
+        await gameClient2.from('caravans')
+            .update({'status': 'arrived'}).eq('id', c['id']);
+        changed = true;
+      }
+    }
+
     if (changed && mounted) {
       ref.invalidate(buildingsProvider);
       ref.invalidate(troopsProvider);
       ref.invalidate(settlementProvider);
       ref.invalidate(notificationsProvider);
+      ref.invalidate(caravansProvider);
+    }
+  }
+
+  Future<void> _checkProductionTick() async {
+    final now = DateTime.now();
+    if (now.difference(_lastProductionTick).inMinutes < 5) return;
+    _lastProductionTick = now;
+
+    final settlement = ref.read(settlementProvider).valueOrNull;
+    final buildings  = ref.read(buildingsProvider).valueOrNull ?? [];
+    if (settlement == null) return;
+
+    final gameClient = ref.read(gameSupabaseProvider);
+    final updates = <String, dynamic>{};
+
+    // Production
+    if (buildings.isNotEmpty) {
+      final gained = ProductionService.calculateOfflineProduction(
+        settlement: settlement,
+        buildings: buildings,
+        lastOnlineAt: now.subtract(const Duration(minutes: 5)),
+      );
+      if (gained.isNotEmpty) {
+        updates['wood']   = settlement.wood   + (gained['wood']   ?? 0);
+        updates['iron']   = settlement.iron   + (gained['iron']   ?? 0);
+        updates['rice']   = settlement.rice   + (gained['rice']   ?? 0);
+        updates['liquor'] = settlement.liquor + (gained['liquor'] ?? 0);
+      }
+    }
+
+    // Population growth — เพิ่มทีละ 1 ต่อ tick ถ้า happiness >= 40
+    // และยังไม่ถึง maxPopulation
+    final maxPop = ref.read(maxPopulationProvider);
+    if (settlement.happiness >= 40 &&
+        settlement.population < maxPop) {
+      updates['population'] = settlement.population + 1;
+      updates['max_population'] = maxPop;
+    } else if (settlement.population > maxPop) {
+      // บ้านถูกทำลาย ประชากรเกิน cap
+      updates['population'] = maxPop;
+      updates['max_population'] = maxPop;
+    } else {
+      // อัพเดท max_population ให้ตรงกับบ้านที่สร้างใหม่
+      updates['max_population'] = maxPop;
+    }
+
+    if (updates.isNotEmpty) {
+      await gameClient
+          .from('settlements')
+          .update(updates)
+          .eq('id', settlement.id);
+      if (mounted) ref.invalidate(settlementProvider);
     }
   }
 
@@ -215,33 +373,48 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 }
 
 // Resource bar ด้านบน
-class _ResourceBar extends StatelessWidget {
+class _ResourceBar extends ConsumerWidget {
   final settlement;
   const _ResourceBar({required this.settlement});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final buildings = ref.watch(buildingsProvider).valueOrNull ?? [];
+    final rate = ProductionService.calculateHourlyRate(buildings);
+
     return Container(
       color: const Color(0xFF3C2810),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
           Text(
             settlement.name,
             style: const TextStyle(
               color: Color(0xFFFAC775),
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
           const Spacer(),
-          _ResChip(icon: '🪵', value: settlement.wood),
-          const SizedBox(width: 6),
-          _ResChip(icon: '⚙️', value: settlement.iron),
-          const SizedBox(width: 6),
-          _ResChip(icon: '🌾', value: settlement.rice),
-          const SizedBox(width: 6),
-          _ResChip(icon: '🍶', value: settlement.liquor),
+          _ResChip(
+            icon: '🪵', value: settlement.wood,
+            rate: rate['wood'] ?? 0,
+          ),
+          const SizedBox(width: 5),
+          _ResChip(
+            icon: '⚙️', value: settlement.iron,
+            rate: rate['iron'] ?? 0,
+          ),
+          const SizedBox(width: 5),
+          _ResChip(
+            icon: '🌾', value: settlement.rice,
+            rate: rate['rice'] ?? 0,
+          ),
+          const SizedBox(width: 5),
+          _ResChip(
+            icon: '🍶', value: settlement.liquor,
+            rate: rate['liquor'] ?? 0,
+          ),
         ],
       ),
     );
@@ -251,23 +424,41 @@ class _ResourceBar extends StatelessWidget {
 class _ResChip extends StatelessWidget {
   final String icon;
   final int value;
-  const _ResChip({required this.icon, required this.value});
+  final int rate;
+  const _ResChip({
+    required this.icon,
+    required this.value,
+    required this.rate,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        '$icon $value',
-        style: const TextStyle(
-          color: Color(0xFFFAC775),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$icon $value',
+            style: const TextStyle(
+              color: Color(0xFFFAC775),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (rate > 0)
+            Text(
+              '+$rate/ชม.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.55),
+                fontSize: 8,
+              ),
+            ),
+        ],
       ),
     );
   }

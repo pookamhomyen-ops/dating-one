@@ -7,7 +7,10 @@ import '../services/happiness_service.dart';
 import '../models/settlement.dart';
 import '../models/building.dart';
 import '../models/troop.dart';
+import '../models/caravan.dart';
+import '../models/march.dart';
 import '../../constants.dart';
+import 'package:flutter/painting.dart';
 
 // 1. Client หลักของแอป
 final supabaseProvider = Provider((ref) => Supabase.instance.client);
@@ -72,6 +75,116 @@ final troopsProvider = FutureProvider<List<Troop>>((ref) async {
 });
 
 final gameRefreshProvider = StateProvider<int>((ref) => 0);
+
+// viewport center สำหรับ lazy load
+final mapViewportProvider = StateProvider<Offset>((ref) => Offset.zero);
+
+final nearbySettlementsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+
+  final viewport = ref.watch(mapViewportProvider);
+  final centerX = viewport == Offset.zero ? settlement.mapX : viewport.dx.toInt();
+  final centerY = viewport == Offset.zero ? settlement.mapY : viewport.dy.toInt();
+
+  final mainClient = ref.watch(supabaseProvider);
+  final data = await mainClient.rpc('game.get_nearby_settlements', params: {
+    'p_center_x': centerX,
+    'p_center_y': centerY,
+    'p_radius': 30,
+  });
+
+  return List<Map<String, dynamic>>.from(data ?? []);
+});
+
+// defense power รวมของชุมนุม
+final settlementDefenseProvider = Provider<int>((ref) {
+  final buildings = ref.watch(buildingsProvider).valueOrNull ?? [];
+  int defense = 50; // base
+  for (final b in buildings) {
+    defense += b.defenseBonus;
+  }
+  return defense;
+});
+
+// population สูงสุดจากบ้านเรือน
+final maxPopulationProvider = Provider<int>((ref) {
+  final buildings = ref.watch(buildingsProvider).valueOrNull ?? [];
+  int pop = 50; // base
+  for (final b in buildings) {
+    pop += b.populationBonus;
+  }
+  return pop;
+});
+
+final marchHistoryProvider = FutureProvider<List<March>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('march_queues')
+      .select()
+      .eq('settlement_id', settlement.id)
+      .eq('status', 'completed')
+      .order('arrive_at', ascending: false)
+      .limit(10);
+
+  return List<Map<String, dynamic>>.from(data)
+      .map((e) => March.fromJson(e))
+      .toList();
+});
+
+// ดึง settlement ของคู่แมทช์
+final matchSettlementProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  final mainClient = ref.watch(supabaseProvider);
+  final userId = mainClient.auth.currentUser?.id;
+  if (userId == null) return null;
+
+  // ดึง match จาก public.matches
+  final matchData = await mainClient
+      .from('matches')
+      .select()
+      .or('user_a_id.eq.$userId,user_b_id.eq.$userId')
+      .order('matched_at', ascending: false)
+      .limit(1)
+      .maybeSingle();
+
+  if (matchData == null) return null;
+
+  // หา partner id
+  final partnerId = matchData['user_a_id'] == userId
+      ? matchData['user_b_id']
+      : matchData['user_a_id'];
+
+  // ดึง settlement ของ partner
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final settlement = await gameClient
+      .from('settlements')
+      .select()
+      .eq('player_id', partnerId)
+      .maybeSingle();
+
+  return settlement;
+});
+
+// ดึง caravans ที่ active (ส่งออกและรับเข้า)
+final caravansProvider = FutureProvider<List<Caravan>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('caravans')
+      .select()
+      .or('from_settlement_id.eq.${settlement.id},to_settlement_id.eq.${settlement.id}')
+      .neq('status', 'arrived')
+      .order('arrive_at');
+
+  return List<Map<String, dynamic>>.from(data)
+      .map((e) => Caravan.fromJson(e))
+      .toList();
+});
 
 final notificationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final settlement = await ref.watch(settlementProvider.future);

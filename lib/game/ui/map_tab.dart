@@ -23,225 +23,573 @@ class MapTab extends ConsumerWidget {
   }
 }
 
-class _MapView extends StatelessWidget {
+// ─── แผนที่หลัก ───────────────────────────────────────────────────────────────
+class _MapView extends ConsumerStatefulWidget {
   final Settlement settlement;
   const _MapView({required this.settlement});
 
   @override
+  ConsumerState<_MapView> createState() => _MapViewState();
+}
+
+class _MapViewState extends ConsumerState<_MapView> {
+  static const double cellSize = 48.0;
+  static const int mapSize = 100;
+
+  late TransformationController _transformController;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformController = TransformationController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _centerOnMySettlement());
+  }
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
+  }
+
+  void _centerOnMySettlement() {
+    final s = widget.settlement;
+    final screenW = MediaQuery.of(context).size.width;
+    final screenH = MediaQuery.of(context).size.height * 0.6;
+    final tx = screenW / 2 - s.mapX * cellSize;
+    final ty = screenH / 2 - s.mapY * cellSize;
+    _transformController.value = Matrix4.identity()..translate(tx, ty);
+  }
+
+  void _onInteractionEnd(ScaleEndDetails _) {
+    // อัพเดท viewport center สำหรับ lazy load
+    final m = _transformController.value;
+    final tx = -m.entry(0, 3);
+    final ty = -m.entry(1, 3);
+    final cx = (tx / cellSize).clamp(0, mapSize).toDouble();
+    final cy = (ty / cellSize).clamp(0, mapSize).toDouble();
+    ref.read(mapViewportProvider.notifier).state = Offset(cx, cy);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final troopsAsync   = ref.watch(troopsProvider);
+    final nodesAsync    = ref.watch(mapNodesProvider);
+    final nearbyAsync   = ref.watch(nearbySettlementsProvider);
+    final troops        = troopsAsync.valueOrNull ?? [];
+    final nodes         = nodesAsync.valueOrNull ?? [];
+    final nearby        = nearbyAsync.valueOrNull ?? [];
+
     return Column(
       children: [
-        // Happiness bar
-        _HappinessBar(settlement: settlement),
-
-        // แผนที่
+        _HappinessBar(settlement: widget.settlement),
         Expanded(
-          child: Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4A6741),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Stack(
-              children: [
-                // Grid
-                const _MapGrid(),
-
-                // โหนดต่างๆ
-                _MapNodes(settlement: settlement),
-
-                // ชุมนุมของผู้เล่น (กลาง)
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+          child: Stack(
+            children: [
+              InteractiveViewer(
+                transformationController: _transformController,
+                boundaryMargin: const EdgeInsets.all(200),
+                minScale: 0.3,
+                maxScale: 2.5,
+                onInteractionEnd: _onInteractionEnd,
+                child: SizedBox(
+                  width: mapSize * cellSize,
+                  height: mapSize * cellSize,
+                  child: Stack(
                     children: [
-                      const Text('🏯', style: TextStyle(fontSize: 36)),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          settlement.name,
-                          style: const TextStyle(
-                            color: Color(0xFFFAC775),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
+                      // พื้นหลัง grid
+                      _MapBackground(mapSize: mapSize, cellSize: cellSize),
+
+                      // โหนดทรัพยากร/โจร
+                      ..._buildNodes(nodes, troops),
+
+                      // ชุมนุมผู้เล่นอื่น
+                      ..._buildNearby(nearby, troops),
+
+                      // ชุมนุมของเรา
+                      _MySettlement(settlement: widget.settlement),
                     ],
                   ),
                 ),
+              ),
 
-                // population badge
-                Positioned(
-                  bottom: 8, right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'ประชาชน ',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                          ),
-                        ),
-                        Text(
-                          '${settlement.population} คน',
-                          style: const TextStyle(
-                            color: Color(0xFFFAC775),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              // ปุ่มกลับมายังชุมนุมของเรา
+              Positioned(
+                bottom: 12, right: 12,
+                child: FloatingActionButton.small(
+                  backgroundColor: const Color(0xFF3C2810),
+                  onPressed: _centerOnMySettlement,
+                  child: const Text('🏯', style: TextStyle(fontSize: 16)),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+        const _MarchHistory(),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
 
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'กดที่โหนดเพื่อส่งกองทัพ',
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[600],
+  List<Widget> _buildNodes(
+    List<Map<String, dynamic>> nodes,
+    List<Troop> troops,
+  ) {
+    const emoji = {
+      'bandit': '⚔️', 'forest': '🪵',
+      'iron_mine': '⚙️', 'npc_settlement': '🏘️',
+    };
+    const colors = {
+      'bandit': Color(0xFF993C1D),
+      'forest': Color(0xFF185FA5),
+      'iron_mine': Color(0xFF185FA5),
+      'npc_settlement': Color(0xFF3B6D11),
+    };
+
+    return nodes.map((node) {
+      final x = (node['map_x'] as int).toDouble();
+      final y = (node['map_y'] as int).toDouble();
+      final type = node['node_type'] as String;
+
+      return Positioned(
+        left: x * cellSize - cellSize / 2,
+        top:  y * cellSize - cellSize / 2,
+        child: GestureDetector(
+          onTap: () => _showNodeAttackSheet(node, troops),
+          child: _MapPin(
+            emoji: emoji[type] ?? '❓',
+            color: colors[type] ?? const Color(0xFF555555),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  List<Widget> _buildNearby(
+    List<Map<String, dynamic>> settlements,
+    List<Troop> troops,
+  ) {
+    return settlements.map((s) {
+      final x = (s['map_x'] as int).toDouble();
+      final y = (s['map_y'] as int).toDouble();
+
+      return Positioned(
+        left: x * cellSize - cellSize / 2,
+        top:  y * cellSize - cellSize / 2,
+        child: GestureDetector(
+          onTap: () => _showPlayerSheet(s, troops),
+          child: _PlayerPin(
+            name: s['display_name'] ?? '???',
+            photoUrl: s['photo_url'],
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  void _showNodeAttackSheet(
+    Map<String, dynamic> node,
+    List<Troop> troops,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _AttackBottomSheet(
+        node: node,
+        settlement: widget.settlement,
+        troops: troops,
+      ),
+    );
+  }
+
+  void _showPlayerSheet(
+    Map<String, dynamic> playerSettlement,
+    List<Troop> troops,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _PlayerAttackSheet(
+        targetSettlement: playerSettlement,
+        mySettlement: widget.settlement,
+        troops: troops,
+      ),
+    );
+  }
+}
+
+// ─── พื้นหลัง grid ────────────────────────────────────────────────────────────
+class _MapBackground extends StatelessWidget {
+  final int mapSize;
+  final double cellSize;
+  const _MapBackground({required this.mapSize, required this.cellSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(mapSize * cellSize, mapSize * cellSize),
+      painter: _GridPainter(mapSize: mapSize, cellSize: cellSize),
+    );
+  }
+}
+
+class _GridPainter extends CustomPainter {
+  final int mapSize;
+  final double cellSize;
+  const _GridPainter({required this.mapSize, required this.cellSize});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = const Color(0xFF4A6741),
+    );
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.06)
+      ..strokeWidth = 0.5;
+
+    for (int i = 0; i <= mapSize; i++) {
+      canvas.drawLine(
+        Offset(i * cellSize, 0),
+        Offset(i * cellSize, size.height),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(0, i * cellSize),
+        Offset(size.width, i * cellSize),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ─── ชุมนุมของเรา ─────────────────────────────────────────────────────────────
+class _MySettlement extends StatelessWidget {
+  final Settlement settlement;
+  const _MySettlement({required this.settlement});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: settlement.mapX * 48.0 - 28,
+      top:  settlement.mapY * 48.0 - 36,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🏯', style: TextStyle(fontSize: 28)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3C2810).withOpacity(0.85),
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: Text(
+              settlement.name,
+              style: const TextStyle(
+                color: Color(0xFFFAC775), fontSize: 9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── pin โหนด ─────────────────────────────────────────────────────────────────
+class _MapPin extends StatelessWidget {
+  final String emoji;
+  final Color color;
+  const _MapPin({required this.emoji, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36, height: 36,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.85),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white24, width: 1),
+      ),
+      child: Center(
+        child: Text(emoji, style: const TextStyle(fontSize: 16)),
+      ),
+    );
+  }
+}
+
+// ─── pin ผู้เล่นอื่น ──────────────────────────────────────────────────────────
+class _PlayerPin extends StatelessWidget {
+  final String name;
+  final String? photoUrl;
+  const _PlayerPin({required this.name, this.photoUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFFAC775), width: 1.5),
+            color: const Color(0xFF3C2810),
+          ),
+          child: ClipOval(
+            child: photoUrl != null
+                ? Image.network(photoUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Center(child: Text('🏯',
+                            style: TextStyle(fontSize: 16))))
+                : const Center(
+                    child: Text('🏯', style: TextStyle(fontSize: 16))),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            name.length > 8 ? '${name.substring(0, 8)}…' : name,
+            style: const TextStyle(color: Colors.white, fontSize: 8),
           ),
         ),
       ],
     );
   }
-
-  void _showNodeDialog(
-    BuildContext context,
-    Map<String, dynamic> node,
-    List<Troop> troops,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFFF5EFE6),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => _AttackBottomSheet(
-        node: node,
-        settlement: settlement,
-        troops: troops,
-      ),
-    );
-  }
 }
 
-class _MapNodes extends ConsumerWidget {
-  final Settlement settlement;
-  const _MapNodes({required this.settlement});
+// ─── sheet โจมตีผู้เล่นอื่น ───────────────────────────────────────────────────
+class _PlayerAttackSheet extends ConsumerStatefulWidget {
+  final Map<String, dynamic> targetSettlement;
+  final Settlement mySettlement;
+  final List<Troop> troops;
 
-  static const _nodeEmoji = {
-    'bandit':         '⚔️',
-    'forest':         '🪵',
-    'iron_mine':      '⚙️',
-    'npc_settlement': '🏘️',
-  };
-  static const _nodeLabel = {
-    'bandit':         'โหนดโจร',
-    'forest':         'ป่าไม้',
-    'iron_mine':      'แร่เหล็ก',
-    'npc_settlement': 'ชุมนุม NPC',
-  };
-  static const _nodeColor = {
-    'bandit':         Color(0xFF993C1D),
-    'forest':         Color(0xFF185FA5),
-    'iron_mine':      Color(0xFF185FA5),
-    'npc_settlement': Color(0xFF3B6D11),
-  };
-
-  // ตำแหน่ง 4 มุม
-  static const _positions = [
-    {'top': 20.0,  'left': 20.0},
-    {'top': 20.0,  'right': 24.0},
-    {'bottom': 24.0, 'left': 22.0},
-    {'bottom': 20.0, 'right': 18.0},
-  ];
+  const _PlayerAttackSheet({
+    required this.targetSettlement,
+    required this.mySettlement,
+    required this.troops,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final nodesAsync = ref.watch(mapNodesProvider);
-    final troopsAsync = ref.watch(troopsProvider);
+  ConsumerState<_PlayerAttackSheet> createState() =>
+      _PlayerAttackSheetState();
+}
 
-    return nodesAsync.when(
-      data: (nodes) => troopsAsync.when(
-        data: (troops) => Stack(
-          children: List.generate(nodes.length > 4 ? 4 : nodes.length, (i) {
-            final node = nodes[i];
-            final pos = _positions[i];
-            final type = node['node_type'] as String;
-            return Positioned(
-              top: pos['top'],
-              left: pos['left'],
-              right: pos['right'],
-              bottom: pos['bottom'],
-              child: _MapNode(
-                emoji: _nodeEmoji[type] ?? '❓',
-                label: _nodeLabel[type] ?? type,
-                color: _nodeColor[type] ?? const Color(0xFF555555),
-                onTap: () => _showAttackSheet(context, node, troops),
+class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
+  final Map<String, int> _selected = {};
+  bool _sending = false;
+
+  int get _travelMinutes {
+    final dx = (widget.targetSettlement['map_x'] as int) - widget.mySettlement.mapX;
+    final dy = (widget.targetSettlement['map_y'] as int) - widget.mySettlement.mapY;
+    final dist = (dx * dx + dy * dy);
+    return (dist / 10).clamp(5, 120).toInt();
+  }
+
+  int get _totalAttack {
+    const power = {
+      'swordsman': 10, 'archer': 12, 'spearman': 8,
+      'cavalry': 18,  'elephant': 35,
+    };
+    int total = 0;
+    _selected.forEach((type, count) {
+      total += (power[type] ?? 10) * count;
+    });
+    return total;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final defense    = widget.targetSettlement['defense_power'] as int? ?? 50;
+    final name       = widget.targetSettlement['name'] as String;
+    final playerName = widget.targetSettlement['display_name'] as String? ?? '???';
+    final photoUrl   = widget.targetSettlement['photo_url'] as String?;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        left: 16, right: 16, top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // header — รูปโปรไฟล์ + ชื่อ
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: const Color(0xFFFAC775), width: 1.5),
+                ),
+                child: ClipOval(
+                  child: photoUrl != null
+                      ? Image.network(photoUrl, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Center(child: Text('🏯')))
+                      : const Center(child: Text('🏯',
+                          style: TextStyle(fontSize: 20))),
+                ),
               ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(playerName,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text('🏯 $name',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('🛡️ $defense',
+                    style: const TextStyle(fontSize: 13)),
+                  Text('⏱ $_travelMinutes นาที',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey[500])),
+                ],
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+
+          // เลือกทหาร
+          ...widget.troops.where((t) => t.count > 0).map((t) {
+            final sel = _selected[t.troopType] ?? 0;
+            return Row(
+              children: [
+                Text('${t.emoji} ${t.displayName}',
+                  style: const TextStyle(fontSize: 12)),
+                const Spacer(),
+                Text('มี ${t.count}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.remove, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: sel > 0
+                      ? () => setState(
+                          () => _selected[t.troopType] = sel - 1)
+                      : null,
+                ),
+                SizedBox(
+                  width: 28,
+                  child: Text('$sel',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: sel < t.count
+                      ? () => setState(
+                          () => _selected[t.troopType] = sel + 1)
+                      : null,
+                ),
+              ],
             );
           }),
-        ),
-        loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+
+          const SizedBox(height: 12),
+          Text(
+            'กำลังรบ $_totalAttack vs 🛡️ $defense  •  '
+            '${_totalAttack > defense ? "✅ น่าจะชนะ" : "⚠️ เสี่ยงแพ้"}',
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF993C1D),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: _sending ||
+                      _selected.values.every((v) => v == 0)
+                  ? null
+                  : _sendAttack,
+              child: _sending
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('⚔️ บุกชุมนุม'),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
-  void _showAttackSheet(
-    BuildContext context,
-    Map<String, dynamic> node,
-    List<Troop> troops,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFFF5EFE6),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => _AttackBottomSheet(
-        node: node,
-        settlement: settlement,
+  Future<void> _sendAttack() async {
+    final troops = Map<String, int>.from(_selected)
+      ..removeWhere((_, v) => v == 0);
+    if (troops.isEmpty) return;
+
+    setState(() => _sending = true);
+    try {
+      final service = MarchService(ref.read(supabaseProvider));
+      await service.sendAttack(
+        settlement: widget.mySettlement,
+        targetNodeId: widget.targetSettlement['id'] as String,
         troops: troops,
-      ),
-    );
+        travelMinutes: _travelMinutes,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚔️ ส่งกองทัพบุกแล้ว!')),
+        );
+        ref.invalidate(troopsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ส่งไม่ได้: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 }
 
-class _HappinessBar extends StatelessWidget {
+// ─── Happiness Bar ────────────────────────────────────────────────────────────
+class _HappinessBar extends ConsumerWidget {
   final Settlement settlement;
   const _HappinessBar({required this.settlement});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final defense = ref.watch(settlementDefenseProvider);
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -251,10 +599,8 @@ class _HappinessBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text(
-            'ความพึงพอใจ',
-            style: TextStyle(color: Color(0xFFF0997B), fontSize: 11),
-          ),
+          const Text('ความพึงพอใจ',
+            style: TextStyle(color: Color(0xFFF0997B), fontSize: 11)),
           const SizedBox(width: 8),
           Expanded(
             child: ClipRRect(
@@ -274,114 +620,123 @@ class _HappinessBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            settlement.happinessEmoji,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(settlement.happinessEmoji,
+            style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 4),
-          Text(
-            '${settlement.happiness}%',
+          Text('${settlement.happiness}%',
             style: const TextStyle(
               color: Color(0xFFFAC775),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+              fontSize: 11, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Text('🛡️$defense',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6), fontSize: 11)),
         ],
       ),
     );
   }
 }
 
-class _MapGrid extends StatelessWidget {
-  const _MapGrid();
+// ─── March History ────────────────────────────────────────────────────────────
+class _MarchHistory extends ConsumerWidget {
+  const _MarchHistory();
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return CustomPaint(
-          size: Size(constraints.maxWidth, constraints.maxHeight),
-          painter: _GridPainter(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(marchHistoryProvider);
+    return historyAsync.when(
+      data: (marches) {
+        if (marches.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+              child: Text('ประวัติการรบ',
+                style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+            ),
+            ...marches.map((m) => _MarchHistoryCard(march: m)),
+            const SizedBox(height: 4),
+          ],
         );
       },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
 
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
-      ..strokeWidth = 0.5;
-
-    const step = 32.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
-}
-
-class _MapNode extends StatelessWidget {
-  final double? top, left, right, bottom;
-  final String emoji, label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _MapNode({
-    this.top, this.left, this.right, this.bottom,
-    required this.emoji,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+class _MarchHistoryCard extends StatelessWidget {
+  final march;
+  const _MarchHistoryCard({required this.march});
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: top, left: left, right: right, bottom: bottom,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white30,
-                  width: 1.5,
-                ),
-              ),
-              child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 14)),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 9,
-                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-              ),
-            ),
-          ],
+    final isVictory = march.loot.isNotEmpty;
+    final lootText = (march.loot as Map<String, int>).entries
+        .map((e) => '${_icon(e.key)}${e.value}').join(' ');
+    final troopsText = (march.troopsSent as Map<String, int>).entries
+        .map((e) => '${e.value}${_troopEmoji(e.key)}').join(' ');
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: isVictory
+                ? const Color(0xFF5DCAA5)
+                : const Color(0xFFF0997B),
+            width: 3,
+          ),
+          top:    BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
+          right:  BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
+          bottom: BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
         ),
+      ),
+      child: Row(
+        children: [
+          Text(isVictory ? '🏆' : '💀',
+            style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(isVictory ? 'ชนะ — ได้ $lootText' : 'แพ้ — ไม่ได้ของ',
+                  style: const TextStyle(fontSize: 12)),
+                Text('ส่ง $troopsText • ${_timeAgo(march.arriveAt)}',
+                  style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  String _icon(String res) {
+    const m = {'wood':'🪵','iron':'⚙️','rice':'🌾','liquor':'🍶'};
+    return m[res] ?? res;
+  }
+
+  String _troopEmoji(String type) {
+    const m = {'swordsman':'🗡️','archer':'🏹','spearman':'🪖',
+               'cavalry':'🐴','elephant':'🐘'};
+    return m[type] ?? '⚔️';
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
+    if (diff.inHours < 24)   return '${diff.inHours} ชั่วโมงที่แล้ว';
+    return '${diff.inDays} วันที่แล้ว';
+  }
 }
 
+// ─── Attack Bottom Sheet (โหนด) ───────────────────────────────────────────────
 class _AttackBottomSheet extends ConsumerStatefulWidget {
   final Map<String, dynamic> node;
   final Settlement settlement;
@@ -394,7 +749,8 @@ class _AttackBottomSheet extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_AttackBottomSheet> createState() => _AttackBottomSheetState();
+  ConsumerState<_AttackBottomSheet> createState() =>
+      _AttackBottomSheetState();
 }
 
 class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
@@ -402,10 +758,8 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
   bool _sending = false;
 
   static const _nodeLabel = {
-    'bandit':         'โหนดโจร',
-    'forest':         'ป่าไม้',
-    'iron_mine':      'แร่เหล็ก',
-    'npc_settlement': 'ชุมนุม NPC',
+    'bandit': 'โหนดโจร', 'forest': 'ป่าไม้',
+    'iron_mine': 'แร่เหล็ก', 'npc_settlement': 'ชุมนุม NPC',
   };
 
   int get _travelMinutes {
@@ -429,10 +783,10 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final type = widget.node['node_type'] as String;
+    final type    = widget.node['node_type'] as String;
     final defense = widget.node['defense_power'] as int;
-    final loot = widget.node['loot_pool'] as Map<String, dynamic>;
-    final label = _nodeLabel[type] ?? type;
+    final loot    = widget.node['loot_pool'] as Map<String, dynamic>;
+    final label   = _nodeLabel[type] ?? type;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -443,11 +797,9 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // หัวข้อ
           Row(
             children: [
-              Text(label,
-                style: const TextStyle(
+              Text(label, style: const TextStyle(
                   fontSize: 16, fontWeight: FontWeight.w600)),
               const Spacer(),
               Text('🛡️ $defense',
@@ -464,8 +816,6 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
             style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
           const Divider(height: 20),
-
-          // เลือกทหาร
           ...widget.troops.where((t) => t.count > 0).map((t) {
             final sel = _selected[t.troopType] ?? 0;
             return Row(
@@ -481,8 +831,9 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: sel > 0
-                    ? () => setState(() => _selected[t.troopType] = sel - 1)
-                    : null,
+                      ? () => setState(
+                          () => _selected[t.troopType] = sel - 1)
+                      : null,
                 ),
                 SizedBox(
                   width: 28,
@@ -495,13 +846,13 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: sel < t.count
-                    ? () => setState(() => _selected[t.troopType] = sel + 1)
-                    : null,
+                      ? () => setState(
+                          () => _selected[t.troopType] = sel + 1)
+                      : null,
                 ),
               ],
             );
           }),
-
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -511,17 +862,17 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
                 foregroundColor: const Color(0xFFFAC775),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: _sending || _selected.values.every((v) => v == 0)
-                ? null
-                : _sendAttack,
+              onPressed: _sending ||
+                      _selected.values.every((v) => v == 0)
+                  ? null
+                  : _sendAttack,
               child: _sending
-                ? const SizedBox(
-                    width: 18, height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
-                : const Text('⚔️ ส่งกองทัพ'),
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('⚔️ ส่งกองทัพ'),
             ),
           ),
           const SizedBox(height: 8),
@@ -563,7 +914,9 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
   }
 }
 
-final settlementCreationLoadingProvider = AutoDisposeStateProvider<bool>((ref) => false);
+// ─── Create Settlement ────────────────────────────────────────────────────────
+final settlementCreationLoadingProvider =
+    AutoDisposeStateProvider<bool>((ref) => false);
 
 class _CreateSettlementPrompt extends ConsumerStatefulWidget {
   const _CreateSettlementPrompt();
@@ -595,29 +948,17 @@ class _CreateSettlementPromptState
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          left: 20,
-          right: 20,
-          top: 20,
+          left: 20, right: 20, top: 20,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '🏯 ตั้งชุมนุมใหม่',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            const Text('🏯 ตั้งชุมนุมใหม่',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             const SizedBox(height: 4),
-            const Text(
-              'ตำแหน่งจะถูกสุ่มให้อัตโนมัติ',
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF888780),
-              ),
-            ),
+            const Text('ตำแหน่งจะถูกสุ่มให้อัตโนมัติ',
+              style: TextStyle(fontSize: 12, color: Color(0xFF888780))),
             const SizedBox(height: 16),
             TextField(
               controller: _nameController,
@@ -626,13 +967,10 @@ class _CreateSettlementPromptState
                 labelText: 'ชื่อชุมนุม',
                 hintText: 'เช่น อยุทธยาเหนือ',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                    borderRadius: BorderRadius.circular(8)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF854F0B),
-                  ),
+                  borderSide: const BorderSide(color: Color(0xFF854F0B)),
                 ),
               ),
               maxLength: 20,
@@ -646,8 +984,7 @@ class _CreateSettlementPromptState
                   foregroundColor: const Color(0xFFFAC775),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () {
                   final name = _nameController.text.trim();
@@ -668,20 +1005,11 @@ class _CreateSettlementPromptState
   Future<void> _createSettlement(String name) async {
     ref.read(settlementCreationLoadingProvider.notifier).state = true;
     try {
-      // ส่ง Client ตัวหลักเข้าไป เพื่อให้ GameService ดึงสิทธิ์ auth.currentUser ได้แบบเสถียรที่สุด
-final service = GameService(ref.read(supabaseProvider));
-
-      // สุ่มตำแหน่งบนแผนที่
+      final service = GameService(ref.read(supabaseProvider));
       final random = DateTime.now().millisecondsSinceEpoch;
       final mapX = (random % 50) + 1;
       final mapY = (random ~/ 100 % 50) + 1;
-
-      await service.createSettlement(
-        name: name,
-        mapX: mapX,
-        mapY: mapY,
-      );
-
+      await service.createSettlement(name: name, mapX: mapX, mapY: mapY);
       ref.invalidate(settlementProvider);
     } catch (e) {
       if (mounted) {
@@ -699,44 +1027,28 @@ final service = GameService(ref.read(supabaseProvider));
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(settlementCreationLoadingProvider);
-
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('🏯', style: TextStyle(fontSize: 56)),
           const SizedBox(height: 16),
-          const Text(
-            'ยังไม่มีชุมนุม',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          const Text('ยังไม่มีชุมนุม',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
-          const Text(
-            'สร้างชุมนุมแรกของคุณเพื่อเริ่มเกม',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF888780),
-            ),
-          ),
+          const Text('สร้างชุมนุมแรกของคุณเพื่อเริ่มเกม',
+            style: TextStyle(fontSize: 13, color: Color(0xFF888780))),
           const SizedBox(height: 20),
           isLoading
-              ? const CircularProgressIndicator(
-                  color: Color(0xFF3C2810),
-                )
+              ? const CircularProgressIndicator(color: Color(0xFF3C2810))
               : ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3C2810),
                     foregroundColor: const Color(0xFFFAC775),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 14,
-                    ),
+                        horizontal: 32, vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: _showCreateDialog,
                   child: const Text('⚔️ สร้างชุมนุม'),

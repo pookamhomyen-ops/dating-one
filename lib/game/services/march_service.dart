@@ -8,6 +8,15 @@ class MarchService {
   MarchService(this._supabase);
 
   // ส่งกองทัพไปโจมตีโหนด
+  // คำนวณ defense รวมจาก buildings
+  static int calcSettlementDefense(List<Building> buildings) {
+    int defense = 50;
+    for (final b in buildings) {
+      defense += b.defenseBonus;
+    }
+    return defense;
+  }
+
   Future<March> sendAttack({
     required Settlement settlement,
     required String targetNodeId,

@@ -68,6 +68,9 @@ class Settlement {
   // ทหารสูงสุดที่มีได้
   int get maxTroops => (population * 1.5).floor();
 
+  // defense power รวมจากกำแพง (คำนวณใน BuildingService)
+  int get baseDefense => 50;
+
   Settlement copyWith({
     int? wood, int? iron, int? rice, int? liquor,
     int? population, int? maxPopulation, int? happiness,
