@@ -7,102 +7,84 @@ class NotificationTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: ดึงจาก Supabase realtime
-    const notifications = [
-      _NotifData(
-        icon: '🚢',
-        text: 'คาราวานมาถึงแล้ว! ได้รับ 🪵50 🌾20',
-        time: '5 นาทีที่แล้ว',
-        accentColor: Color(0xFF5DCAA5),
-      ),
-      _NotifData(
-        icon: '⚔️',
-        text: 'กองทัพกลับจากโหนดโจรแล้ว ได้รับ ⚙️30 🪵20',
-        time: '22 นาทีที่แล้ว',
-        accentColor: Color(0xFFF0997B),
-      ),
-      _NotifData(
-        icon: '🔔',
-        text: 'โรงกลั่นสุราหยุดผลิต — ข้าวสารในคลังหมดแล้ว',
-        time: '1 ชั่วโมงที่แล้ว',
-        accentColor: Color(0xFFFAC775),
-      ),
-      _NotifData(
-        icon: '🏯',
-        text: 'อัปเกรดค่ายทหาร → Lv.3 เสร็จแล้ว',
-        time: '2 ชั่วโมงที่แล้ว',
-        accentColor: Color(0xFFAFA9EC),
-      ),
-    ];
+    final notifsAsync = ref.watch(notificationsProvider);
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(8),
-      itemCount: notifications.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (_, i) => _NotifCard(data: notifications[i]),
+    return notifsAsync.when(
+      data: (notifs) => notifs.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('🔔', style: TextStyle(fontSize: 40)),
+                  SizedBox(height: 12),
+                  Text('ยังไม่มีการแจ้งเตือน',
+                    style: TextStyle(color: Color(0xFF888780))),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(8),
+              itemCount: notifs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (_, i) => _NotifCard(data: notifs[i]),
+            ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('$e')),
     );
   }
 }
 
-class _NotifData {
-  final String icon, text, time;
-  final Color accentColor;
-  const _NotifData({
-    required this.icon,
-    required this.text,
-    required this.time,
-    required this.accentColor,
-  });
-}
-
 class _NotifCard extends StatelessWidget {
-  final _NotifData data;
+  final Map<String, dynamic> data;
   const _NotifCard({required this.data});
+
+  Color _parseColor(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+    } catch (_) {
+      return const Color(0xFFFAC775);
+    }
+  }
+
+  String _timeAgo(String createdAt) {
+    final dt = DateTime.parse(createdAt).toLocal();
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1)  return 'เมื่อกี้';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
+    if (diff.inHours < 24)   return '${diff.inHours} ชั่วโมงที่แล้ว';
+    return '${diff.inDays} วันที่แล้ว';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final accent = _parseColor(data['accent_color'] ?? '#FAC775');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border(
-          left: BorderSide(color: data.accentColor, width: 3),
-          top: BorderSide(
-            color: Colors.black.withOpacity(0.06),
-            width: 0.5,
-          ),
-          right: BorderSide(
-            color: Colors.black.withOpacity(0.06),
-            width: 0.5,
-          ),
-          bottom: BorderSide(
-            color: Colors.black.withOpacity(0.06),
-            width: 0.5,
-          ),
+          left: BorderSide(color: accent, width: 3),
+          top:    BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
+          right:  BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
+          bottom: BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(data.icon, style: const TextStyle(fontSize: 16)),
+          Text(data['icon'] ?? '🔔',
+            style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  data.text,
-                  style: const TextStyle(fontSize: 12, height: 1.5),
-                ),
+                Text(data['text'] ?? '',
+                  style: const TextStyle(fontSize: 12, height: 1.5)),
                 const SizedBox(height: 2),
-                Text(
-                  data.time,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[500],
-                  ),
-                ),
+                Text(_timeAgo(data['created_at']),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[500])),
               ],
             ),
           ),

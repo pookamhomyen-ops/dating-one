@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:math';
 import '../models/settlement.dart';
+import '../models/building.dart';
+import '../services/production_service.dart';
 
 class GameService {
   final SupabaseClient _supabase; // รับตัวแปร Supabase.instance.client (ตัวหลัก) เข้ามา
@@ -36,6 +39,7 @@ class GameService {
     final settlement = Settlement.fromJson(data);
     await _initStarterBuildings(settlement.id);
     await _initTroopSlots(settlement.id);
+    await _initMapNodes(settlement.id, mapX, mapY);
     return settlement;
   }
 
@@ -54,6 +58,55 @@ class GameService {
         'settlement_id': settlementId,
       });
     }
+  }
+
+  Future<void> _initMapNodes(
+    String settlementId, int centerX, int centerY) async {
+    final rng = Random();
+    final nodes = [
+      {
+        'node_type': 'bandit',
+        'defense_power': 30 + rng.nextInt(40),
+        'loot_pool': {'wood': 20, 'iron': 10, 'rice': 15},
+        'offset': [_rngOffset(rng), _rngOffset(rng)],
+      },
+      {
+        'node_type': 'forest',
+        'defense_power': 10 + rng.nextInt(20),
+        'loot_pool': {'wood': 50},
+        'offset': [_rngOffset(rng), _rngOffset(rng)],
+      },
+      {
+        'node_type': 'iron_mine',
+        'defense_power': 10 + rng.nextInt(20),
+        'loot_pool': {'iron': 50},
+        'offset': [_rngOffset(rng), _rngOffset(rng)],
+      },
+      {
+        'node_type': 'npc_settlement',
+        'defense_power': 60 + rng.nextInt(40),
+        'loot_pool': {'wood': 30, 'iron': 20, 'rice': 25, 'liquor': 10},
+        'offset': [_rngOffset(rng), _rngOffset(rng)],
+      },
+    ];
+
+    for (final n in nodes) {
+      final offset = n['offset'] as List;
+      await _supabase.schema('game').from('map_nodes').insert({
+        'node_type': n['node_type'],
+        'map_x': (centerX + offset[0]).clamp(1, 100),
+        'map_y': (centerY + offset[1]).clamp(1, 100),
+        'defense_power': n['defense_power'],
+        'loot_pool': n['loot_pool'],
+        'owner_settlement_id': settlementId,
+      });
+    }
+  }
+
+  // สุ่ม offset ±5 ถึง ±15 ไม่ให้ชนกับชุมนุม
+  int _rngOffset(Random rng) {
+    final sign = rng.nextBool() ? 1 : -1;
+    return sign * (5 + rng.nextInt(11));
   }
 
   Future<void> _initTroopSlots(String settlementId) async {
@@ -84,5 +137,37 @@ class GameService {
         .from('settlements')
         .update(updates)
         .eq('id', settlementId);
+  }
+
+  // คำนวณ offline production แล้วอัพ DB ในครั้งเดียว
+  Future<Settlement?> applyOfflineProduction({
+    required Settlement settlement,
+    required List<Building> buildings,
+    required DateTime lastOnlineAt,
+  }) async {
+    final gained = ProductionService.calculateOfflineProduction(
+      settlement: settlement,
+      buildings: buildings,
+      lastOnlineAt: lastOnlineAt,
+    );
+    if (gained.isEmpty) return null;
+
+    final newWood   = settlement.wood   + (gained['wood']   ?? 0);
+    final newIron   = settlement.iron   + (gained['iron']   ?? 0);
+    final newRice   = settlement.rice   + (gained['rice']   ?? 0);
+    final newLiquor = settlement.liquor + (gained['liquor'] ?? 0);
+
+    await updateResources(
+      settlement.id,
+      wood: newWood,
+      iron: newIron,
+      rice: newRice,
+      liquor: newLiquor,
+    );
+
+    return settlement.copyWith(
+      wood: newWood, iron: newIron,
+      rice: newRice, liquor: newLiquor,
+    );
   }
 }

@@ -577,6 +577,7 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
     final user = widget.user;
 
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         // ── รูปภาพ ──
         GestureDetector(
@@ -692,34 +693,34 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
             ),
           ),
 
-        // ── โปรไฟล์ Avatar + คอลัมน์ปุ่มด้านข้าง ──
+        // ── โปรไฟล์ Avatar ──
         Positioned(
           top: 60,
           right: 16,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _ProfileAvatarButton(
-                photoUrl: widget.user.primaryPhoto,
-              ),
-              const SizedBox(height: 12),
-              _AnimatedSideBarButton(
-                icon: Icons.shield_rounded,
-                label: 'บรรลัยวอร์',
-                color: const Color(0xFFB91C1C),
-                animType: _SideBarAnimType.shake,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProviderScope(
-                        child: GameScreen(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+          child: _ProfileAvatarButton(
+            photoUrl: widget.user.primaryPhoto,
+          ),
+        ),
+
+        // ── ปุ่มบรรลัยวอร์ ──
+        Positioned(
+          bottom: -32,
+          right: 16,
+          child: _AnimatedSideBarButton(
+            icon: Icons.shield_rounded,
+            label: 'บรรลัยวอร์',
+            color: const Color(0xFFB91C1C),
+            animType: _SideBarAnimType.shake,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProviderScope(
+                    child: GameScreen(),
+                  ),
+                ),
+              );
+            },
           ),
         ),
 

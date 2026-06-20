@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
 import '../models/settlement.dart';
+import '../models/troop.dart';
 import '../services/game_service.dart';
+import '../services/march_service.dart';
 
 class MapTab extends ConsumerWidget {
   const MapTab({super.key});
@@ -46,34 +48,7 @@ class _MapView extends StatelessWidget {
                 const _MapGrid(),
 
                 // โหนดต่างๆ
-                _MapNode(
-                  top: 20, left: 20,
-                  emoji: '⚔️',
-                  label: 'โหนดโจร',
-                  color: const Color(0xFF993C1D),
-                  onTap: () => _showNodeDialog(context, 'โหนดโจร', 15),
-                ),
-                _MapNode(
-                  top: 20, right: 24,
-                  emoji: '🪵',
-                  label: 'ป่าไม้',
-                  color: const Color(0xFF185FA5),
-                  onTap: () => _showNodeDialog(context, 'ป่าไม้', 10),
-                ),
-                _MapNode(
-                  bottom: 24, left: 22,
-                  emoji: '⚙️',
-                  label: 'แร่เหล็ก',
-                  color: const Color(0xFF185FA5),
-                  onTap: () => _showNodeDialog(context, 'แร่เหล็ก', 12),
-                ),
-                _MapNode(
-                  bottom: 20, right: 18,
-                  emoji: '🏘️',
-                  label: 'ชุมนุม NPC',
-                  color: const Color(0xFF3B6D11),
-                  onTap: () => _showNodeDialog(context, 'ชุมนุม NPC', 20),
-                ),
+                _MapNodes(settlement: settlement),
 
                 // ชุมนุมของผู้เล่น (กลาง)
                 Center(
@@ -154,16 +129,108 @@ class _MapView extends StatelessWidget {
     );
   }
 
-  void _showNodeDialog(BuildContext context, String name, int travelMinutes) {
+  void _showNodeDialog(
+    BuildContext context,
+    Map<String, dynamic> node,
+    List<Troop> troops,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _AttackBottomSheet(
-        nodeName: name,
-        travelMinutes: travelMinutes,
+        node: node,
+        settlement: settlement,
+        troops: troops,
+      ),
+    );
+  }
+}
+
+class _MapNodes extends ConsumerWidget {
+  final Settlement settlement;
+  const _MapNodes({required this.settlement});
+
+  static const _nodeEmoji = {
+    'bandit':         '⚔️',
+    'forest':         '🪵',
+    'iron_mine':      '⚙️',
+    'npc_settlement': '🏘️',
+  };
+  static const _nodeLabel = {
+    'bandit':         'โหนดโจร',
+    'forest':         'ป่าไม้',
+    'iron_mine':      'แร่เหล็ก',
+    'npc_settlement': 'ชุมนุม NPC',
+  };
+  static const _nodeColor = {
+    'bandit':         Color(0xFF993C1D),
+    'forest':         Color(0xFF185FA5),
+    'iron_mine':      Color(0xFF185FA5),
+    'npc_settlement': Color(0xFF3B6D11),
+  };
+
+  // ตำแหน่ง 4 มุม
+  static const _positions = [
+    {'top': 20.0,  'left': 20.0},
+    {'top': 20.0,  'right': 24.0},
+    {'bottom': 24.0, 'left': 22.0},
+    {'bottom': 20.0, 'right': 18.0},
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final nodesAsync = ref.watch(mapNodesProvider);
+    final troopsAsync = ref.watch(troopsProvider);
+
+    return nodesAsync.when(
+      data: (nodes) => troopsAsync.when(
+        data: (troops) => Stack(
+          children: List.generate(nodes.length > 4 ? 4 : nodes.length, (i) {
+            final node = nodes[i];
+            final pos = _positions[i];
+            final type = node['node_type'] as String;
+            return Positioned(
+              top: pos['top'],
+              left: pos['left'],
+              right: pos['right'],
+              bottom: pos['bottom'],
+              child: _MapNode(
+                emoji: _nodeEmoji[type] ?? '❓',
+                label: _nodeLabel[type] ?? type,
+                color: _nodeColor[type] ?? const Color(0xFF555555),
+                onTap: () => _showAttackSheet(context, node, troops),
+              ),
+            );
+          }),
+        ),
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+      ),
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  void _showAttackSheet(
+    BuildContext context,
+    Map<String, dynamic> node,
+    List<Troop> troops,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _AttackBottomSheet(
+        node: node,
+        settlement: settlement,
+        troops: troops,
       ),
     );
   }
@@ -315,36 +382,127 @@ class _MapNode extends StatelessWidget {
   }
 }
 
-class _AttackBottomSheet extends StatelessWidget {
-  final String nodeName;
-  final int travelMinutes;
+class _AttackBottomSheet extends ConsumerStatefulWidget {
+  final Map<String, dynamic> node;
+  final Settlement settlement;
+  final List<Troop> troops;
 
   const _AttackBottomSheet({
-    required this.nodeName,
-    required this.travelMinutes,
+    required this.node,
+    required this.settlement,
+    required this.troops,
   });
 
   @override
+  ConsumerState<_AttackBottomSheet> createState() => _AttackBottomSheetState();
+}
+
+class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
+  final Map<String, int> _selected = {};
+  bool _sending = false;
+
+  static const _nodeLabel = {
+    'bandit':         'โหนดโจร',
+    'forest':         'ป่าไม้',
+    'iron_mine':      'แร่เหล็ก',
+    'npc_settlement': 'ชุมนุม NPC',
+  };
+
+  int get _travelMinutes {
+    final dx = (widget.node['map_x'] as int) - widget.settlement.mapX;
+    final dy = (widget.node['map_y'] as int) - widget.settlement.mapY;
+    final dist = (dx * dx + dy * dy);
+    return (dist / 10).clamp(5, 60).toInt();
+  }
+
+  int get _totalAttack {
+    const power = {
+      'swordsman': 10, 'archer': 12, 'spearman': 8,
+      'cavalry': 18,  'elephant': 35,
+    };
+    int total = 0;
+    _selected.forEach((type, count) {
+      total += (power[type] ?? 10) * count;
+    });
+    return total;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final type = widget.node['node_type'] as String;
+    final defense = widget.node['defense_power'] as int;
+    final loot = widget.node['loot_pool'] as Map<String, dynamic>;
+    final label = _nodeLabel[type] ?? type;
+
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        left: 16, right: 16, top: 16,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            nodeName,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+          // หัวข้อ
+          Row(
+            children: [
+              Text(label,
+                style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text('🛡️ $defense',
+                style: const TextStyle(fontSize: 13)),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
-            'เวลาเดินทาง $travelMinutes นาที',
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            'สมบัติ: ${loot.entries.map((e) => '${e.key} ×${e.value}').join('  ')}',
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 16),
+          Text(
+            'เวลาเดินทาง $_travelMinutes นาที  •  กำลังรบ $_totalAttack / $defense',
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
+          const Divider(height: 20),
+
+          // เลือกทหาร
+          ...widget.troops.where((t) => t.count > 0).map((t) {
+            final sel = _selected[t.troopType] ?? 0;
+            return Row(
+              children: [
+                Text('${t.emoji} ${t.displayName}',
+                  style: const TextStyle(fontSize: 12)),
+                const Spacer(),
+                Text('มี ${t.count}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.remove, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: sel > 0
+                    ? () => setState(() => _selected[t.troopType] = sel - 1)
+                    : null,
+                ),
+                SizedBox(
+                  width: 28,
+                  child: Text('$sel',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: sel < t.count
+                    ? () => setState(() => _selected[t.troopType] = sel + 1)
+                    : null,
+                ),
+              ],
+            );
+          }),
+
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -353,17 +511,55 @@ class _AttackBottomSheet extends StatelessWidget {
                 foregroundColor: const Color(0xFFFAC775),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                  borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ส่งกองทัพ'),
+              onPressed: _sending || _selected.values.every((v) => v == 0)
+                ? null
+                : _sendAttack,
+              child: _sending
+                ? const SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+                : const Text('⚔️ ส่งกองทัพ'),
             ),
           ),
           const SizedBox(height: 8),
         ],
       ),
     );
+  }
+
+  Future<void> _sendAttack() async {
+    final troops = Map<String, int>.from(_selected)
+      ..removeWhere((_, v) => v == 0);
+    if (troops.isEmpty) return;
+
+    setState(() => _sending = true);
+    try {
+      final service = MarchService(ref.read(supabaseProvider));
+      await service.sendAttack(
+        settlement: widget.settlement,
+        targetNodeId: widget.node['id'] as String,
+        troops: troops,
+        travelMinutes: _travelMinutes,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚔️ ส่งกองทัพแล้ว!')),
+        );
+        ref.invalidate(troopsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ส่งไม่ได้: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 }
 

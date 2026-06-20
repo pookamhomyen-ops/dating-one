@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
+import '../services/building_service.dart';
+import '../services/troop_service.dart';
+import '../services/march_service.dart';
 import 'map_tab.dart';
 import 'building_tab.dart';
 import 'troop_tab.dart';
@@ -17,6 +21,8 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class _GameScreenState extends ConsumerState<GameScreen> {
   int _currentTab = 0;
+  Timer? _ticker;
+  Timer? _completeChecker;
 
   final _tabs = const [
     _TabItem(label: 'แผนที่',    icon: Icons.map_outlined),
@@ -25,6 +31,143 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _TabItem(label: 'คาราวาน',   icon: Icons.local_shipping_outlined),
     _TabItem(label: 'แจ้งเตือน', icon: Icons.notifications_outlined),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(offlineProductionProvider));
+
+    // rebuild ทุก 1 วินาที เพื่อให้ countdown สด
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+
+    // เช็ค complete upgrade/training ทุก 10 วินาที
+    _completeChecker = Timer.periodic(const Duration(seconds: 10), (_) {
+      _checkCompletes();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _completeChecker?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkCompletes() async {
+    final buildings  = ref.read(buildingsProvider).valueOrNull ?? [];
+    final troops     = ref.read(troopsProvider).valueOrNull ?? [];
+    final settlement = ref.read(settlementProvider).valueOrNull;
+    final gameClient = ref.read(gameSupabaseProvider);
+    final mainClient = ref.read(supabaseProvider);
+
+    bool changed = false;
+
+    // เช็ค building upgrade
+    for (final b in buildings) {
+      if (b.isUpgrading && b.upgradeComplete) {
+        await BuildingService(gameClient).checkAndCompleteUpgrade(b);
+        await gameClient.from('notifications').insert({
+          'settlement_id': b.settlementId,
+          'icon': '🏗️',
+          'text': 'อัปเกรด ${b.displayName} → Lv.${b.level + 1} เสร็จแล้ว!',
+          'accent_color': '#AFA9EC',
+        });
+        changed = true;
+      }
+    }
+
+    // เช็ค troop training
+    for (final t in troops) {
+      if (t.isTraining && t.trainingTimeRemaining == Duration.zero) {
+        await TroopService(gameClient).checkAndCompleteTraining(t);
+        await gameClient.from('notifications').insert({
+          'settlement_id': t.settlementId,
+          'icon': '⚔️',
+          'text': 'ฝึก${t.displayName} ${t.trainingCount} คน เสร็จแล้ว!',
+          'accent_color': '#FAC775',
+        });
+        changed = true;
+      }
+    }
+
+    // เช็ค march ที่ถึงที่หมายแล้ว
+    if (settlement != null) {
+      final marchService = MarchService(mainClient);
+      final marches = await marchService.getActiveMarches(settlement.id);
+
+      for (final march in marches) {
+        if (!march.hasArrived) continue;
+
+        if (march.marchType == 'attack') {
+          // ดึงข้อมูลโหนด
+          final nodeData = await gameClient
+              .from('map_nodes')
+              .select()
+              .eq('id', march.targetNodeId!)
+              .maybeSingle();
+          if (nodeData == null) continue;
+
+          final result = await marchService.resolveBattle(
+            march: march,
+            nodeDefensePower: nodeData['defense_power'] as int,
+            nodeLootPool: nodeData['loot_pool'] as Map<String, dynamic>,
+          );
+
+          final victory = result['victory'] as bool;
+          final loot = result['loot'] as Map<String, int>;
+          final lootText = loot.entries
+              .map((e) => '${_resIcon(e.key)}${e.value}')
+              .join(' ');
+
+          await gameClient.from('notifications').insert({
+            'settlement_id': settlement.id,
+            'icon': victory ? '🏆' : '💀',
+            'text': victory
+                ? 'ชนะการรบ! ได้รับ $lootText'
+                : 'แพ้การรบ กองทัพกำลังถอยกลับ',
+            'accent_color': victory ? '#5DCAA5' : '#F0997B',
+          });
+          changed = true;
+
+        } else if (march.marchType == 'return') {
+          // กองทัพกลับถึงแล้ว
+          await marchService.completeMarch(
+            march: march,
+            settlement: settlement,
+            currentTroops: troops,
+          );
+          final lootText = march.loot.entries
+              .map((e) => '${_resIcon(e.key)}${e.value}')
+              .join(' ');
+          if (march.loot.isNotEmpty) {
+            await gameClient.from('notifications').insert({
+              'settlement_id': settlement.id,
+              'icon': '🚩',
+              'text': 'กองทัพกลับถึงแล้ว! นำของกลับมา $lootText',
+              'accent_color': '#5DCAA5',
+            });
+          }
+          changed = true;
+        }
+      }
+    }
+
+    if (changed && mounted) {
+      ref.invalidate(buildingsProvider);
+      ref.invalidate(troopsProvider);
+      ref.invalidate(settlementProvider);
+      ref.invalidate(notificationsProvider);
+    }
+  }
+
+  String _resIcon(String res) {
+    const icons = {
+      'wood': '🪵', 'iron': '⚙️', 'rice': '🌾', 'liquor': '🍶'
+    };
+    return icons[res] ?? res;
+  }
 
   @override
   Widget build(BuildContext context) {
