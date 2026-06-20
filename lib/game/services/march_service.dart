@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/march.dart';
 import '../models/settlement.dart';
 import '../models/troop.dart';
+import '../models/building.dart';
 
 class MarchService {
   final SupabaseClient _supabase;
