@@ -12,7 +12,9 @@ import 'building_tab.dart';
 import 'troop_tab.dart';
 import 'caravan_tab.dart';
 import 'notification_tab.dart';
+import 'enemy_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 
 
@@ -37,6 +39,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _TabItem(label: 'คาราวาน',   icon: Icons.local_shipping_outlined),
     _TabItem(label: 'แจ้งเตือน', icon: Icons.notifications_outlined),
   ];
+
+  void switchTab(int index) {
+    setState(() => _currentTab = index);
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
 
   @override
   void initState() {
@@ -76,9 +83,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             column: 'target_settlement_id',
             value: settlement.id,
           ),
-          callback: (payload) {
+          callback: (payload) async {
             if (!mounted) return;
-            // มีคนส่งกองทัพมาบุก!
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('⚔️ มีกองทัพกำลังบุกชุมนุมของคุณ!'),
@@ -86,6 +92,34 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 duration: Duration(seconds: 5),
               ),
             );
+
+            // บันทึกศัตรู
+            try {
+              final newRow = payload.newRecord;
+              final attackerSettlementId = newRow['settlement_id'] as String?;
+              if (attackerSettlementId != null) {
+                final settlement = ref.read(settlementProvider).valueOrNull;
+                if (settlement != null) {
+                  final gameClient = ref.read(gameSupabaseProvider);
+
+                  // ดึงชื่อชุมนุมของผู้บุก
+                  final attackerData = await gameClient
+                      .from('settlements')
+                      .select('name')
+                      .eq('id', attackerSettlementId)
+                      .maybeSingle();
+
+                  await gameClient.from('enemies').insert({
+                    'settlement_id': settlement.id,
+                    'enemy_settlement_id': attackerSettlementId,
+                    'enemy_name': attackerData?['name'] ?? 'ไม่ทราบชื่อ',
+                    'attacked_at': DateTime.now().toIso8601String(),
+                  });
+                  ref.invalidate(recentEnemiesProvider);
+                }
+              }
+            } catch (_) {}
+
             ref.invalidate(notificationsProvider);
           },
         )
@@ -265,6 +299,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       ref.invalidate(settlementProvider);
       ref.invalidate(notificationsProvider);
       ref.invalidate(caravansProvider);
+      ref.invalidate(activeMarchesProvider);
+      ref.invalidate(marchHistoryProvider);
     }
   }
 
@@ -357,7 +393,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               child: IndexedStack(
                 index: _currentTab,
                 children: const [
-                  MapTab(),
+                  MapTab(onSwitchTab: switchTab),
                   BuildingTab(),
                   TroopTab(),
                   CaravanTab(),
@@ -395,6 +431,8 @@ class _ResourceBar extends ConsumerWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(width: 6),
+          _EnemyButton(),
           const Spacer(),
           _ResChip(
             icon: '🪵', value: settlement.wood,
@@ -415,6 +453,51 @@ class _ResourceBar extends ConsumerWidget {
             icon: '🍶', value: settlement.liquor,
             rate: rate['liquor'] ?? 0,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnemyButton extends ConsumerWidget {
+  const _EnemyButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enemies = ref.watch(recentEnemiesProvider).valueOrNull ?? [];
+    final hasEnemy = enemies.isNotEmpty;
+
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (_) => const EnemySheet(),
+      ),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: hasEnemy
+                  ? const Color(0xFF993C1D).withOpacity(0.8)
+                  : Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text('⚔️',
+              style: TextStyle(fontSize: 12)),
+          ),
+          if (hasEnemy)
+            Positioned(
+              right: 0, top: 0,
+              child: Container(
+                width: 8, height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF0997B),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
         ],
       ),
     );

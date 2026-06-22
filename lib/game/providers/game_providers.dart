@@ -76,6 +76,86 @@ final troopsProvider = FutureProvider<List<Troop>>((ref) async {
 
 final gameRefreshProvider = StateProvider<int>((ref) => 0);
 
+// ศัตรูใน 24 ชั่วโมงล่าสุด
+final recentEnemiesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final since = DateTime.now().subtract(const Duration(hours: 24)).toIso8601String();
+
+  final data = await gameClient
+      .from('enemies')
+      .select()
+      .eq('settlement_id', settlement.id)
+      .gte('attacked_at', since)
+      .order('attacked_at', ascending: false);
+
+  return List<Map<String, dynamic>>.from(data);
+});
+
+// ประวัติศัตรูทั้งหมด
+final enemyHistoryProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('enemies')
+      .select()
+      .eq('settlement_id', settlement.id)
+      .order('attacked_at', ascending: false)
+      .limit(50);
+
+  return List<Map<String, dynamic>>.from(data);
+});
+
+final seasonProvider = FutureProvider<String>((ref) async {
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('season')
+      .select()
+      .eq('id', 1)
+      .single();
+
+  final season = data['current_season'] as String;
+  final startedAt = DateTime.parse(data['started_at']);
+  final now = DateTime.now();
+  final daysPassed = now.difference(startedAt).inDays;
+
+  // วนรอบ: ร้อน 3 วัน, ฝน 1 วัน, หนาว 1 วัน = 5 วัน/รอบ
+  const cycle = [
+    'summer', 'summer', 'summer', 'rain', 'winter',
+  ];
+  final currentSeason = cycle[daysPassed % cycle.length];
+
+  // อัพเดท DB ถ้าฤดูเปลี่ยน
+  if (currentSeason != season) {
+    await gameClient.from('season').update({
+      'current_season': currentSeason,
+    }).eq('id', 1);
+  }
+
+  return currentSeason;
+});
+
+final activeMarchesProvider = FutureProvider<List<March>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('march_queues')
+      .select()
+      .eq('settlement_id', settlement.id)
+      .neq('status', 'completed')
+      .order('arrive_at');
+
+  return List<Map<String, dynamic>>.from(data)
+      .map((e) => March.fromJson(e))
+      .toList();
+});
+
 // viewport center สำหรับ lazy load
 final mapViewportProvider = StateProvider<Offset>((ref) => Offset.zero);
 
@@ -95,6 +175,13 @@ final nearbySettlementsProvider = FutureProvider<List<Map<String, dynamic>>>((re
   });
 
   return List<Map<String, dynamic>>.from(data ?? []);
+});
+
+// town hall level
+final townHallLevelProvider = Provider<int>((ref) {
+  final buildings = ref.watch(buildingsProvider).valueOrNull ?? [];
+  final th = buildings.where((b) => b.buildingType == 'town_hall').firstOrNull;
+  return th?.level ?? 1;
 });
 
 // defense power รวมของชุมนุม

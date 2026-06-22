@@ -47,6 +47,7 @@ class GameService {
     final starterBuildings = [
       {'building_type': 'town_hall', 'level': 1},
       {'building_type': 'sawmill',   'level': 1},
+      {'building_type': 'smelter',   'level': 1},
       {'building_type': 'rice_farm', 'level': 1},
       {'building_type': 'barracks',  'level': 1},
       {'building_type': 'house',     'level': 1, 'house_variant': 1},

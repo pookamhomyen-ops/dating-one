@@ -75,6 +75,7 @@ class _MapViewState extends ConsumerState<_MapView> {
     final troopsAsync   = ref.watch(troopsProvider);
     final nodesAsync    = ref.watch(mapNodesProvider);
     final nearbyAsync   = ref.watch(nearbySettlementsProvider);
+    final season        = ref.watch(seasonProvider).valueOrNull ?? 'summer';
     final troops        = troopsAsync.valueOrNull ?? [];
     final nodes         = nodesAsync.valueOrNull ?? [];
     final nearby        = nearbyAsync.valueOrNull ?? [];
@@ -97,7 +98,11 @@ class _MapViewState extends ConsumerState<_MapView> {
                   child: Stack(
                     children: [
                       // พื้นหลัง grid
-                      _MapBackground(mapSize: mapSize, cellSize: cellSize),
+                      _MapBackground(
+                        mapSize: mapSize,
+                        cellSize: cellSize,
+                        season: season,
+                      ),
 
                       // โหนดทรัพยากร/โจร
                       ..._buildNodes(nodes, troops),
@@ -229,13 +234,22 @@ class _MapViewState extends ConsumerState<_MapView> {
 class _MapBackground extends StatelessWidget {
   final int mapSize;
   final double cellSize;
-  const _MapBackground({required this.mapSize, required this.cellSize});
+  final String season;
+  const _MapBackground({
+    required this.mapSize,
+    required this.cellSize,
+    required this.season,
+  });
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size(mapSize * cellSize, mapSize * cellSize),
-      painter: _GridPainter(mapSize: mapSize, cellSize: cellSize),
+      painter: _GridPainter(
+        mapSize: mapSize,
+        cellSize: cellSize,
+        season: season,
+      ),
     );
   }
 }
@@ -243,13 +257,27 @@ class _MapBackground extends StatelessWidget {
 class _GridPainter extends CustomPainter {
   final int mapSize;
   final double cellSize;
-  const _GridPainter({required this.mapSize, required this.cellSize});
+  final String season;
+  const _GridPainter({
+    required this.mapSize,
+    required this.cellSize,
+    required this.season,
+  });
+
+  Color get _mapBgColor {
+    switch (season) {
+      case 'summer': return const Color(0xFF8B7355); // สีดินแห้ง
+      case 'rain':   return const Color(0xFF2D5A27); // สีเขียวเข้ม
+      case 'winter': return const Color(0xFF6B8E9F); // สีฟ้าหมอก
+      default:       return const Color(0xFF4A6741);
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint()..color = const Color(0xFF4A6741),
+      Paint()..color = _mapBgColor,
     );
     final paint = Paint()
       ..color = Colors.white.withOpacity(0.06)
@@ -270,7 +298,7 @@ class _GridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_) => false;
+  bool shouldRepaint(_GridPainter oldDelegate) => oldDelegate.season != season;
 }
 
 // ─── ชุมนุมของเรา ─────────────────────────────────────────────────────────────
@@ -667,7 +695,7 @@ class _MarchHistory extends ConsumerWidget {
 }
 
 class _MarchHistoryCard extends StatelessWidget {
-  final march;
+  final dynamic march;
   const _MarchHistoryCard({required this.march});
 
   @override

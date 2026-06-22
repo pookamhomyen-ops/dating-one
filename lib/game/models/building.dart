@@ -109,6 +109,10 @@ class Building {
     return base * level; // แต่ละ level นานขึ้นเรื่อยๆ
   }
 
+  // town hall กำหนด cap อาคารและทหาร
+  static int maxBuildingSlots(int townHallLevel) => 5 + (townHallLevel * 2);
+  static int maxTroopCap(int townHallLevel) => 50 * townHallLevel;
+
   // population ที่เพิ่มจากอาคาร
   int get populationBonus {
     switch (buildingType) {
@@ -130,10 +134,12 @@ class Building {
   // production ต่อ tick (5 นาที)
   Map<String, int> get productionPerTick {
     switch (buildingType) {
-      case 'sawmill':    return {'wood': 4 + (level * 2)};
-      case 'smelter':    return {'iron': 3 + (level * 2)};
-      case 'rice_farm':  return {'rice': 4 + (level * 2)};
-      case 'distillery': return {'liquor': 2 + level};
+      case 'sawmill':    return {'wood': 6 + (level * 3)};   // เยอะสุด
+      case 'rice_farm':  return {'rice': 6 + (level * 3)};   // เท่ากับไม้
+      case 'smelter':    return {'iron': 2 + level};          // น้อยกว่า
+      case 'distillery': return {'liquor': 1 + level};
       default:           return {};
     }
+  }
+  
   }

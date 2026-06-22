@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
 import '../models/troop.dart';
+import '../models/building.dart';
 import '../models/settlement.dart';
 import '../services/troop_service.dart';
 
@@ -50,10 +51,16 @@ class _TroopList extends StatelessWidget {
           status: settlement.happinessEmoji,
         ),
         const SizedBox(height: 6),
-        _StatRow(
-          label: 'ทหารปัจจุบัน',
-          value: '$totalTroops/${settlement.maxTroops}',
-          status: totalTroops < settlement.maxTroops ? '✅' : '🔴',
+        Consumer(
+          builder: (_, ref, __) {
+            final thLevel  = ref.watch(townHallLevelProvider);
+            final troopCap = Building.maxTroopCap(thLevel);
+            return _StatRow(
+              label: 'ทหารปัจจุบัน',
+              value: '$totalTroops/$troopCap',
+              status: totalTroops < troopCap ? '✅' : '🔴',
+            );
+          },
         ),
         const SizedBox(height: 12),
 

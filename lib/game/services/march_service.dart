@@ -2,13 +2,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/march.dart';
 import '../models/settlement.dart';
 import '../models/troop.dart';
+import '../models/building.dart';
 
 class MarchService {
   final SupabaseClient _supabase;
   MarchService(this._supabase);
 
-  // ส่งกองทัพไปโจมตีโหนด
-  // คำนวณ defense รวมจาก buildings
   static int calcSettlementDefense(List<Building> buildings) {
     int defense = 50;
     for (final b in buildings) {
@@ -29,6 +28,7 @@ class MarchService {
     final arriveAt = now.add(Duration(minutes: travelMinutes));
 
     final data = await _supabase
+        .schema('game')
         .from('march_queues')
         .insert({
           'settlement_id': settlement.id,
@@ -45,7 +45,6 @@ class MarchService {
     return March.fromJson(data);
   }
 
-  // resolve การรบเมื่อกองทัพถึงที่หมาย
   Future<Map<String, dynamic>> resolveBattle({
     required March march,
     required int nodeDefensePower,
@@ -58,21 +57,16 @@ class MarchService {
     Map<String, int> troopsLost = {};
 
     if (isVictory) {
-      // สุ่ม loot จาก loot_pool
       loot = _rollLoot(nodeLootPool);
-      // สูญเสียทหารน้อย (~10-20%)
       troopsLost = _calculateLosses(march.troopsSent, 0.15);
     } else {
-      // แพ้ — สูญเสียทหารเยอะ (~40-50%)
       troopsLost = _calculateLosses(march.troopsSent, 0.45);
     }
 
-    // เวลาเดินทางกลับ (เท่ากับเวลาไป)
     final travelTime = march.arriveAt.difference(march.departAt);
     final returnAt = DateTime.now().add(travelTime);
 
-    // อัปเดต march → returning
-    await _supabase.from('march_queues').update({
+    await _supabase.schema('game').from('march_queues').update({
       'status': 'returning',
       'march_type': 'return',
       'loot': loot,
@@ -86,13 +80,11 @@ class MarchService {
     };
   }
 
-  // รับทหารและ loot กลับเมื่อเดินทางกลับถึง
   Future<void> completeMarch({
     required March march,
     required Settlement settlement,
     required List<Troop> currentTroops,
   }) async {
-    // คืนทหารที่รอดกลับมา
     final survivingTroops = march.troopsSent;
     for (final entry in survivingTroops.entries) {
       final troop = currentTroops
@@ -100,30 +92,28 @@ class MarchService {
           .firstOrNull;
       if (troop == null) continue;
 
-      await _supabase.from('troops').update({
+      await _supabase.schema('game').from('troops').update({
         'count': troop.count + entry.value,
       }).eq('id', troop.id);
     }
 
-    // เพิ่ม loot เข้าคลัง
     if (march.loot.isNotEmpty) {
-      await _supabase.from('settlements').update({
-        'wood':   settlement.wood  + (march.loot['wood']   ?? 0),
-        'iron':   settlement.iron  + (march.loot['iron']   ?? 0),
-        'rice':   settlement.rice  + (march.loot['rice']   ?? 0),
+      await _supabase.schema('game').from('settlements').update({
+        'wood':   settlement.wood   + (march.loot['wood']   ?? 0),
+        'iron':   settlement.iron   + (march.loot['iron']   ?? 0),
+        'rice':   settlement.rice   + (march.loot['rice']   ?? 0),
         'liquor': settlement.liquor + (march.loot['liquor'] ?? 0),
       }).eq('id', settlement.id);
     }
 
-    // mark completed
-    await _supabase.from('march_queues').update({
+    await _supabase.schema('game').from('march_queues').update({
       'status': 'completed',
     }).eq('id', march.id);
   }
 
-  // ดึง march ที่กำลัง active อยู่
   Future<List<March>> getActiveMarches(String settlementId) async {
     final data = await _supabase
+        .schema('game')
         .from('march_queues')
         .select()
         .eq('settlement_id', settlementId)
@@ -136,10 +126,13 @@ class MarchService {
   Map<String, int> _rollLoot(Map<String, dynamic> lootPool) {
     final loot = <String, int>{};
     lootPool.forEach((key, value) {
-      if (value is List && value.length == 2) {
+      if (value is int) {
+        loot[key] = value;
+      } else if (value is List && value.length == 2) {
         final min = value[0] as int;
         final max = value[1] as int;
-        loot[key] = min + (DateTime.now().millisecondsSinceEpoch % (max - min + 1));
+        loot[key] = min +
+            (DateTime.now().millisecondsSinceEpoch % (max - min + 1));
       }
     });
     return loot;
@@ -150,10 +143,7 @@ class MarchService {
     double lossRate,
   ) {
     return troops.map(
-      (type, count) => MapEntry(
-        type,
-        (count * lossRate).round(),
-      ),
+      (type, count) => MapEntry(type, (count * lossRate).round()),
     );
   }
 
@@ -162,7 +152,7 @@ class MarchService {
     Map<String, int> troops,
   ) async {
     for (final entry in troops.entries) {
-      await _supabase.rpc('deduct_troops', params: {
+      await _supabase.schema('game').rpc('deduct_troops', params: {
         'p_settlement_id': settlementId,
         'p_troop_type': entry.key,
         'p_amount': entry.value,
