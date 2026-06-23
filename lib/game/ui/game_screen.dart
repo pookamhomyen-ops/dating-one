@@ -392,12 +392,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             Expanded(
               child: IndexedStack(
                 index: _currentTab,
-                children: const [
+                children: [
                   MapTab(onSwitchTab: switchTab),
-                  BuildingTab(),
-                  TroopTab(),
-                  CaravanTab(),
-                  NotificationTab(),
+                  const BuildingTab(),
+                  const TroopTab(),
+                  const CaravanTab(),
+                  const NotificationTab(),
                 ],
               ),
             ),

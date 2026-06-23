@@ -11,6 +11,9 @@ import '../models/caravan.dart';
 import '../models/march.dart';
 import '../../constants.dart';
 import 'package:flutter/painting.dart';
+import '../models/building_position.dart';
+import '../services/building_position_service.dart';
+
 
 // 1. Client หลักของแอป
 final supabaseProvider = Provider((ref) => Supabase.instance.client);
@@ -376,3 +379,14 @@ final offlineProductionProvider = FutureProvider<void>((ref) async {
   ref.invalidate(settlementProvider);
   ref.invalidate(notificationsProvider);
 });
+
+final buildingPositionServiceProvider = Provider<BuildingPositionService>((ref) {
+  return BuildingPositionService(ref.read(gameSupabaseProvider));
+});
+
+final buildingPositionsProvider = FutureProvider<List<BuildingPosition>>((ref) async {
+  final settlement = ref.watch(settlementProvider).value;
+  if (settlement == null) return [];
+  final service = ref.read(buildingPositionServiceProvider);
+  return service.getPositions(settlement.id);
+});

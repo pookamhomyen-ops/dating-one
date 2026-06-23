@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:collection/collection.dart';
 import '../providers/game_providers.dart';
 import '../models/building.dart';
 import '../models/settlement.dart';
 import '../services/building_service.dart';
+import 'arrange_buildings_view.dart';
 
 class SettlementView extends ConsumerWidget {
   final void Function(int)? onSwitchTab;
@@ -37,7 +39,7 @@ class SettlementView extends ConsumerWidget {
 }
 
 // ─── Scene หลัก ───────────────────────────────────────────────────────────────
-class _SettlementScene extends StatelessWidget {
+class _SettlementScene extends ConsumerWidget {
   final Settlement settlement;
   final List<Building> buildings;
   final void Function(int)? onSwitchTab;
@@ -47,25 +49,38 @@ class _SettlementScene extends StatelessWidget {
     this.onSwitchTab,
   });
 
-  // ตำแหน่ง % ของแต่ละ building_type บนหน้าจอ
+  // ขอบเขตพื้นที่ (fraction) สำหรับแปลง grid <-> offset
+  static const double _left = 0.10;
+  static const double _right = 0.90;
+  static const double _top = 0.20;
+  static const double _bottom = 0.90;
+  static const int _gridSize = 20;
+
+  static Offset _gridToOffset(int x, int y) {
+    return Offset(
+      _left + (x / _gridSize) * (_right - _left),
+      _top + (y / _gridSize) * (_bottom - _top),
+    );
+  }
+
+  // hardcoded fallback
   static const _positions = <String, Offset>{
-    'town_hall':      Offset(0.42, 0.32), // กลางบน
-    'barracks':       Offset(0.62, 0.52), // ขวากลาง
-    'sawmill':        Offset(0.25, 0.38), // ซ้ายบน
-    'smelter':        Offset(0.68, 0.36), // ขวาบน
-    'rice_farm':      Offset(0.28, 0.62), // ซ้ายล่าง
-    'distillery':     Offset(0.58, 0.68), // ขวาล่าง
-    'house':          Offset(0.42, 0.55), // กลาง
-    'tavern':         Offset(0.50, 0.44), // กลางบน
-    'shrine':         Offset(0.72, 0.60), // ขวาล่าง
-    'elephant_camp':  Offset(0.22, 0.52), // ซ้ายกลาง
-    'smithy':         Offset(0.65, 0.44), // ขวากลางบน
-    'wall':           Offset(0.35, 0.46), // กลางซ้าย
-    'watchtower':     Offset(0.55, 0.38), // กลางขวาบน
+    'town_hall':      Offset(0.42, 0.32),
+    'barracks':       Offset(0.62, 0.52),
+    'sawmill':        Offset(0.25, 0.38),
+    'smelter':        Offset(0.68, 0.36),
+    'rice_farm':      Offset(0.28, 0.62),
+    'distillery':     Offset(0.58, 0.68),
+    'house':          Offset(0.42, 0.55),
+    'tavern':         Offset(0.50, 0.44),
+    'shrine':         Offset(0.72, 0.60),
+    'elephant_camp':  Offset(0.22, 0.52),
+    'smithy':         Offset(0.65, 0.44),
+    'wall':           Offset(0.35, 0.46),
+    'watchtower':     Offset(0.55, 0.38),
   };
 
   static const _assetPath = 'assets/games/buildings';
-
   static const _imageMap = <String, String>{
     'town_hall':   'town_hall.webp',
     'barracks':    'barracks.webp',
@@ -74,8 +89,6 @@ class _SettlementScene extends StatelessWidget {
     'rice_farm':   'rice_farm.webp',
     'shrine':      'shrine.webp',
   };
-
-  // fallback emoji สำหรับอาคารที่ยังไม่มีรูป
   static const _emoji = <String, String>{
     'distillery':    '🍶',
     'house':         '🏠',
@@ -96,24 +109,49 @@ class _SettlementScene extends StatelessWidget {
     return '';
   }
 
+  int _getTabIndex() => 0;
+
+  // แทนที่ build method ของ _SettlementScene ด้วยโค้ดนี้
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final positionsAsync = ref.watch(buildingPositionsProvider);
+    final positionsMap = <String, Offset>{};
+
+    positionsAsync.maybeWhen(
+      data: (posList) {
+        for (var b in buildings) {
+          final found = posList.firstWhereOrNull((p) => p.buildingId == b.id);
+          if (found != null) {
+            positionsMap[b.id] = _gridToOffset(found.posX, found.posY);
+          } else {
+            final defaultOffset = _positions[b.buildingType];
+            if (defaultOffset != null) {
+              positionsMap[b.id] = defaultOffset;
+            }
+          }
+        }
+      },
+      orElse: () {
+        for (var b in buildings) {
+          final defaultOffset = _positions[b.buildingType];
+          if (defaultOffset != null) {
+            positionsMap[b.id] = defaultOffset;
+          }
+        }
+      },
+    );
+
     return Stack(
       children: [
-        // พื้นหลัง gradient อยุทธยา
         _AyutthayaBackground(),
-
-        // top bar
         Positioned(
           top: 0, left: 0, right: 0,
           child: SafeArea(
             child: _TopBar(settlement: settlement),
           ),
         ),
-
-        // อาคารต่างๆ
         ...buildings.map((b) {
-          final pos = _positions[b.buildingType];
+          final pos = positionsMap[b.id];
           if (pos == null) return const SizedBox.shrink();
           final imagePath = _getImagePath(b);
           return _BuildingIcon(
@@ -125,8 +163,6 @@ class _SettlementScene extends StatelessWidget {
             onSwitchTab: onSwitchTab,
           );
         }),
-
-        // ปุ่มกลับ
         Positioned(
           top: 0, left: 0,
           child: SafeArea(
@@ -134,10 +170,34 @@ class _SettlementScene extends StatelessWidget {
               icon: const Icon(Icons.arrow_back_ios,
                 color: Color(0xFFFAC775), size: 20),
               onPressed: () {
-                  Navigator.pop(context);  // ปิด popup
-                  onSwitchTab?.call(_getTabIndex());
-                },
+                Navigator.pop(context);
+                onSwitchTab?.call(_getTabIndex());
+              },
             ),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.small(
+            heroTag: 'arrangeBtn',
+            backgroundColor: const Color(0xFF854F0B),
+            onPressed: () {
+              final container = ProviderScope.containerOf(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProviderScope(
+                    parent: container,
+                    child: ArrangeBuildingsView(
+                      settlement: settlement,
+                      buildings: buildings,
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: const Icon(Icons.edit, color: Colors.white, size: 20),
           ),
         ),
       ],
@@ -813,15 +873,3 @@ class _CostBadge extends StatelessWidget {
   }
 }
 
-int _getTabIndex() {
-    switch (building.buildingType) {
-      case 'barracks':
-      case 'elephant_camp': return 2; // tab ทหาร
-      case 'sawmill':
-      case 'smelter':
-      case 'rice_farm':
-      case 'distillery':    return 1; // tab อาคาร
-      case 'town_hall':     return 1;
-      default:              return 0;
-    }
-  }

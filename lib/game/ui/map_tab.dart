@@ -5,9 +5,11 @@ import '../models/settlement.dart';
 import '../models/troop.dart';
 import '../services/game_service.dart';
 import '../services/march_service.dart';
+import '../ui/settlement_view.dart';
 
 class MapTab extends ConsumerWidget {
-  const MapTab({super.key});
+  final void Function(int)? onSwitchTab;
+  const MapTab({super.key, this.onSwitchTab});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -15,7 +17,7 @@ class MapTab extends ConsumerWidget {
 
     return settlementAsync.when(
       data: (settlement) => settlement != null
-          ? _MapView(settlement: settlement)
+          ? _MapView(settlement: settlement, onSwitchTab: onSwitchTab)
           : const _CreateSettlementPrompt(),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('เกิดข้อผิดพลาด: $e')),
@@ -26,7 +28,8 @@ class MapTab extends ConsumerWidget {
 // ─── แผนที่หลัก ───────────────────────────────────────────────────────────────
 class _MapView extends ConsumerStatefulWidget {
   final Settlement settlement;
-  const _MapView({required this.settlement});
+  final void Function(int)? onSwitchTab;
+  const _MapView({required this.settlement, this.onSwitchTab});
 
   @override
   ConsumerState<_MapView> createState() => _MapViewState();
@@ -52,6 +55,7 @@ class _MapViewState extends ConsumerState<_MapView> {
   }
 
   void _centerOnMySettlement() {
+    if (!mounted) return;
     final s = widget.settlement;
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height * 0.6;
@@ -61,7 +65,6 @@ class _MapViewState extends ConsumerState<_MapView> {
   }
 
   void _onInteractionEnd(ScaleEndDetails _) {
-    // อัพเดท viewport center สำหรับ lazy load
     final m = _transformController.value;
     final tx = -m.entry(0, 3);
     final ty = -m.entry(1, 3);
@@ -72,61 +75,79 @@ class _MapViewState extends ConsumerState<_MapView> {
 
   @override
   Widget build(BuildContext context) {
-    final troopsAsync   = ref.watch(troopsProvider);
-    final nodesAsync    = ref.watch(mapNodesProvider);
-    final nearbyAsync   = ref.watch(nearbySettlementsProvider);
-    final season        = ref.watch(seasonProvider).valueOrNull ?? 'summer';
-    final troops        = troopsAsync.valueOrNull ?? [];
-    final nodes         = nodesAsync.valueOrNull ?? [];
-    final nearby        = nearbyAsync.valueOrNull ?? [];
+    final troops  = ref.watch(troopsProvider).valueOrNull ?? [];
+    final nodes   = ref.watch(mapNodesProvider).valueOrNull ?? [];
+    final nearby  = ref.watch(nearbySettlementsProvider).valueOrNull ?? [];
+    final season  = ref.watch(seasonProvider).valueOrNull ?? 'summer';
 
     return Column(
       children: [
         _HappinessBar(settlement: widget.settlement),
         Expanded(
-          child: Stack(
-            children: [
-              InteractiveViewer(
-                transformationController: _transformController,
-                boundaryMargin: const EdgeInsets.all(200),
-                minScale: 0.3,
-                maxScale: 2.5,
-                onInteractionEnd: _onInteractionEnd,
-                child: SizedBox(
-                  width: mapSize * cellSize,
-                  height: mapSize * cellSize,
-                  child: Stack(
+          child: ClipRect(               // ← กัน InteractiveViewer ล้นกรอบ
+            child: Stack(
+              children: [
+                InteractiveViewer(
+                  transformationController: _transformController,
+                  boundaryMargin: const EdgeInsets.all(200),
+                  minScale: 0.3,
+                  maxScale: 2.5,
+                  constrained: false,    // ← ให้ child ใหญ่กว่า viewport ได้
+                  onInteractionEnd: _onInteractionEnd,
+                  child: SizedBox(
+                    width: mapSize * cellSize,
+                    height: mapSize * cellSize,
+                    child: Stack(
+                      children: [
+                        _MapBackground(
+                          mapSize: mapSize,
+                          cellSize: cellSize,
+                          season: season,
+                        ),
+                        ..._buildNodes(nodes, troops),
+                        ..._buildNearby(nearby, troops),
+                        _MySettlement(settlement: widget.settlement),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 12,
+                  right: 12,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // พื้นหลัง grid
-                      _MapBackground(
-                        mapSize: mapSize,
-                        cellSize: cellSize,
-                        season: season,
+                      FloatingActionButton.small(
+                        heroTag: 'centerBtn',
+                        backgroundColor: const Color(0xFF3C2810),
+                        onPressed: _centerOnMySettlement,
+                        child: const Text('🏯', style: TextStyle(fontSize: 16)),
                       ),
-
-                      // โหนดทรัพยากร/โจร
-                      ..._buildNodes(nodes, troops),
-
-                      // ชุมนุมผู้เล่นอื่น
-                      ..._buildNearby(nearby, troops),
-
-                      // ชุมนุมของเรา
-                      _MySettlement(settlement: widget.settlement),
+                      const SizedBox(height: 8),
+                      FloatingActionButton.small(
+                        heroTag: 'settlementBtn',
+                        backgroundColor: const Color(0xFF854F0B),
+                        onPressed: () {
+                          final container = ProviderScope.containerOf(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProviderScope(
+                                parent: container,
+                                child: SettlementView(
+                                  onSwitchTab: widget.onSwitchTab,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('🏛️', style: TextStyle(fontSize: 16)),
+                      ),
                     ],
                   ),
                 ),
-              ),
-
-              // ปุ่มกลับมายังชุมนุมของเรา
-              Positioned(
-                bottom: 12, right: 12,
-                child: FloatingActionButton.small(
-                  backgroundColor: const Color(0xFF3C2810),
-                  onPressed: _centerOnMySettlement,
-                  child: const Text('🏯', style: TextStyle(fontSize: 16)),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         const _MarchHistory(),
@@ -135,10 +156,7 @@ class _MapViewState extends ConsumerState<_MapView> {
     );
   }
 
-  List<Widget> _buildNodes(
-    List<Map<String, dynamic>> nodes,
-    List<Troop> troops,
-  ) {
+  List<Widget> _buildNodes(List<Map<String, dynamic>> nodes, List<Troop> troops) {
     const emoji = {
       'bandit': '⚔️', 'forest': '🪵',
       'iron_mine': '⚙️', 'npc_settlement': '🏘️',
@@ -149,12 +167,10 @@ class _MapViewState extends ConsumerState<_MapView> {
       'iron_mine': Color(0xFF185FA5),
       'npc_settlement': Color(0xFF3B6D11),
     };
-
     return nodes.map((node) {
       final x = (node['map_x'] as int).toDouble();
       final y = (node['map_y'] as int).toDouble();
       final type = node['node_type'] as String;
-
       return Positioned(
         left: x * cellSize - cellSize / 2,
         top:  y * cellSize - cellSize / 2,
@@ -169,14 +185,10 @@ class _MapViewState extends ConsumerState<_MapView> {
     }).toList();
   }
 
-  List<Widget> _buildNearby(
-    List<Map<String, dynamic>> settlements,
-    List<Troop> troops,
-  ) {
+  List<Widget> _buildNearby(List<Map<String, dynamic>> settlements, List<Troop> troops) {
     return settlements.map((s) {
       final x = (s['map_x'] as int).toDouble();
       final y = (s['map_y'] as int).toDouble();
-
       return Positioned(
         left: x * cellSize - cellSize / 2,
         top:  y * cellSize - cellSize / 2,
@@ -191,10 +203,7 @@ class _MapViewState extends ConsumerState<_MapView> {
     }).toList();
   }
 
-  void _showNodeAttackSheet(
-    Map<String, dynamic> node,
-    List<Troop> troops,
-  ) {
+  void _showNodeAttackSheet(Map<String, dynamic> node, List<Troop> troops) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFFF5EFE6),
@@ -210,10 +219,7 @@ class _MapViewState extends ConsumerState<_MapView> {
     );
   }
 
-  void _showPlayerSheet(
-    Map<String, dynamic> playerSettlement,
-    List<Troop> troops,
-  ) {
+  void _showPlayerSheet(Map<String, dynamic> playerSettlement, List<Troop> troops) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFFF5EFE6),
