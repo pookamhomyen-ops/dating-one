@@ -286,7 +286,7 @@ class _GridPainter extends CustomPainter {
       Paint()..color = _mapBgColor,
     );
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = Colors.white.withValues(alpha: 0.06)
       ..strokeWidth = 0.5;
 
     for (int i = 0; i <= mapSize; i++) {
@@ -324,7 +324,7 @@ class _MySettlement extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: const Color(0xFF3C2810).withOpacity(0.85),
+              color: const Color(0xFF3C2810).withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -350,7 +350,7 @@ class _MapPin extends StatelessWidget {
     return Container(
       width: 36, height: 36,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.85),
+        color: color.withValues(alpha: 0.85),
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white24, width: 1),
       ),
@@ -383,7 +383,7 @@ class _PlayerPin extends StatelessWidget {
             child: photoUrl != null
                 ? Image.network(photoUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
+                    errorBuilder: (_, _, _) =>
                         const Center(child: Text('🏯',
                             style: TextStyle(fontSize: 16))))
                 : const Center(
@@ -476,7 +476,7 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
                 child: ClipOval(
                   child: photoUrl != null
                       ? Image.network(photoUrl, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
+                          errorBuilder: (_, _, _) =>
                               const Center(child: Text('🏯')))
                       : const Center(child: Text('🏯',
                           style: TextStyle(fontSize: 20))),
@@ -664,7 +664,7 @@ class _HappinessBar extends ConsumerWidget {
           const SizedBox(width: 8),
           Text('🛡️$defense',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6), fontSize: 11)),
+              color: Colors.white.withValues(alpha: 0.6), fontSize: 11)),
         ],
       ),
     );
@@ -695,7 +695,7 @@ class _MarchHistory extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -725,9 +725,9 @@ class _MarchHistoryCard extends StatelessWidget {
                 : const Color(0xFFF0997B),
             width: 3,
           ),
-          top:    BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
-          right:  BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
-          bottom: BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
+          top:    BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+          right:  BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+          bottom: BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
         ),
       ),
       child: Row(

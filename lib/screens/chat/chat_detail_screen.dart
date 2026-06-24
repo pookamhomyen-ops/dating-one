@@ -341,7 +341,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         'reporter_id': me.id,
         'reported_id': _partnerId,
         'reason': reason,
-        if (subtype != null) 'gender_mismatch_subtype': subtype,
+        'gender_mismatch_subtype': ?subtype,
       });
       if (mounted) {
         setState(() => _hasReported = true);

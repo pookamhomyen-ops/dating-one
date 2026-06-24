@@ -334,7 +334,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                           sliver: SliverList.separated(
                             itemCount: _posts.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 16),
+                            separatorBuilder: (_, _) => const SizedBox(height: 16),
                             itemBuilder: (context, index) {
                               return _FeedPostCard(
                                 post: _posts[index],
@@ -367,7 +367,7 @@ class _StoriesRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         scrollDirection: Axis.horizontal,
         itemCount: 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
         itemBuilder: (context, i) {
           final isMe = i == 0;
           return Column(
@@ -727,7 +727,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                     ),
                                     child: ClipOval(
                                       child: photoUrl != null && photoUrl.isNotEmpty
-                                          ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _avatarFallback(name))
+                                          ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, _, _) => _avatarFallback(name))
                                           : _avatarFallback(name),
                                     ),
                                   ),
@@ -1120,7 +1120,7 @@ class _InlineCommentSectionState extends State<_InlineCommentSection> {
                       child: ClipOval(
                         child: photoUrl.isNotEmpty
                             ? CachedNetworkImage(imageUrl: photoUrl, width: 36, height: 36, fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)))
+                                errorWidget: (_, _, _) => const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)))
                             : const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)),
                       ),
                     ),

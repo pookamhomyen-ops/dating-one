@@ -97,7 +97,7 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
 
               // แถวที่ 2: สถานะความสัมพันธ์
               DropdownButtonFormField<String>(
-                value: _status,
+                initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: 'สถานะหัวใจ',
                   prefixIcon: Icon(Icons.favorite_border_rounded),
@@ -167,7 +167,7 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
 
               // ตัวเลือก ทำอะไร
               DropdownButtonFormField<String>(
-                value: _activity,
+                initialValue: _activity,
                 decoration: const InputDecoration(
                   labelText: 'ตอนนี้ทำอะไรอยู่',
                   prefixIcon: Icon(Icons.work_outline_rounded),

@@ -28,11 +28,15 @@ class HappinessService {
     // คำนวณ delta ต่อชั่วโมง
     int deltaPerHour = 0;
 
-    if (hasRice)   deltaPerHour += 2;
-    else           deltaPerHour -= 3;
+    if (hasRice) {
+      deltaPerHour += 2;
+    } else {
+      deltaPerHour -= 3;
+    }
 
-    if (hasTavern && hasLiquor) deltaPerHour += 3;
-    else if (hasTavern)         deltaPerHour -= 1;
+    if (hasTavern && hasLiquor) {
+      deltaPerHour += 3;
+    } else if (hasTavern)         deltaPerHour -= 1;
 
     if (hasShrine) deltaPerHour += 2;
 

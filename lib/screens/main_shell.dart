@@ -66,7 +66,9 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    for (final c in _controllers) c.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -288,7 +290,7 @@ class _PulsingHeartState extends State<_PulsingHeart>
 }
 
 class _ChatBubblesOverlay extends StatefulWidget {
-  _ChatBubblesOverlay();
+  const _ChatBubblesOverlay();
   @override
   State<_ChatBubblesOverlay> createState() => _ChatBubblesOverlayState();
 }
@@ -360,7 +362,7 @@ class _BubblePainter extends CustomPainter {
 }
 
 class _FeedParticlesOverlay extends StatefulWidget {
-  _FeedParticlesOverlay();
+  const _FeedParticlesOverlay();
   @override
   State<_FeedParticlesOverlay> createState() => _FeedParticlesOverlayState();
 }

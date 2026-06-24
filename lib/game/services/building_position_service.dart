@@ -22,6 +22,6 @@ class BuildingPositionService {
       'pos_x': p.posX,
       'pos_y': p.posY,
     }).toList();
-    await _supabase.from('building_positions').upsert(data, onConflict: 'building_id');
+    await _supabase.from('building_positions').upsert(data, onConflict: 'settlement_id,building_id');
   }
 }

@@ -555,7 +555,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                     sliver: SliverList.separated(
                       itemCount: _members.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final member = _members[index];
                         _registerCard(member.id);

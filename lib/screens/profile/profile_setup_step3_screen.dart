@@ -180,7 +180,7 @@ class _ProfileSetupStep3ScreenState extends State<ProfileSetupStep3Screen> {
                   return ChoiceChip(
                     label: Text(interest),
                     selected: isSelected,
-                    selectedColor: AppColors.brandPink.withOpacity(0.15),
+                    selectedColor: AppColors.brandPink.withValues(alpha: 0.15),
                     checkmarkColor: AppColors.brandPink,
                     labelStyle: TextStyle(
                       color: isSelected ? AppColors.brandPink : Colors.black87,

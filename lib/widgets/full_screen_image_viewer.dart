@@ -40,7 +40,7 @@ class FullScreenImageViewer extends StatelessWidget {
                         Positioned.fill(
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                            child: Container(color: AppColors.textPrimary.withOpacity(0.3)),
+                            child: Container(color: AppColors.textPrimary.withValues(alpha: 0.3)),
                           ),
                         ),
                     ],

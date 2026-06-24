@@ -132,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _field('ชื่อ', _nameCtrl),
           const SizedBox(height: 14),
           DropdownButtonFormField<Gender>(
-            value: _gender,
+            initialValue: _gender,
             decoration: const InputDecoration(labelText: 'เพศ'),
             items: Gender.values
                 .map(

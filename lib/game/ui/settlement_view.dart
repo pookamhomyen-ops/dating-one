@@ -230,10 +230,10 @@ class _AyutthayaBackground extends ConsumerWidget {
           child: Image.asset(
             bgPath,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Image.asset(
+            errorBuilder: (_, _, _) => Image.asset(
               'assets/games/bg/bg.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -281,7 +281,7 @@ class _WallPainter extends CustomPainter {
 
     // เงา
     canvas.drawPath(path, Paint()
-      ..color = Colors.black.withOpacity(0.25)
+      ..color = Colors.black.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 16
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
@@ -300,7 +300,7 @@ class _WallPainter extends CustomPainter {
 
     // ไฮไลท์
     canvas.drawPath(path, Paint()
-      ..color = const Color(0xFFD4A057).withOpacity(0.45)
+      ..color = const Color(0xFFD4A057).withValues(alpha: 0.45)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2);
 
@@ -310,7 +310,7 @@ class _WallPainter extends CustomPainter {
         ..color = const Color(0xFF4A2508)
         ..style = PaintingStyle.fill);
       canvas.drawCircle(p, 7, Paint()
-        ..color = const Color(0xFFD4A057).withOpacity(0.7)
+        ..color = const Color(0xFFD4A057).withValues(alpha: 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5);
       canvas.drawCircle(Offset(p.dx, p.dy - 3), 4, Paint()
@@ -330,7 +330,7 @@ class _WallPainter extends CustomPainter {
       ..color = const Color(0xFF4A2508)
       ..style = PaintingStyle.fill;
     final postBorder = Paint()
-      ..color = const Color(0xFFD4A057).withOpacity(0.6)
+      ..color = const Color(0xFFD4A057).withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -377,7 +377,7 @@ class _WallPainter extends CustomPainter {
     );
 
     final roofPaint = Paint()
-      ..color = const Color(0xFF8B1A1A).withOpacity(0.85)
+      ..color = const Color(0xFF8B1A1A).withValues(alpha: 0.85)
       ..style = PaintingStyle.fill;
     final roofPath = Path()
       ..moveTo(center.dx, isTop ? center.dy - 20 : center.dy + 20)
@@ -405,10 +405,10 @@ class _TopBar extends ConsumerWidget {
       margin: const EdgeInsets.fromLTRB(44, 8, 12, 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: const Color(0xFF8B6914).withOpacity(0.5), width: 0.5),
+          color: const Color(0xFF8B6914).withValues(alpha: 0.5), width: 0.5),
       ),
       child: Row(
         children: [
@@ -420,7 +420,7 @@ class _TopBar extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: const Color(0xFF854F0B).withOpacity(0.6),
+              color: const Color(0xFF854F0B).withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text('🏛️ Lv.$thLevel',
@@ -492,9 +492,9 @@ class _BuildingIcon extends StatelessWidget {
                         imagePath != null
                             ? Image.asset(
                                 imagePath!,
-                                width: 60, height: 60,
+                                width: 100, height: 100,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => Text(emoji,
+                                errorBuilder: (_, _, _) => Text(emoji,
                                   style: const TextStyle(fontSize: 36)),
                               )
                             : Text(emoji,
@@ -505,7 +505,7 @@ class _BuildingIcon extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 1),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF0997B).withOpacity(0.85),
+                                color: const Color(0xFFF0997B).withValues(alpha: 0.85),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -529,7 +529,7 @@ class _BuildingIcon extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 1),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0997B).withOpacity(0.9),
+                            color: const Color(0xFFF0997B).withValues(alpha: 0.9),
                             borderRadius: const BorderRadius.vertical(
                               bottom: Radius.circular(10)),
                           ),
@@ -550,7 +550,7 @@ class _BuildingIcon extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
+                    color: Colors.black.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -692,7 +692,7 @@ class _BuildingPopup extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Text('⏱ ${_fmtSec(building.upgradeSeconds)}',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5), fontSize: 11)),
+                    color: Colors.white.withValues(alpha: 0.5), fontSize: 11)),
               ],
             ),
             const SizedBox(height: 12),
@@ -722,7 +722,7 @@ class _BuildingPopup extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF5DCAA5).withOpacity(0.15),
+                color: const Color(0xFF5DCAA5).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -833,7 +833,7 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text(text,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7), fontSize: 12)),
+            color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
       ],
     );
   }
@@ -851,13 +851,13 @@ class _CostBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: enough
-            ? const Color(0xFF0F6E56).withOpacity(0.3)
-            : const Color(0xFFA32D2D).withOpacity(0.3),
+            ? const Color(0xFF0F6E56).withValues(alpha: 0.3)
+            : const Color(0xFFA32D2D).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: enough
-              ? const Color(0xFF5DCAA5).withOpacity(0.4)
-              : const Color(0xFFF0997B).withOpacity(0.4),
+              ? const Color(0xFF5DCAA5).withValues(alpha: 0.4)
+              : const Color(0xFFF0997B).withValues(alpha: 0.4),
           width: 0.5,
         ),
       ),

@@ -21,8 +21,8 @@ class PhotoManagerScreen extends StatefulWidget {
 
 class _PhotoManagerScreenState extends State<PhotoManagerScreen> {
   List<Map<String, dynamic>> _existingPhotos = [];
-  List<XFile> _pendingAdd = [];
-  List<Map<String, dynamic>> _pendingDelete = [];
+  final List<XFile> _pendingAdd = [];
+  final List<Map<String, dynamic>> _pendingDelete = [];
   bool _isLoading = true;
   bool _isSaving = false;
   int _primaryIndex = 0;

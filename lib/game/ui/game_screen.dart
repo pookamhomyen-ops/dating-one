@@ -378,7 +378,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ? _ResourceBar(settlement: s)
                   : const SizedBox.shrink(),
               loading: () => const _ResourceBarSkeleton(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
 
             // Tab bar
@@ -480,8 +480,8 @@ class _EnemyButton extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
               color: hasEnemy
-                  ? const Color(0xFF993C1D).withOpacity(0.8)
-                  : Colors.white.withOpacity(0.1),
+                  ? const Color(0xFF993C1D).withValues(alpha: 0.8)
+                  : Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text('⚔️',
@@ -519,7 +519,7 @@ class _ResChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -537,7 +537,7 @@ class _ResChip extends StatelessWidget {
             Text(
               '+$rate/ชม.',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
+                color: Colors.white.withValues(alpha: 0.55),
                 fontSize: 8,
               ),
             ),

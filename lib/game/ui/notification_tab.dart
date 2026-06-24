@@ -25,7 +25,7 @@ class NotificationTab extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(8),
               itemCount: notifs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              separatorBuilder: (_, _) => const SizedBox(height: 6),
               itemBuilder: (_, i) => _NotifCard(data: notifs[i]),
             ),
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -65,9 +65,9 @@ class _NotifCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(color: accent, width: 3),
-          top:    BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
-          right:  BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
-          bottom: BorderSide(color: Colors.black.withOpacity(0.06), width: 0.5),
+          top:    BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+          right:  BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+          bottom: BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
         ),
       ),
       child: Row(

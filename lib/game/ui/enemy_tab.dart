@@ -104,7 +104,7 @@ class _RecentEnemyList extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: enemies.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, i) => _EnemyCard(
                 enemy: enemies[i],
                 showRevengeButton: true,
@@ -133,7 +133,7 @@ class _EnemyHistoryList extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: enemies.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, i) => _EnemyCard(
                 enemy: enemies[i],
                 showRevengeButton: false,
@@ -169,7 +169,7 @@ class _EnemyCard extends ConsumerWidget {
         border: Border.all(
           color: isRevenged
               ? Colors.white12
-              : const Color(0xFF993C1D).withOpacity(0.5),
+              : const Color(0xFF993C1D).withValues(alpha: 0.5),
           width: 0.5,
         ),
       ),
@@ -188,7 +188,7 @@ class _EnemyCard extends ConsumerWidget {
                     fontSize: 13, fontWeight: FontWeight.w600)),
                 Text(_timeAgo(attackedAt),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.4), fontSize: 11)),
+                    color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
               ],
             ),
           ),
@@ -211,7 +211,7 @@ class _EnemyCard extends ConsumerWidget {
           else if (isRevenged)
             Text('แก้แค้นแล้ว',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.3), fontSize: 11)),
+                color: Colors.white.withValues(alpha: 0.3), fontSize: 11)),
         ],
       ),
     );
@@ -310,7 +310,7 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
                         fontSize: 16, fontWeight: FontWeight.w700)),
                     Text('🏯 ${widget.enemyName}',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                        color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
                   ],
                 ),
               ),
@@ -331,7 +331,7 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
                 const Spacer(),
                 Text('มี ${t.count}',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.4), fontSize: 11)),
+                    color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.remove, size: 16, color: Colors.white54),

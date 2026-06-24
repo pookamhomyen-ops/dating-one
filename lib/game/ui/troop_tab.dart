@@ -52,7 +52,7 @@ class _TroopList extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Consumer(
-          builder: (_, ref, __) {
+          builder: (_, ref, _) {
             final thLevel  = ref.watch(townHallLevelProvider);
             final troopCap = Building.maxTroopCap(thLevel);
             return _StatRow(
@@ -100,7 +100,7 @@ class _StatRow extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.black.withOpacity(0.08),
+          color: Colors.black.withValues(alpha: 0.08),
           width: 0.5,
         ),
       ),
@@ -149,7 +149,7 @@ class _TroopCard extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.black.withOpacity(0.08),
+          color: Colors.black.withValues(alpha: 0.08),
           width: 0.5,
         ),
       ),

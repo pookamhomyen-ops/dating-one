@@ -623,7 +623,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
         'reporter_id': me.id,
         'reported_id': widget.memberId,
         'reason': reason,
-        if (subtype != null) 'gender_mismatch_subtype': subtype,
+        'gender_mismatch_subtype': ?subtype,
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -911,12 +911,12 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                           fontWeight: FontWeight.w500,
                           shadows: [
                             Shadow(
-                              color: Colors.black.withOpacity(0.9),
+                              color: Colors.black.withValues(alpha: 0.9),
                               blurRadius: 6,
                               offset: Offset(0, 1),
                             ),
                             Shadow(
-                              color: Colors.black.withOpacity(0.6),
+                              color: Colors.black.withValues(alpha: 0.6),
                               blurRadius: 12,
                               offset: Offset(0, 2),
                             ),
@@ -1014,8 +1014,8 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                                 return const SizedBox.shrink();
                               }
                               final parts = [
-                                if (relStatus != null) relStatus,
-                                if (activity != null) activity
+                                ?relStatus,
+                                ?activity
                               ];
                               return Padding(
                                 padding: const EdgeInsets.only(top: 12),
@@ -1104,7 +1104,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: _photoUrls.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, index) => GestureDetector(
                     onTap: () => _openImageCommentsDialog(_photoUrls[index]),
                     child: NetworkImageBox(
@@ -1139,7 +1139,7 @@ class _MemberProfileScreenState extends State<MemberProfileScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _secretPhotoUrls.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
                         itemBuilder: (context, index) => ClipRRect(
                           borderRadius: BorderRadius.circular(14),
                           child: SizedBox(
@@ -1277,10 +1277,9 @@ class _VerticalActionButtons extends StatelessWidget {
   const _VerticalActionButtons({
     this.isFollowing = false,
     this.onFollowTap,
-    this.onLeafTap,
     this.onChatTap,
     this.goWhereData,
-  });
+  }) : onLeafTap = null;
 
   @override
   Widget build(BuildContext context) {
@@ -1624,10 +1623,10 @@ class _GoToButtonState extends State<_GoToButton>
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                        color: Colors.black.withOpacity(0.12), width: 1),
+                        color: Colors.black.withValues(alpha: 0.12), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -1642,7 +1641,7 @@ class _GoToButtonState extends State<_GoToButton>
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: _goColor.withOpacity(0.12),
+                              color: _goColor.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(Icons.directions_walk_rounded,
@@ -1848,10 +1847,10 @@ class _LeafButtonState extends State<_LeafButton>
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                        color: Colors.black.withOpacity(0.12), width: 1),
+                        color: Colors.black.withValues(alpha: 0.12), width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -1866,7 +1865,7 @@ class _LeafButtonState extends State<_LeafButton>
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: AppColors.iconGreen.withOpacity(0.12),
+                              color: AppColors.iconGreen.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(Icons.eco_rounded,

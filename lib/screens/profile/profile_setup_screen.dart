@@ -209,7 +209,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<Gender>(
-              value: _gender,
+              initialValue: _gender,
               decoration: const InputDecoration(labelText: 'เพศ'),
               items: Gender.values
                   .map((g) => DropdownMenuItem(value: g, child: Text(g.labelTh)))

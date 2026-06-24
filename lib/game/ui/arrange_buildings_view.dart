@@ -19,43 +19,48 @@ class ArrangeBuildingsView extends ConsumerStatefulWidget {
       _ArrangeBuildingsViewState();
 }
 
+
 class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
-  static const double _left = 0.10;
-  static const double _right = 0.90;
-  static const double _top = 0.20;
+  // boundary ในหน่วย fraction ของหน้าจอ
+  static const double _left   = 0.10;
+  static const double _right  = 0.90;
+  static const double _top    = 0.20;
   static const double _bottom = 0.90;
-  static const int _gridSize = 20;
+  static const int _gridSize  = 20;
+
+  // อาคาร 1 หลัง ยึด 3 cols x 2 rows, anchor = กลางล่าง
+  static const int _bldW = 3; // แนวนอน
+  static const int _bldH = 2; // แนวตั้ง
 
   static const _defaultOffsets = <String, Offset>{
-    'town_hall':      Offset(0.42, 0.32),
-    'barracks':       Offset(0.62, 0.52),
-    'sawmill':        Offset(0.25, 0.38),
-    'smelter':        Offset(0.68, 0.36),
-    'rice_farm':      Offset(0.28, 0.62),
-    'distillery':     Offset(0.58, 0.68),
-    'house':          Offset(0.42, 0.55),
-    'tavern':         Offset(0.50, 0.44),
-    'shrine':         Offset(0.72, 0.60),
-    'elephant_camp':  Offset(0.22, 0.52),
-    'smithy':         Offset(0.65, 0.44),
-    'wall':           Offset(0.35, 0.46),
-    'watchtower':     Offset(0.55, 0.38),
+    'town_hall':     Offset(0.42, 0.32),
+    'barracks':      Offset(0.62, 0.52),
+    'sawmill':       Offset(0.25, 0.38),
+    'smelter':       Offset(0.68, 0.36),
+    'rice_farm':     Offset(0.28, 0.62),
+    'distillery':    Offset(0.58, 0.68),
+    'house':         Offset(0.42, 0.55),
+    'tavern':        Offset(0.50, 0.44),
+    'shrine':        Offset(0.72, 0.60),
+    'elephant_camp': Offset(0.22, 0.52),
+    'smithy':        Offset(0.65, 0.44),
+    'wall':          Offset(0.35, 0.46),
+    'watchtower':    Offset(0.55, 0.38),
   };
 
+  // แปลง grid -> fraction offset (anchor = กลางล่าง)
   static Offset _gridToOffset(int x, int y) {
     return Offset(
       _left + (x / _gridSize) * (_right - _left),
-      _top + (y / _gridSize) * (_bottom - _top),
+      _top  + (y / _gridSize) * (_bottom - _top),
     );
   }
 
   static ({int x, int y}) _offsetToGrid(Offset offset) {
     final x = ((offset.dx - _left) / (_right - _left) * _gridSize)
-        .round()
-        .clamp(0, _gridSize - 1);
+        .round().clamp(1, _gridSize - 2); // clamp เผื่อ _bldW=3
     final y = ((offset.dy - _top) / (_bottom - _top) * _gridSize)
-        .round()
-        .clamp(0, _gridSize - 1);
+        .round().clamp(1, _gridSize - 1);
     return (x: x, y: y);
   }
 
@@ -78,7 +83,7 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
       if (offset != null) {
         result[b.id] = _offsetToGrid(offset);
       } else {
-        result[b.id] = (x: 10, y: 10);
+        result[b.id] = (x: 5, y: 5);
       }
     }
     return result;
@@ -96,59 +101,62 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
     }
   }
 
-  bool _isOccupied(int x, int y, String excludeBuildingId) {
-    return _positions.entries.any((entry) =>
-        entry.key != excludeBuildingId &&
-        entry.value.x == x &&
-        entry.value.y == y);
+  // คืน list ของ cells ทั้งหมดที่อาคารยึด จาก anchor (กลางล่าง)
+  static List<({int x, int y})> _occupiedCells(int ax, int ay) {
+    final cells = <({int x, int y})>[];
+    for (int row = 0; row < _bldH; row++) {
+      for (int col = -(_bldW ~/ 2); col <= _bldW ~/ 2; col++) {
+        cells.add((x: ax + col, y: ay - row));
+      }
+    }
+    return cells;
+  }
+
+  // เช็คว่า cells ทั้งหมดของอาคารที่ anchor ใหม่ ไม่ชนกับอาคารอื่น
+  bool _canPlace(int ax, int ay, String excludeId) {
+    final cells = _occupiedCells(ax, ay);
+    for (final cell in cells) {
+      if (cell.x < 0 || cell.x >= _gridSize || cell.y < 0 || cell.y >= _gridSize) return false;
+      if (!_isInsideOval(cell.x, cell.y)) return false;
+      // เช็คชนกับอาคารอื่น
+      for (final entry in _positions.entries) {
+        if (entry.key == excludeId) continue;
+        final otherCells = _occupiedCells(entry.value.x, entry.value.y);
+        if (otherCells.any((c) => c.x == cell.x && c.y == cell.y)) return false;
+      }
+    }
+    return true;
+  }
+
+  bool _isInsideOval(int x, int y) {
+    const cx = (_left + _right) / 2;
+    const cy = (_top + _bottom) / 2;
+    const rx = (_right - _left) / 2;
+    const ry = (_bottom - _top) / 2;
+    final fx = _left + (x / _gridSize) * (_right - _left);
+    final fy = _top  + (y / _gridSize) * (_bottom - _top);
+    final dx = (fx - cx) / rx;
+    final dy = (fy - cy) / ry;
+    return (dx * dx + dy * dy) <= 1.0;
   }
 
   void _tryMove(String buildingId, int dx, int dy) {
     final current = _positions[buildingId];
-    if (current == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ไม่พบอาคาร')),
-      );
-      return;
-    }
+    if (current == null) return;
 
-    int targetX = current.x;
-    int targetY = current.y;
+    int nextX = current.x + dx;
+    int nextY = current.y + dy;
 
-    // ข้ามสิ่งกีดขวางไปเรื่อยๆ จนกว่าจะเจอช่องว่างหรือถึงขอบ
     while (true) {
-      final nextX = targetX + dx;
-      final nextY = targetY + dy;
-      if (nextX < 0 || nextX >= _gridSize || nextY < 0 || nextY >= _gridSize) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ถึงขอบเขตแล้ว')),
-        );
-        return;
-      }
-      if (!_isOccupied(nextX, nextY, buildingId)) {
-        // เจอช่องว่าง
-        targetX = nextX;
-        targetY = nextY;
-        break;
-      }
-      // มีสิ่งกีดขวาง ข้ามไป
-      targetX = nextX;
-      targetY = nextY;
-      // continue loop
+      if (nextX < 0 || nextX >= _gridSize || nextY < 0 || nextY >= _gridSize) return;
+      if (_canPlace(nextX, nextY, buildingId)) break;
+      nextX += dx;
+      nextY += dy;
     }
 
-    if (targetX != current.x || targetY != current.y) {
-      setState(() {
-        _positions[buildingId] = (x: targetX, y: targetY);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ย้ายไป ($targetX,$targetY)')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ไม่สามารถย้ายได้')),
-      );
-    }
+    setState(() {
+      _positions[buildingId] = (x: nextX, y: nextY);
+    });
   }
 
   void _cancel() {
@@ -176,7 +184,7 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
       await service.savePositions(positionsList);
       ref.invalidate(buildingPositionsProvider);
       if (mounted) Navigator.pop(context);
-    } catch (e, stack) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -191,6 +199,12 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+
+    // คำนวณ cell size ให้เป็นสี่เหลี่ยมจัตุรัส
+    final gridW = size.width  * (_right - _left);
+    final gridH = size.height * (_bottom - _top);
+    final cellSize = (gridW < gridH ? gridW : gridH) / _gridSize;
+
     double? selLeft;
     double? selTop;
 
@@ -199,7 +213,7 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
       if (pos != null) {
         final offset = _gridToOffset(pos.x, pos.y);
         selLeft = offset.dx * size.width - 28;
-        selTop = offset.dy * size.height - 40;
+        selTop  = offset.dy * size.height - 40;
       }
     }
 
@@ -210,14 +224,12 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
           _AyutthayaBackground(),
           Positioned.fill(
             child: CustomPaint(
-              painter: _GridPainter(gridSize: _gridSize),
+              painter: _GridPainter(gridSize: _gridSize, cellSize: cellSize),
             ),
           ),
           Positioned(
             top: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: _TopBar(settlement: widget.settlement),
-            ),
+            child: SafeArea(child: _TopBar(settlement: widget.settlement)),
           ),
           ...widget.buildings.map((b) {
             final pos = _positions[b.id];
@@ -229,57 +241,40 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
               offset: offset,
               gridX: pos.x,
               gridY: pos.y,
+              cellSize: cellSize,
               selected: isSelected,
               onTap: () {
                 setState(() {
-                  if (_selectedBuildingId == b.id) {
-                    _selectedBuildingId = null;
-                  } else {
-                    _selectedBuildingId = b.id;
-                  }
+                  _selectedBuildingId = (_selectedBuildingId == b.id) ? null : b.id;
                 });
               },
             );
           }),
           if (selLeft != null && selTop != null) ...[
             Positioned(
-              top: selTop - 32,
-              left: selLeft + 16,
-              child: _ArrowButton(
-                icon: Icons.arrow_upward,
-                onTap: () => _tryMove(_selectedBuildingId!, 0, -1),
-              ),
+              top: selTop - 32, left: selLeft + 16,
+              child: _ArrowButton(icon: Icons.arrow_upward,
+                onTap: () => _tryMove(_selectedBuildingId!, 0, -1)),
             ),
             Positioned(
-              top: selTop + 62,
-              left: selLeft + 16,
-              child: _ArrowButton(
-                icon: Icons.arrow_downward,
-                onTap: () => _tryMove(_selectedBuildingId!, 0, 1),
-              ),
+              top: selTop + 62, left: selLeft + 16,
+              child: _ArrowButton(icon: Icons.arrow_downward,
+                onTap: () => _tryMove(_selectedBuildingId!, 0, 1)),
             ),
             Positioned(
-              top: selTop + 16,
-              left: selLeft - 32,
-              child: _ArrowButton(
-                icon: Icons.arrow_back,
-                onTap: () => _tryMove(_selectedBuildingId!, -1, 0),
-              ),
+              top: selTop + 16, left: selLeft - 32,
+              child: _ArrowButton(icon: Icons.arrow_back,
+                onTap: () => _tryMove(_selectedBuildingId!, -1, 0)),
             ),
             Positioned(
-              top: selTop + 16,
-              left: selLeft + 62,
-              child: _ArrowButton(
-                icon: Icons.arrow_forward,
-                onTap: () => _tryMove(_selectedBuildingId!, 1, 0),
-              ),
+              top: selTop + 16, left: selLeft + 62,
+              child: _ArrowButton(icon: Icons.arrow_forward,
+                onTap: () => _tryMove(_selectedBuildingId!, 1, 0)),
             ),
           ],
           if (_selectedBuildingId != null)
             Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
+              bottom: 16, left: 16, right: 16,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -313,29 +308,44 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
 
 class _GridPainter extends CustomPainter {
   final int gridSize;
-  const _GridPainter({required this.gridSize});
+  final double cellSize;
+  const _GridPainter({required this.gridSize, required this.cellSize});
+
+  static const double _left   = 0.17;
+  static const double _right  = 0.98;
+  static const double _top    = 0.22;
+  static const double _bottom = 0.79;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.blue.withValues(alpha: 0.35)
-      ..strokeWidth = 1.0;
+    final cx = size.width  * (_left + _right)  / 2;
+    final cy = size.height * (_top  + _bottom) / 2;
+    final rx = size.width  * (_right - _left)  / 2;
+    final ry = size.height * (_bottom - _top)  / 2;
 
-    final left = size.width * 0.10;
-    final right = size.width * 0.90;
-    final top = size.height * 0.20;
-    final bottom = size.height * 0.90;
-    final cellW = (right - left) / gridSize;
-    final cellH = (bottom - top) / gridSize;
+    final ovalRect = Rect.fromCenter(
+      center: Offset(cx, cy), width: rx * 2, height: ry * 2);
+
+    canvas.save();
+    canvas.clipPath(Path()..addOval(ovalRect));
+
+    final gridPaint = Paint()
+      ..color = Colors.blue.withValues(alpha: 0.5)
+      ..strokeWidth = 1.2;
+
+    // ใช้ cellSize เดียวกันทั้ง W และ H → สี่เหลี่ยมจัตุรัส
+    final left = size.width * _left;
+    final top  = size.height * _top;
 
     for (int i = 0; i <= gridSize; i++) {
-      final x = left + i * cellW;
-      canvas.drawLine(Offset(x, top), Offset(x, bottom), paint);
+      final x = left + i * cellSize;
+      canvas.drawLine(Offset(x, top), Offset(x, top + cellSize * gridSize), gridPaint);
     }
     for (int i = 0; i <= gridSize; i++) {
-      final y = top + i * cellH;
-      canvas.drawLine(Offset(left, y), Offset(right, y), paint);
+      final y = top + i * cellSize;
+      canvas.drawLine(Offset(left, y), Offset(left + cellSize * gridSize, y), gridPaint);
     }
+    canvas.restore();
   }
 
   @override
@@ -366,10 +376,10 @@ class _AyutthayaBackground extends ConsumerWidget {
           child: Image.asset(
             bgPath,
             fit: BoxFit.cover,
-            errorBuilder: (_, _, __) => Image.asset(
+            errorBuilder: (_, _, _) => Image.asset(
               'assets/games/bg/bg.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, _, __) => Container(
+              errorBuilder: (_, _, _) => Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -450,6 +460,7 @@ class _ArrangeBuildingIcon extends StatelessWidget {
   final Offset offset;
   final int gridX;
   final int gridY;
+  final double cellSize;
   final bool selected;
   final VoidCallback onTap;
 
@@ -458,6 +469,7 @@ class _ArrangeBuildingIcon extends StatelessWidget {
     required this.offset,
     required this.gridX,
     required this.gridY,
+    required this.cellSize,
     required this.selected,
     required this.onTap,
   });
@@ -519,9 +531,9 @@ class _ArrangeBuildingIcon extends StatelessWidget {
                   imagePath.isNotEmpty
                       ? Image.asset(
                           imagePath,
-                          width: 60, height: 60,
+                          width: 100, height: 100,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, _, __) => Text(
+                          errorBuilder: (_, _, _) => Text(
                             _emoji[building.buildingType] ?? '🏛️',
                             style: const TextStyle(fontSize: 36),
                           ),

@@ -50,7 +50,7 @@ class AppTheme {
       bodySmall: GoogleFonts.notoSansThai(
         fontSize: 12, 
         fontWeight: FontWeight.w400, 
-        color: AppColors.textPrimary.withOpacity(0.75),
+        color: AppColors.textPrimary.withValues(alpha: 0.75),
       ),
       // Question box text: 12px, weight 400
       labelLarge: GoogleFonts.notoSansThai(
@@ -109,7 +109,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary.withOpacity(0.5)),
+        hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary.withValues(alpha: 0.5)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

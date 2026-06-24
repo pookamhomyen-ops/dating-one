@@ -82,7 +82,7 @@ class _BuildingCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 0.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,7 +115,7 @@ class _BuildingCard extends ConsumerWidget {
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(
                 value: isUpgrading ? _upgradeProgress(building) : building.level / 5,
-                backgroundColor: Colors.black.withOpacity(0.06),
+                backgroundColor: Colors.black.withValues(alpha: 0.06),
                 valueColor: AlwaysStoppedAnimation(
                   isUpgrading ? const Color(0xFFF0997B) : const Color(0xFF5DCAA5)),
                 minHeight: 3,
@@ -413,7 +413,7 @@ class _BuildSheet extends StatelessWidget {
                   color: canAfford ? Colors.white : const Color(0xFFF5F5F5),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Colors.black.withOpacity(0.08), width: 0.5),
+                    color: Colors.black.withValues(alpha: 0.08), width: 0.5),
                 ),
                 child: Row(
                   children: [
@@ -460,7 +460,7 @@ class DottedBorder extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withOpacity(0.4), width: 1),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.4), width: 1),
       ),
       child: child,
     );

@@ -34,7 +34,7 @@ class BuildingService {
           'settlement_id': settlement.id,
           'building_type': buildingType,
           'level': 1,
-          if (variant != null) 'house_variant': variant,
+          'house_variant': ?variant,
         })
         .select()
         .single();

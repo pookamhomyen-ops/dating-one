@@ -1,9 +1,6 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/network_image_box.dart';
 import 'match_popup.dart';
 
 class SwipeScreen extends StatefulWidget {

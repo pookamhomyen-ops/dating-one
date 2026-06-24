@@ -156,7 +156,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _posts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
                     itemBuilder: (ctx, i) {
                       final p = _posts[i];
                       final imageUrl = p['image_url'] as String?;
@@ -283,8 +283,8 @@ class _MyPostCardState extends State<_MyPostCard> {
                   child: CachedNetworkImage(
                     imageUrl: widget.imageUrl!,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppColors.border),
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    placeholder: (_, _) => Container(color: AppColors.border),
+                    errorWidget: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -432,7 +432,7 @@ class _MyPostInlineCommentsState extends State<_MyPostInlineComments> {
                   child: ClipOval(
                     child: photoUrl != null
                         ? CachedNetworkImage(imageUrl: photoUrl, width: 36, height: 36, fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)))
+                            errorWidget: (_, _, _) => const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)))
                         : const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)),
                   ),
                 ),
@@ -665,7 +665,7 @@ class _MyPostInlineLikersState extends State<_MyPostInlineLikers> {
                         width: 56, height: 56,
                         child: photoUrl != null
                             ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Container(color: borderColor.withValues(alpha: 0.2),
+                                errorWidget: (_, _, _) => Container(color: borderColor.withValues(alpha: 0.2),
                                     child: Center(child: Text(name.isNotEmpty ? name[0] : '?', style: TextStyle(color: borderColor, fontWeight: FontWeight.w700)))))
                             : Container(color: borderColor.withValues(alpha: 0.2),
                                 child: Center(child: Text(name.isNotEmpty ? name[0] : '?', style: TextStyle(color: borderColor, fontWeight: FontWeight.w700)))),
@@ -804,7 +804,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                                 decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: borderColor, width: 2.5)),
                                 child: ClipOval(
                                   child: photoUrl != null
-                                      ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _avatarFallback(name, borderColor))
+                                      ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, _, _) => _avatarFallback(name, borderColor))
                                       : _avatarFallback(name, borderColor),
                                 ),
                               ),
@@ -846,7 +846,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                               decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: borderColor, width: 2)),
                               child: ClipOval(
                                 child: photoUrl != null
-                                    ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, __, ___) => _avatarFallback(name, borderColor))
+                                    ? CachedNetworkImage(imageUrl: photoUrl, fit: BoxFit.cover, errorWidget: (_, _, _) => _avatarFallback(name, borderColor))
                                     : _avatarFallback(name, borderColor),
                               ),
                             ),

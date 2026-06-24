@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_colors.dart';
-import 'profile_setup_screen.dart';
 import 'profile_setup_step1_screen.dart';
 import 'profile_setup_step2_screen.dart';
 import 'profile_setup_step3_screen.dart';

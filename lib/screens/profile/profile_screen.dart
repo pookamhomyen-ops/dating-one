@@ -26,7 +26,6 @@ class ProfileScreenState extends State<ProfileScreen> {
   List<String> _secretPhotoUrls = [];
   bool _isLoading = true;
   RealtimeChannel? _likesChannel;
-  int _likedMeCount = 0;
   int _myPostsCount = 0;
 
   @override
@@ -64,9 +63,8 @@ class ProfileScreenState extends State<ProfileScreen> {
             final count = (res as List).length;
             if (mounted) {
               setState(() {
-                _likedMeCount = count;
                 if (_user != null) {
-                  _user = _user!.copyWith(likesReceived: count);
+                  _user = _user!.copyWith(profileViews: count);
                 }
               });
             }
@@ -182,7 +180,6 @@ class ProfileScreenState extends State<ProfileScreen> {
               xHandle: data['x_handle'] ?? '',
               facebook: data['facebook'] ?? '',
             );
-            _likedMeCount = likedMeCount;
             _myPostsCount = myPostsCount;
           });
         }
@@ -257,8 +254,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   label: Text(tag),
                                   backgroundColor: AppColors.background,
                                   side: BorderSide(
-                                    color: AppColors.accent.withOpacity(
-                                      0.1,
+                                    color: AppColors.accent.withValues(
+                                      alpha: 0.1,
                                     ),
                                   ),
                                   labelStyle: const TextStyle(
@@ -296,7 +293,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: _user!.photoUrls.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(width: 12),
                             itemBuilder: (context, i) => GestureDetector(
                               onTap: () =>
@@ -307,7 +304,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   boxShadow: [
                                     BoxShadow(
                                       color: AppColors.textPrimary
-                                          .withOpacity(0.05),
+                                          .withValues(alpha: 0.05),
                                       blurRadius: 8,
                                       offset: const Offset(0, 4),
                                     ),
@@ -339,7 +336,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: const Color(0xFFFFB300)
-                                        .withOpacity(0.4),
+                                        .withValues(alpha: 0.4),
                                     width: 1.2,
                                   ),
                                 ),
@@ -394,7 +391,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: _secretPhotoUrls.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(width: 12),
                             itemBuilder: (context, i) => GestureDetector(
                               onTap: () => _viewFullScreen(
@@ -408,7 +405,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   boxShadow: [
                                     BoxShadow(
                                       color: AppColors.textPrimary
-                                          .withOpacity(0.08),
+                                          .withValues(alpha: 0.08),
                                       blurRadius: 8,
                                       offset: const Offset(0, 4),
                                     ),
@@ -432,7 +429,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                               sigmaX: 5, sigmaY: 5),
                                           child: Container(
                                             color:
-                                                Colors.black.withOpacity(0.05),
+                                                Colors.black.withValues(alpha: 0.05),
                                           ),
                                         ),
                                       ),
@@ -501,7 +498,7 @@ class _SettingsButton extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -639,7 +636,7 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                   radius: 1.3,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.10),
+                    Colors.black.withValues(alpha: 0.10),
                   ],
                 ),
               ),
@@ -658,8 +655,8 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                   colors: [
                     Colors.transparent,
                     Colors.transparent,
-                    Colors.black.withOpacity(0.15),
-                    Colors.black.withOpacity(0.52),
+                    Colors.black.withValues(alpha: 0.15),
+                    Colors.black.withValues(alpha: 0.52),
                   ],
                   stops: const [0.0, 0.50, 0.75, 1.0],
                 ),
@@ -744,12 +741,12 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
                   fontWeight: FontWeight.w500,
                   shadows: [
                     Shadow(
-                      color: Colors.black.withOpacity(0.8),
+                      color: Colors.black.withValues(alpha: 0.8),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
                     Shadow(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -1017,7 +1014,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.textPrimary.withOpacity(0.04),
+            color: AppColors.textPrimary.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1271,8 +1268,7 @@ class _ProfileActionButton extends StatefulWidget {
     required this.icon,
     required this.color,
     required this.onTap,
-    this.isFilled = false,
-  });
+  }) : isFilled = false;
 
   @override
   State<_ProfileActionButton> createState() => _ProfileActionButtonState();
@@ -1392,10 +1388,10 @@ class _SettingsIconButtonState extends State<_SettingsIconButton>
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               width: 1.5,
             ),
           ),
@@ -1462,7 +1458,7 @@ class _ProfileAvatarButtonState extends State<_ProfileAvatarButton>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.brandPink.withOpacity(0.5 * _glowAnim.value),
+                  color: AppColors.brandPink.withValues(alpha: 0.5 * _glowAnim.value),
                   blurRadius: 20,
                   spreadRadius: 4,
                 ),
@@ -1477,12 +1473,12 @@ class _ProfileAvatarButtonState extends State<_ProfileAvatarButton>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: AppColors.background.withOpacity(0.9),
+              color: AppColors.background.withValues(alpha: 0.9),
               width: 2.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
+                color: Colors.black.withValues(alpha: 0.25),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1493,7 +1489,7 @@ class _ProfileAvatarButtonState extends State<_ProfileAvatarButton>
                 ? Image.network(
                     widget.photoUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       color: AppColors.textSecondary,
                       child: const Icon(Icons.person,
                           color: Colors.white, size: 28),
@@ -1567,10 +1563,10 @@ class _SectionSettingsButtonState extends State<_SectionSettingsButton>
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               width: 1.5,
             ),
           ),
@@ -1600,11 +1596,10 @@ class _AnimatedSideBarButton extends StatefulWidget {
     required this.icon,
     required this.label,
     required this.color,
-    this.labelColor,
-    this.iconColor,
     required this.animType,
     required this.onTap,
-  });
+  })  : labelColor = null,
+        iconColor = null;
 
   @override
   State<_AnimatedSideBarButton> createState() => _AnimatedSideBarButtonState();
@@ -1729,4 +1724,4 @@ class _AnimatedSideBarButtonState extends State<_AnimatedSideBarButton>
     );
   }
 }
-
+

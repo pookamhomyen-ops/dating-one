@@ -230,7 +230,7 @@ class _MatchBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 0.5),
         ),
         child: Row(
           children: [
@@ -290,7 +290,7 @@ class _CaravanCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withOpacity(0.08), width: 0.5),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08), width: 0.5),
       ),
       child: Row(
         children: [
