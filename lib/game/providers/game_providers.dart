@@ -42,6 +42,28 @@ final settlementProvider = FutureProvider<Settlement?>((ref) async {
   final userId = mainClient.auth.currentUser?.id;
   if (userId == null) return null;
 
+  // โหลด configurations จากระบบแอดมิน (DB)
+  try {
+    final configs = await gameClient.from('game_configs').select();
+    for (final config in configs) {
+      final key = config['key'];
+      final value = config['value'];
+      if (key == 'buildings') {
+        Building.remoteConfig = value as Map<String, dynamic>?;
+      } else if (key == 'troops') {
+        Troop.remoteConfig = value as Map<String, dynamic>?;
+      } else if (key == 'resources') {
+        final resVal = value as Map<String, dynamic>?;
+        if (resVal != null) {
+          ProductionService.tickDurationMinutes = (resVal['tick_duration_minutes'] as num?)?.toInt() ?? 5;
+          ProductionService.offlineCapMinutes = (resVal['offline_cap_minutes'] as num?)?.toInt() ?? 480;
+        }
+      }
+    }
+  } catch (e) {
+    print('Failed to load remote game configurations: $e');
+  }
+
   final data = await gameClient
       .from('settlements')
       .select()

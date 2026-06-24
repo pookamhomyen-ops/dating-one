@@ -2,7 +2,8 @@ import '../models/settlement.dart';
 import '../models/building.dart';
 
 class ProductionService {
-  static const tickDurationMinutes = 5;
+  static int tickDurationMinutes = 5;
+  static int offlineCapMinutes = 480;
 
   // คำนวณ resource ที่ได้รับตั้งแต่ครั้งล่าสุดที่เปิดแอป
   static Map<String, int> calculateOfflineProduction({
@@ -13,8 +14,8 @@ class ProductionService {
     final now = DateTime.now();
     final minutesOffline = now.difference(lastOnlineAt).inMinutes;
 
-    // จำกัดสูงสุด 8 ชั่วโมง (offline cap)
-    final cappedMinutes = minutesOffline.clamp(0, 480);
+    // จำกัดสูงสุด (offline cap)
+    final cappedMinutes = minutesOffline.clamp(0, offlineCapMinutes);
     final ticks = (cappedMinutes / tickDurationMinutes).floor();
 
     if (ticks == 0) return {};

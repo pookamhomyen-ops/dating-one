@@ -66,9 +66,18 @@ class Building {
     return names[buildingType] ?? buildingType;
   }
 
+  static Map<String, dynamic>? remoteConfig;
+
   // ต้นทุนอัปเกรด level ถัดไป
   Map<String, int> get upgradeCost {
     final multiplier = level; // level 1→2 = x1, 2→3 = x2 ...
+    if (remoteConfig != null && remoteConfig![buildingType] != null) {
+      final config = remoteConfig![buildingType];
+      final baseCost = config['base_cost'] as Map<String, dynamic>?;
+      if (baseCost != null) {
+        return baseCost.map((k, v) => MapEntry(k, (v as num).toInt() * multiplier));
+      }
+    }
     const baseCosts = {
       'sawmill':       {'wood': 30, 'iron': 10},
       'smelter':       {'wood': 20, 'iron': 30},
@@ -90,6 +99,11 @@ class Building {
 
   // เวลาอัปเกรด (วินาที)
   int get upgradeSeconds {
+    if (remoteConfig != null && remoteConfig![buildingType] != null) {
+      final config = remoteConfig![buildingType];
+      final base = config['base_seconds'] ?? 300;
+      return (base as num).toInt() * level;
+    }
     const baseSeconds = {
       'sawmill': 180,       // 3 นาที
       'smelter': 180,
@@ -133,6 +147,20 @@ class Building {
 
   // production ต่อ tick (5 นาที)
   Map<String, int> get productionPerTick {
+    if (remoteConfig != null && remoteConfig![buildingType] != null) {
+      final config = remoteConfig![buildingType];
+      final baseProd = config['base_prod_tick'] as Map<String, dynamic>?;
+      final prodLvl = config['prod_tick_per_level'] as Map<String, dynamic>?;
+      if (baseProd != null && baseProd.isNotEmpty) {
+        final result = <String, int>{};
+        baseProd.forEach((k, v) {
+          final baseVal = (v as num).toInt();
+          final lvlVal = prodLvl != null && prodLvl[k] != null ? (prodLvl[k] as num).toInt() : 0;
+          result[k] = baseVal + (lvlVal * level);
+        });
+        return result;
+      }
+    }
     switch (buildingType) {
       case 'sawmill':    return {'wood': 6 + (level * 3)};   // เยอะสุด
       case 'rice_farm':  return {'rice': 6 + (level * 3)};   // เท่ากับไม้

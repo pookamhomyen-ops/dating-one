@@ -205,18 +205,6 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
     final gridH = size.height * (_bottom - _top);
     final cellSize = (gridW < gridH ? gridW : gridH) / _gridSize;
 
-    double? selLeft;
-    double? selTop;
-
-    if (_selectedBuildingId != null) {
-      final pos = _positions[_selectedBuildingId!];
-      if (pos != null) {
-        final offset = _gridToOffset(pos.x, pos.y);
-        selLeft = offset.dx * size.width - 28;
-        selTop  = offset.dy * size.height - 40;
-      }
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFF2A1A08),
       body: Stack(
@@ -250,56 +238,17 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
               },
             );
           }),
-          if (selLeft != null && selTop != null) ...[
-            Positioned(
-              top: selTop - 32, left: selLeft + 16,
-              child: _ArrowButton(icon: Icons.arrow_upward,
-                onTap: () => _tryMove(_selectedBuildingId!, 0, -1)),
+          // Bottom control panel - always shows save/cancel, shows D-pad when building selected
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: _BottomControlPanel(
+              selectedBuildingId: _selectedBuildingId,
+              buildings: widget.buildings,
+              onMove: (dx, dy) => _tryMove(_selectedBuildingId!, dx, dy),
+              onCancel: _cancel,
+              onSave: _saveAndPop,
             ),
-            Positioned(
-              top: selTop + 62, left: selLeft + 16,
-              child: _ArrowButton(icon: Icons.arrow_downward,
-                onTap: () => _tryMove(_selectedBuildingId!, 0, 1)),
-            ),
-            Positioned(
-              top: selTop + 16, left: selLeft - 32,
-              child: _ArrowButton(icon: Icons.arrow_back,
-                onTap: () => _tryMove(_selectedBuildingId!, -1, 0)),
-            ),
-            Positioned(
-              top: selTop + 16, left: selLeft + 62,
-              child: _ArrowButton(icon: Icons.arrow_forward,
-                onTap: () => _tryMove(_selectedBuildingId!, 1, 0)),
-            ),
-          ],
-          if (_selectedBuildingId != null)
-            Positioned(
-              bottom: 16, left: 16, right: 16,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton(
-                    onPressed: _cancel,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF8B6914)),
-                      foregroundColor: const Color(0xFFFAC775),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('ยกเลิก'),
-                  ),
-                  const SizedBox(width: 20),
-                  ElevatedButton(
-                    onPressed: _saveAndPop,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5DCAA5),
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('บันทึก'),
-                  ),
-                ],
-              ),
-            ),
+          ),
         ],
       ),
     );
@@ -593,6 +542,189 @@ class _ArrangeBuildingIcon extends StatelessWidget {
   }
 }
 
+class _BottomControlPanel extends StatelessWidget {
+  final String? selectedBuildingId;
+  final List<Building> buildings;
+  final void Function(int dx, int dy) onMove;
+  final VoidCallback onCancel;
+  final VoidCallback onSave;
+
+  const _BottomControlPanel({
+    required this.selectedBuildingId,
+    required this.buildings,
+    required this.onMove,
+    required this.onCancel,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedBuilding = selectedBuildingId != null
+        ? buildings.where((b) => b.id == selectedBuildingId).firstOrNull
+        : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        border: const Border(
+          top: BorderSide(color: Color(0xFF8B6914), width: 1),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 12,
+        top: 12,
+        left: 16,
+        right: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ชื่ออาคารที่เลือก + ลูกศร D-pad
+          if (selectedBuilding != null) ...[
+            // ป้ายชื่ออาคาร
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF854F0B).withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFAC775), width: 0.8),
+              ),
+              child: Text(
+                '${selectedBuilding.displayName} Lv.${selectedBuilding.level}  —  กดลูกศรเพื่อย้ายตำแหน่ง',
+                style: const TextStyle(
+                  color: Color(0xFFFAC775),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // D-pad ลูกศร 4 ทิศ
+            SizedBox(
+              width: 160,
+              height: 160,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // ขึ้น
+                  Positioned(
+                    top: 0, left: 0, right: 0,
+                    child: Center(
+                      child: _ArrowButton(
+                        icon: Icons.arrow_upward_rounded,
+                        onTap: () => onMove(0, -1),
+                      ),
+                    ),
+                  ),
+                  // ซ้าย
+                  Positioned(
+                    left: 0, top: 0, bottom: 0,
+                    child: Center(
+                      child: _ArrowButton(
+                        icon: Icons.arrow_back_rounded,
+                        onTap: () => onMove(-1, 0),
+                      ),
+                    ),
+                  ),
+                  // กลาง - ไอคอนอาคาร
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3D1F08).withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF8B6914).withValues(alpha: 0.6),
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _buildingEmoji(selectedBuilding.buildingType),
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                    ),
+                  ),
+                  // ขวา
+                  Positioned(
+                    right: 0, top: 0, bottom: 0,
+                    child: Center(
+                      child: _ArrowButton(
+                        icon: Icons.arrow_forward_rounded,
+                        onTap: () => onMove(1, 0),
+                      ),
+                    ),
+                  ),
+                  // ลง
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Center(
+                      child: _ArrowButton(
+                        icon: Icons.arrow_downward_rounded,
+                        onTap: () => onMove(0, 1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          // ปุ่มยกเลิก + บันทึก (แสดงเสมอ)
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onCancel,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF8B6914)),
+                    foregroundColor: const Color(0xFFFAC775),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('ยกเลิก'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5DCAA5),
+                    foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('บันทึก'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildingEmoji(String type) {
+    const emojis = {
+      'town_hall':     '🏛️',
+      'barracks':      '⚔️',
+      'sawmill':       '🪵',
+      'smelter':       '🔥',
+      'rice_farm':     '🌾',
+      'distillery':    '🍶',
+      'house':         '🏠',
+      'tavern':        '🍺',
+      'shrine':        '⛩️',
+      'elephant_camp': '🐘',
+      'smithy':        '🔨',
+      'wall':          '🧱',
+      'watchtower':    '🗼',
+    };
+    return emojis[type] ?? '🏛️';
+  }
+}
+
 class _ArrowButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -603,14 +735,21 @@ class _ArrowButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
-          color: const Color(0xFF854F0B).withValues(alpha: 0.85),
+          color: const Color(0xFF854F0B).withValues(alpha: 0.9),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFFAC775), width: 1),
+          border: Border.all(color: const Color(0xFFFAC775), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Icon(icon, color: Colors.white, size: 16),
+        child: Icon(icon, color: Colors.white, size: 26),
       ),
     );
   }

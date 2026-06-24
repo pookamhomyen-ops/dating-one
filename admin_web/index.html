@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love Empire - Game Admin Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Language Switcher Button at Top Right Corner -->
+    <div class="lang-switch-container">
+        <button class="btn btn-secondary btn-lang" id="btn-toggle-lang" data-current="en">
+            <i class="fa-solid fa-language"></i> <span id="lang-label">TH</span>
+        </button>
+    </div>
+
+    <div class="admin-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-emoji">👑</span>
+                <div class="brand-text">
+                    <h1>Love Empire</h1>
+                    <p data-th="ผู้ดูแลมินิเกม" data-en="Mini-Game Admin">Mini-Game Admin</p>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-gauge"></i>
+                    <span data-th="แดชบอร์ด & เครื่องมือทดสอบ" data-en="Dashboard & Test tools">Dashboard & Test tools</span>
+                </button>
+                <button class="nav-item" data-tab="buildings">
+                    <i class="fa-solid fa-building-columns"></i>
+                    <span data-th="อัปเกรดสิ่งปลูกสร้าง" data-en="Building Upgrades">Building Upgrades</span>
+                </button>
+                <button class="nav-item" data-tab="troops">
+                    <i class="fa-solid fa-person-military-pointing"></i>
+                    <span data-th="ฝึกฝนทหาร" data-en="Troop Training">Troop Training</span>
+                </button>
+                <button class="nav-item" data-tab="resources">
+                    <i class="fa-solid fa-cubes"></i>
+                    <span data-th="ตั้งค่าทรัพยากร" data-en="Resource Configs">Resource Configs</span>
+                </button>
+                <button class="nav-item" data-tab="players">
+                    <i class="fa-solid fa-users"></i>
+                    <span data-th="ผู้เล่น & นิคม" data-en="Player & Settlements">Player & Settlements</span>
+                </button>
+                <button class="nav-item" data-tab="quests">
+                    <i class="fa-solid fa-scroll"></i>
+                    <span data-th="เควสต์ & ฤดูกาล" data-en="Quests & Seasons">Quests & Seasons</span>
+                </button>
+            </nav>
+
+            <div class="connection-status">
+                <div class="status-indicator connected"></div>
+                <span data-th="Supabase: เชื่อมต่อแล้ว" data-en="Supabase: Connected">Supabase: Connected</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-title">
+                    <h2 id="current-tab-title" data-th="แดชบอร์ด & เครื่องมือทดสอบ" data-en="Dashboard & Test Tools">Dashboard & Test Tools</h2>
+                    <p id="current-tab-desc" data-th="สร้างผู้เล่นจำลอง, แก้ไขทรัพยากร และรันคำสั่งทดสอบด่วน" data-en="Generate mock players, edit resources, and run quick testing actions.">Generate mock players, edit resources, and run quick testing actions.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="btn-refresh-data">
+                        <i class="fa-solid fa-arrows-rotate"></i> <span data-th="รีเฟรช" data-en="Refresh">Refresh</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Notifications / Alert bar -->
+            <div id="alert-container" class="alert-container"></div>
+
+            <!-- Content Views -->
+            <div class="tab-content active" id="tab-dashboard">
+                <!-- Quick Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon wood"><i class="fa-solid fa-tree"></i></div>
+                        <div class="stat-info">
+                            <h3 data-th="ผู้เล่นทั้งหมด" data-en="Total Players">Total Players</h3>
+                            <p class="stat-value" id="stat-players">-</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon iron"><i class="fa-solid fa-cubes-stacked"></i></div>
+                        <div class="stat-info">
+                            <h3 data-th="นิคมทั้งหมด" data-en="Total Settlements">Total Settlements</h3>
+                            <p class="stat-value" id="stat-settlements">-</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon rice"><i class="fa-solid fa-wheat-awn"></i></div>
+                        <div class="stat-info">
+                            <h3 data-th="กำลังอัปเกรด" data-en="Active Upgrades">Active Upgrades</h3>
+                            <p class="stat-value" id="stat-upgrades">-</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon liquor"><i class="fa-solid fa-wine-bottle"></i></div>
+                        <div class="stat-info">
+                            <h3 data-th="กำลังฝึกทหาร" data-en="Active Training">Active Training</h3>
+                            <p class="stat-value" id="stat-training">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test tools section -->
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-th="ระบบสร้างผู้เล่นจำลอง" data-en="Mock Player Generator">Mock Player Generator</span></h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-description" data-th="สร้างผู้เล่นทดสอบ, สุ่มพิกัดที่ตั้งเมือง และเริ่มต้นสิ่งปลูกสร้างพื้นฐานพร้อมช่องทหารว่างทันที" data-en="Create a test player, a settlement at random coordinates, and initialize default starter buildings and empty troops slots instantly.">Create a test player, a settlement at random coordinates, and initialize default starter buildings and empty troops slots instantly.</p>
+                            <div class="form-group">
+                                <label for="mock-player-name" data-th="ชื่อผู้เล่นจำลอง" data-en="Mock Player Name">Mock Player Name</label>
+                                <input type="text" id="mock-player-name" placeholder="e.g. Test King 99" class="form-control">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col">
+                                    <label for="mock-map-x" data-th="พิกัด X (1-100)" data-en="Map X (1-100)">Map X (1-100)</label>
+                                    <input type="number" id="mock-map-x" value="25" min="1" max="100" class="form-control">
+                                </div>
+                                <div class="form-group col">
+                                    <label for="mock-map-y" data-th="พิกัด Y (1-100)" data-en="Map Y (1-100)">Map Y (1-100)</label>
+                                    <input type="number" id="mock-map-y" value="40" min="1" max="100" class="form-control">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-block" id="btn-generate-mock">
+                                <i class="fa-solid fa-plus"></i> <span data-th="สร้างผู้เล่นทดสอบ" data-en="Generate Test Player">Generate Test Player</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-bolt"></i> <span data-th="สูตรโกงสำหรับทดสอบด่วน" data-en="Quick Testing Cheats">Quick Testing Cheats</span></h3>
+                        </div>
+                        <div class="card-body quick-cheats">
+                            <p class="card-description" data-th="จัดการระบบแบบกลุ่มสำหรับผู้เล่นทุกคนในเซิร์ฟเวอร์ เพื่อทดสอบความสมดุลเกมอย่างรวดเร็ว" data-en="Perform bulk operations on all players and settlements for quick game design feedback.">Perform bulk operations on all players and settlements for quick game design feedback.</p>
+                            <div class="button-group">
+                                <button class="btn btn-warning" id="btn-cheat-resources">
+                                    <i class="fa-solid fa-coins"></i> <span data-th="แจกทรัพยากร +10,000 ให้ทุกคน" data-en="Give +10,000 All Resources to Everyone">Give +10,000 All Resources to Everyone</span>
+                                </button>
+                                <button class="btn btn-warning" id="btn-cheat-complete-upgrades">
+                                    <i class="fa-solid fa-circle-check"></i> <span data-th="เร่งการอัปเกรดทั้งหมดให้เสร็จทันที" data-en="Instantly Finish ALL Upgrades">Instantly Finish ALL Upgrades</span>
+                                </button>
+                                <button class="btn btn-warning" id="btn-cheat-complete-training">
+                                    <i class="fa-solid fa-person-running"></i> <span data-th="เร่งการฝึกทหารทั้งหมดให้เสร็จทันที" data-en="Instantly Finish ALL Troop Training">Instantly Finish ALL Troop Training</span>
+                                </button>
+                                <button class="btn btn-danger" id="btn-cheat-clear-data">
+                                    <i class="fa-solid fa-trash-can"></i> <span data-th="ลบข้อมูลผู้เล่น & นิคมทดสอบทั้งหมด" data-en="Delete All Test Settlements & Players">Delete All Test Settlements & Players</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buildings Config Tab -->
+            <div class="tab-content" id="tab-buildings">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-building-columns"></i> <span data-th="จัดการเวลาและต้นทุนการอัปเกรดสิ่งปลูกสร้าง" data-en="Manage Building Upgrade Times & Costs">Manage Building Upgrade Times & Costs</span></h3>
+                        <button class="btn btn-primary" id="btn-save-buildings" data-th="บันทึกการเปลี่ยนแปลง" data-en="Save Changes">Save Changes</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="buildings-config-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="ประเภทสิ่งปลูกสร้าง" data-en="Building Type">Building Type</th>
+                                        <th data-th="เวลาฐาน (วินาที)" data-en="Base Time (Seconds)">Base Time (Seconds)</th>
+                                        <th data-th="สูตรคำนวณ (ตัวคูณเลเวล)" data-en="Formula (Level Multiplier)">Formula (Level Multiplier)</th>
+                                        <th data-th="ต้นทุนฐาน (ไม้)" data-en="Base Cost (Wood)">Base Cost (Wood)</th>
+                                        <th data-th="ต้นทุนฐาน (เหล็ก)" data-en="Base Cost (Iron)">Base Cost (Iron)</th>
+                                        <th data-th="ผลิต / ติ๊ก (เริ่มต้น)" data-en="Prod / Tick (Base)">Prod / Tick (Base)</th>
+                                        <th data-th="ผลิต / ติ๊ก (+เลเวล)" data-en="Prod / Tick (+Level)">Prod / Tick (+Level)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Troops Config Tab -->
+            <div class="tab-content" id="tab-troops">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-person-military-pointing"></i> <span data-th="จัดการเวลาและต้นทุนการฝึกทหาร" data-en="Manage Troop Training Times & Costs">Manage Troop Training Times & Costs</span></h3>
+                        <button class="btn btn-primary" id="btn-save-troops" data-th="บันทึกการเปลี่ยนแปลง" data-en="Save Changes">Save Changes</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="troops-config-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="ประเภททหาร" data-en="Troop Type">Troop Type</th>
+                                        <th data-th="เวลาฝึก (วินาที / 10 ยูนิต)" data-en="Training Time (Seconds / 10 Units)">Training Time (Seconds / 10 Units)</th>
+                                        <th data-th="ทุนไม้ (ต่อยูนิต)" data-en="Wood Cost (Per Unit)">Wood Cost (Per Unit)</th>
+                                        <th data-th="ทุนเหล็ก (ต่อยูนิต)" data-en="Iron Cost (Per Unit)">Iron Cost (Per Unit)</th>
+                                        <th data-th="พลังโจมตี" data-en="Attack Power">Attack Power</th>
+                                        <th data-th="พลังป้องกัน" data-en="Defense Power">Defense Power</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources Config Tab -->
+            <div class="tab-content" id="tab-resources">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-cubes"></i> <span data-th="ตั้งค่าทรัพยากรโกลบอล" data-en="Global Resource Configuration">Global Resource Configuration</span></h3>
+                        <button class="btn btn-primary" id="btn-save-resources" data-th="บันทึกการเปลี่ยนแปลง" data-en="Save Changes">Save Changes</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="config-tick-duration" data-th="ระยะเวลาต่อติ๊ก (นาที)" data-en="Tick Duration (Minutes)">Tick Duration (Minutes)</label>
+                                <input type="number" id="config-tick-duration" class="form-control" min="1">
+                                <small class="form-text text-muted" data-th="ช่วงเวลาคำนวณทรัพยากรทั้งออนไลน์และออฟไลน์ ค่าเริ่มต้นคือ 5 นาที" data-en="Interval at which offline and online resource ticks are calculated. Default is 5 minutes.">Interval at which offline and online resource ticks are calculated. Default is 5 minutes.</small>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="config-offline-cap" data-th="ขีดจำกัดออฟไลน์ (ชั่วโมง)" data-en="Offline Cap (Hours)">Offline Cap (Hours)</label>
+                                <input type="number" id="config-offline-cap" class="form-control" min="1">
+                                <small class="form-text text-muted" data-th="เวลาสูงสุดที่ระบบคำนวณการผลิตขณะออฟไลน์ ค่าเริ่มต้นคือ 8 ชั่วโมง (480 นาที)" data-en="Maximum time offline production is allowed to accumulate. Default is 8 hours (480 minutes).">Maximum time offline production is allowed to accumulate. Default is 8 hours (480 minutes).</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player & Settlements Tab -->
+            <div class="tab-content" id="tab-players">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-users"></i> <span data-th="ฐานข้อมูลผู้เล่น & นิคม" data-en="Player & Settlement Database">Player & Settlement Database</span></h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="data-table" id="settlements-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="ชื่อผู้เล่น" data-en="Player Name">Player Name</th>
+                                        <th data-th="ชื่อเมือง / นิคม" data-en="Settlement Name">Settlement Name</th>
+                                        <th data-th="พิกัด (X, Y)" data-en="Coordinates (X, Y)">Coordinates (X, Y)</th>
+                                        <th data-th="ทรัพยากรที่มี (ไม้, เหล็ก, ข้าว, สุรา)" data-en="Resources (Wood, Iron, Rice, Liquor)">Resources (Wood, Iron, Rice, Liquor)</th>
+                                        <th data-th="จัดการ" data-en="Actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="5" class="text-center" data-th="ไม่พบข้อมูลนิคม กรุณาสร้างผู้เล่นจำลองที่หน้าแดชบอร์ด" data-en="No settlements found. Generate test player on Dashboard.">No settlements found. Generate test player on Dashboard.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quests & Seasons Tab -->
+            <div class="tab-content" id="tab-quests">
+                <div class="card-grid">
+                    <div class="card col-md-8">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-scroll"></i> <span data-th="ตั้งค่าเควสต์" data-en="Quests Config">Quests Config</span></h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="data-table" id="quests-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-th="ชื่อเควสต์" data-en="Title">Title</th>
+                                            <th data-th="ประเภท" data-en="Type">Type</th>
+                                            <th data-th="เงื่อนไข" data-en="Requirement">Requirement</th>
+                                            <th data-th="รางวัล (W, I, R, L, H)" data-en="Rewards (W, I, R, L, H)">Rewards (W, I, R, L, H)</th>
+                                            <th data-th="สถานะ" data-en="Active">Active</th>
+                                            <th data-th="จัดการ" data-en="Actions">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card col-md-4">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-cloud-sun-rain"></i> <span data-th="ตั้งค่าฤดูกาล" data-en="Season Config">Season Config</span></h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="current-season" data-th="ฤดูกาลปัจจุบัน" data-en="Current Season">Current Season</label>
+                                <select id="current-season" class="form-control">
+                                    <option value="summer">☀️ Summer (ฤดูร้อน)</option>
+                                    <option value="rainy">🌧️ Rainy (ฤดูฝน)</option>
+                                    <option value="winter">❄️ Winter (ฤดูหนาว)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary btn-block" id="btn-save-season" data-th="อัปเดตฤดูกาล" data-en="Update Season">
+                                Update Season
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Settlement Modal -->
+    <div id="edit-settlement-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-th="แก้ไขนิคม & ทรัพยากร" data-en="Edit Settlement & Resources">Edit Settlement & Resources</h3>
+                <span class="close-modal" onclick="closeSettlementModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-settlement-id">
+                <div class="form-group">
+                    <label for="edit-settlement-name" data-th="ชื่อเมือง / นิคม" data-en="Settlement Name">Settlement Name</label>
+                    <input type="text" id="edit-settlement-name" class="form-control">
+                </div>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label for="edit-wood" data-th="ไม้" data-en="Wood">Wood</label>
+                        <input type="number" id="edit-wood" class="form-control">
+                    </div>
+                    <div class="form-group col">
+                        <label for="edit-iron" data-th="เหล็ก" data-en="Iron">Iron</label>
+                        <input type="number" id="edit-iron" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label for="edit-rice" data-th="ข้าว" data-en="Rice">Rice</label>
+                        <input type="number" id="edit-rice" class="form-control">
+                    </div>
+                    <div class="form-group col">
+                        <label for="edit-liquor" data-th="สุรา" data-en="Liquor">Liquor</label>
+                        <input type="number" id="edit-liquor" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSettlementModal()" data-th="ยกเลิก" data-en="Cancel">Cancel</button>
+                <button class="btn btn-primary" id="btn-update-settlement" data-th="บันทึกการเปลี่ยนแปลง" data-en="Save Changes">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settlement Buildings & Troops Viewer Modal -->
+    <div id="details-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="details-modal-title" data-th="รายละเอียดนิคม" data-en="Settlement Details">Settlement Details</h3>
+                <span class="close-modal" onclick="closeDetailsModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="tabs-container">
+                    <div class="modal-tabs">
+                        <button class="modal-tabactive" id="btn-modal-buildings" onclick="showModalTab('buildings')" data-th="สิ่งปลูกสร้าง" data-en="Buildings">Buildings</button>
+                        <button class="modal-tab" id="btn-modal-troops" onclick="showModalTab('troops')" data-th="กองทหาร" data-en="Troops">Troops</button>
+                    </div>
+                    
+                    <!-- Buildings Tab -->
+                    <div class="modal-tab-content active" id="modal-tab-buildings-view">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="สิ่งปลูกสร้าง" data-en="Building">Building</th>
+                                        <th data-th="เลเวล" data-en="Level">Level</th>
+                                        <th data-th="สถานะ" data-en="Status">Status</th>
+                                        <th data-th="จัดการ" data-en="Actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settlement-buildings-list">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Troops Tab -->
+                    <div class="modal-tab-content" id="modal-tab-troops-view">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="ประเภททหาร" data-en="Troop Type">Troop Type</th>
+                                        <th data-th="จำนวน" data-en="Quantity">Quantity</th>
+                                        <th data-th="สถานะการฝึก" data-en="Training Status">Training Status</th>
+                                        <th data-th="จัดการ" data-en="Actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settlement-troops-list">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load custom javascript -->
+    <script src="app.js"></script>
+</body>
+</html>

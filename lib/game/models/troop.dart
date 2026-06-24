@@ -50,8 +50,17 @@ class Troop {
     return emojis[troopType] ?? '⚔️';
   }
 
+  static Map<String, dynamic>? remoteConfig;
+
   // ต้นทุนต่อคน
   Map<String, int> get costPerUnit {
+    if (remoteConfig != null && remoteConfig![troopType] != null) {
+      final config = remoteConfig![troopType];
+      final cost = config['cost_per_unit'] as Map<String, dynamic>?;
+      if (cost != null) {
+        return cost.map((k, v) => MapEntry(k, (v as num).toInt()));
+      }
+    }
     const costs = {
       'swordsman': {'wood': 5,  'iron': 3},
       'archer':    {'wood': 8,  'iron': 2},
@@ -64,6 +73,12 @@ class Troop {
 
   // attack power ต่อหน่วย
   int get attackPower {
+    if (remoteConfig != null && remoteConfig![troopType] != null) {
+      final config = remoteConfig![troopType];
+      if (config['attack'] != null) {
+        return (config['attack'] as num).toInt();
+      }
+    }
     const power = {
       'swordsman': 10,
       'archer':    12,
@@ -76,6 +91,12 @@ class Troop {
 
   // defense power ต่อหน่วย
   int get defensePower {
+    if (remoteConfig != null && remoteConfig![troopType] != null) {
+      final config = remoteConfig![troopType];
+      if (config['defense'] != null) {
+        return (config['defense'] as num).toInt();
+      }
+    }
     const power = {
       'swordsman': 10,
       'archer':    6,
@@ -88,6 +109,12 @@ class Troop {
 
   // เวลาฝึก (วินาที) ต่อ 10 คน
   int get trainingSeconds {
+    if (remoteConfig != null && remoteConfig![troopType] != null) {
+      final config = remoteConfig![troopType];
+      if (config['training_seconds'] != null) {
+        return (config['training_seconds'] as num).toInt();
+      }
+    }
     const seconds = {
       'swordsman': 300,   // 5 นาที
       'archer':    300,
