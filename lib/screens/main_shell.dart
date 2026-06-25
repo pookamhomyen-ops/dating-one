@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import 'chat/chat_list_screen.dart';
 import 'discover/discover_screen.dart';
 import 'feed/feed_screen.dart';
+import 'match/match_alway.dart';
 import 'profile/profile_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -23,7 +24,7 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _controllers = List.generate(
-      4,
+      5,
       (_) => AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 450),
@@ -61,6 +62,13 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
       ]).animate(
         CurvedAnimation(parent: _controllers[3], curve: Curves.easeInOut),
       ),
+      TweenSequence<double>([
+        TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.2), weight: 35),
+        TweenSequenceItem(tween: Tween(begin: 0.2, end: -0.1), weight: 30),
+        TweenSequenceItem(tween: Tween(begin: -0.1, end: 0.0), weight: 35),
+      ]).animate(
+        CurvedAnimation(parent: _controllers[4], curve: Curves.easeInOut),
+      ),
     ];
   }
 
@@ -82,6 +90,7 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
     final screens = [
       const DiscoverScreen(),
       const FeedScreen(),
+      const DatingFeedPage(),
       const ChatListScreen(),
       ProfileScreen(key: _profileKey),
     ];
@@ -129,6 +138,12 @@ class _IslandNavBar extends StatelessWidget {
   });
 
   static const _inactiveColor = AppColors.textSecondary;
+  static const _iconSize = 27.3;
+  static const _specialTabDiameter = 38.0;
+  static const _specialTabIconSize = 31.5;
+  static const _specialTabVerticalOffset = -8.0;
+  static const _itemVerticalPadding = 2.0;
+  static const _labelSpacing = 3.0;
 
   static const _items = [
     _NavData(
@@ -142,6 +157,12 @@ class _IslandNavBar extends StatelessWidget {
       activeIcon: Icons.favorite,
       label: 'ฟีด',
       color: AppColors.iconPink,
+    ),
+    _NavData(
+      icon: Icons.auto_awesome_outlined,
+      activeIcon: Icons.auto_awesome,
+      label: 'สบัด',
+      color: Color(0xFFFA9A2D),
     ),
     _NavData(
       icon: Icons.chat_bubble_outline_rounded,
@@ -175,7 +196,7 @@ class _IslandNavBar extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -188,20 +209,29 @@ class _IslandNavBar extends StatelessWidget {
                       behavior: HitTestBehavior.opaque,
                       child: AnimatedBuilder(
                         animation: controllers[i],
-                        builder: (context, child) => Transform.rotate(
-                          angle: rotateAnims[i].value,
-                          child: Transform.scale(
-                            scale: scaleAnims[i].value,
-                            child: child,
-                          ),
-                        ),
+                        builder: (context, child) {
+                          final translated = Transform.translate(
+                            offset: i == 2 ? Offset(0, _specialTabVerticalOffset) : Offset.zero,
+                            child: Transform.rotate(
+                              angle: rotateAnims[i].value,
+                              child: Transform.scale(
+                                scale: scaleAnims[i].value,
+                                child: child,
+                              ),
+                            ),
+                          );
+                          return translated;
+                        },
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(vertical: _itemVerticalPadding),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildIcon(i, selected),
-                              const SizedBox(height: 4),
+                              if (i == 2)
+                                _buildSpecialTab(selected)
+                              else
+                                _buildIcon(i, selected),
+                              const SizedBox(height: _labelSpacing),
                               AnimatedDefaultTextStyle(
                                 duration: const Duration(milliseconds: 200),
                                 style: GoogleFonts.notoSansThai(
@@ -227,7 +257,7 @@ class _IslandNavBar extends StatelessWidget {
                 Positioned.fill(
                   child: IgnorePointer(child: _FeedParticlesOverlay()),
                 ),
-              if (selectedIndex == 2)
+              if (selectedIndex == 3)
                 Positioned.fill(
                   child: IgnorePointer(child: _ChatBubblesOverlay()),
                 ),
@@ -243,8 +273,44 @@ class _IslandNavBar extends StatelessWidget {
     if (i == 1 && selected) return _PulsingHeart(color: color);
     return Icon(
       selected ? _items[i].activeIcon : _items[i].icon,
-      size: 26,
+      size: _iconSize,
       color: color,
+    );
+  }
+
+  Widget _buildSpecialTab(bool selected) {
+    return Container(
+      width: _specialTabDiameter,
+      height: _specialTabDiameter,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: selected
+              ? const [Color(0xFFFCD77F), Color(0xFFF58B23)]
+              : const [Color(0xFFFBCB79), Color(0xFFF1892C)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF58B23).withValues(alpha: 0.35),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(
+          selected ? _items[2].activeIcon : _items[2].icon,
+          size: _specialTabIconSize,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }
@@ -285,7 +351,7 @@ class _PulsingHeartState extends State<_PulsingHeart>
   @override
   Widget build(BuildContext context) => ScaleTransition(
     scale: _anim,
-    child: Icon(Icons.favorite, size: 26, color: widget.color),
+    child: Icon(Icons.favorite, size: _IslandNavBar._iconSize, color: widget.color),
   );
 }
 
