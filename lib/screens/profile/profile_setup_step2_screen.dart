@@ -30,6 +30,77 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
   String _status = 'โสด';
   double _brokenHeartDays = 30; // ค่าเริ่มต้น 30 วัน
   String _activity = 'ทำงาน';
+  bool _loading = false;
+  Map<String, dynamic> _snapshot = {};
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditMode) _loadFromDb();
+  }
+
+  Future<void> _loadFromDb() async {
+    setState(() => _loading = true);
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+      final data = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+      if (data != null && mounted) {
+        setState(() {
+          _snapshot = data;
+          _provinceCtrl.text = data['province'] ?? '';
+          _districtCtrl.text = data['district'] ?? '';
+          _bioCtrl.text = data['bio'] ?? '';
+          _status = data['relationship_status'] ?? 'โสด';
+          _brokenHeartDays = (data['broken_heart_days'] ?? 30).toDouble();
+          _activity = data['current_activity'] ?? 'ทำงาน';
+        });
+      }
+    } catch (e) {
+      debugPrint('Load step2 profile error: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveEdit() async {
+    if (_provinceCtrl.text.isEmpty || _districtCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกจังหวัดและอำเภอ')),
+      );
+      return;
+    }
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    setState(() => _loading = true);
+    try {
+      final payload = Map<String, dynamic>.from(_snapshot);
+      payload['id'] = user.id;
+      payload['province'] = _provinceCtrl.text.trim();
+      payload['district'] = _districtCtrl.text.trim();
+      payload['relationship_status'] = _status;
+      payload['broken_heart_days'] = _status == 'อกหัก' ? _brokenHeartDays.round() : 0;
+      payload['current_activity'] = _activity;
+      payload['bio'] = _bioCtrl.text.trim();
+      payload.remove('created_at');
+      payload.remove('updated_at');
+      payload['updated_at'] = DateTime.now().toIso8601String();
+      await Supabase.instance.client.from('profiles').upsert(payload);
+      if (context.mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('บันทึกไม่สำเร็จ: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -63,7 +134,9 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('ไลฟ์สไตล์และสถานะ (2/3)'), centerTitle: true),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _loading && widget.isEditMode && _snapshot.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -200,33 +273,16 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
 
               if (widget.isEditMode)
                 OutlinedButton(
-                  onPressed: () async {
-                    if (_provinceCtrl.text.isEmpty || _districtCtrl.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('กรุณากรอกจังหวัดและอำเภอ')),
-                      );
-                      return;
-                    }
-                    final user = Supabase.instance.client.auth.currentUser;
-                    if (user == null) return;
-                    await Supabase.instance.client.from('profiles').upsert({
-                      'id': user.id,
-                      'province': _provinceCtrl.text.trim(),
-                      'district': _districtCtrl.text.trim(),
-                      'relationship_status': _status,
-                      'broken_heart_days': _status == 'อกหัก' ? _brokenHeartDays.round() : 0,
-                      'current_activity': _activity,
-                      'bio': _bioCtrl.text.trim(),
-                    });
-                    if (context.mounted) Navigator.pop(context);
-                  },
+                  onPressed: _loading ? null : _saveEdit,
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: AppColors.brandPink),
                     foregroundColor: AppColors.brandPink,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('บันทึก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  child: _loading
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.brandPink, strokeWidth: 2))
+                      : const Text('บันทึก', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 )
               else
                 ElevatedButton(
@@ -269,3 +325,4 @@ class _ProfileSetupStep2ScreenState extends State<ProfileSetupStep2Screen> {
     );
   }
 }
+

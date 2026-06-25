@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'member_profile_screen.dart';
 import 'swipe_screen.dart';
 import '../../models/member.dart';
+import '../../test/dating_feed_page.dart' show DatingFeedPage;
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/network_image_box.dart';
@@ -414,6 +415,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Discover'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DatingFeedPage()),
+              );
+            },
+            child: const Text('สงป้า', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
       body: SafeArea(
   child: _isLoading
       ? const Center(child: CircularProgressIndicator())
