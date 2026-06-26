@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
 import '../models/settlement.dart';
 import '../models/troop.dart';
+import '../models/march.dart';
 import '../services/game_service.dart';
 import '../services/march_service.dart';
 import '../ui/settlement_view.dart';
@@ -35,22 +37,29 @@ class _MapView extends ConsumerStatefulWidget {
   ConsumerState<_MapView> createState() => _MapViewState();
 }
 
-class _MapViewState extends ConsumerState<_MapView> {
+class _MapViewState extends ConsumerState<_MapView>
+    with SingleTickerProviderStateMixin {
   static const double cellSize = 48.0;
   static const int mapSize = 100;
 
   late TransformationController _transformController;
+  late AnimationController _marchAnimController;
 
   @override
   void initState() {
     super.initState();
     _transformController = TransformationController();
+    _marchAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) => _centerOnMySettlement());
   }
 
   @override
   void dispose() {
     _transformController.dispose();
+    _marchAnimController.dispose();
     super.dispose();
   }
 
@@ -75,16 +84,17 @@ class _MapViewState extends ConsumerState<_MapView> {
 
   @override
   Widget build(BuildContext context) {
-    final troops  = ref.watch(troopsProvider).valueOrNull ?? [];
-    final nodes   = ref.watch(mapNodesProvider).valueOrNull ?? [];
-    final nearby  = ref.watch(nearbySettlementsProvider).valueOrNull ?? [];
-    final season  = ref.watch(seasonProvider).valueOrNull ?? 'summer';
+    final troops         = ref.watch(troopsProvider).valueOrNull ?? [];
+    final nodes          = ref.watch(mapNodesProvider).valueOrNull ?? [];
+    final nearby         = ref.watch(nearbySettlementsProvider).valueOrNull ?? [];
+    final season         = ref.watch(seasonProvider).valueOrNull ?? 'summer';
+    final activeMarches  = ref.watch(activeMarchesProvider).valueOrNull ?? [];
 
     return Column(
       children: [
         _HappinessBar(settlement: widget.settlement),
         Expanded(
-          child: ClipRect(               // ← กัน InteractiveViewer ล้นกรอบ
+          child: ClipRect(
             child: Stack(
               children: [
                 InteractiveViewer(
@@ -92,7 +102,7 @@ class _MapViewState extends ConsumerState<_MapView> {
                   boundaryMargin: const EdgeInsets.all(200),
                   minScale: 0.3,
                   maxScale: 2.5,
-                  constrained: false,    // ← ให้ child ใหญ่กว่า viewport ได้
+                  constrained: false,
                   onInteractionEnd: _onInteractionEnd,
                   child: SizedBox(
                     width: mapSize * cellSize,
@@ -104,6 +114,22 @@ class _MapViewState extends ConsumerState<_MapView> {
                           cellSize: cellSize,
                           season: season,
                         ),
+                        // เส้นประและอนิเมชั่นทหาร
+                        if (activeMarches.isNotEmpty)
+                          AnimatedBuilder(
+                            animation: _marchAnimController,
+                            builder: (_, __) => CustomPaint(
+                              size: Size(mapSize * cellSize, mapSize * cellSize),
+                              painter: _MarchLinePainter(
+                                marches: activeMarches,
+                                mySettlement: widget.settlement,
+                                nodes: nodes,
+                                nearbySettlements: nearby,
+                                cellSize: cellSize,
+                                progress: _marchAnimController.value,
+                              ),
+                            ),
+                          ),
                         ..._buildNodes(nodes, troops),
                         ..._buildNearby(nearby, troops),
                         _MySettlement(settlement: widget.settlement),
@@ -111,6 +137,14 @@ class _MapViewState extends ConsumerState<_MapView> {
                     ),
                   ),
                 ),
+                // March countdown overlay
+                if (activeMarches.isNotEmpty)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    right: 60,
+                    child: _MarchCountdownList(marches: activeMarches),
+                  ),
                 Positioned(
                   bottom: 12,
                   right: 12,
@@ -186,17 +220,24 @@ class _MapViewState extends ConsumerState<_MapView> {
   }
 
   List<Widget> _buildNearby(List<Map<String, dynamic>> settlements, List<Troop> troops) {
+    final activeMarches = ref.watch(activeMarchesProvider).valueOrNull ?? [];
     return settlements.map((s) {
       final x = (s['map_x'] as int).toDouble();
       final y = (s['map_y'] as int).toDouble();
+      final march = activeMarches
+          .where((m) => m.targetSettlementId == s['id'] as String)
+          .firstOrNull;
       return Positioned(
         left: x * cellSize - cellSize / 2,
         top:  y * cellSize - cellSize / 2,
         child: GestureDetector(
-          onTap: () => _showPlayerSheet(s, troops),
+          onTap: () => march != null
+              ? _showMarchInfoSheet(march, s)
+              : _showPlayerSheet(s, troops),
           child: _PlayerPin(
             name: s['display_name'] ?? '???',
             photoUrl: s['photo_url'],
+            isUnderAttack: march != null,
           ),
         ),
       );
@@ -204,6 +245,7 @@ class _MapViewState extends ConsumerState<_MapView> {
   }
 
   void _showNodeAttackSheet(Map<String, dynamic> node, List<Troop> troops) {
+    final container = ProviderScope.containerOf(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFFF5EFE6),
@@ -211,15 +253,19 @@ class _MapViewState extends ConsumerState<_MapView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _AttackBottomSheet(
-        node: node,
-        settlement: widget.settlement,
-        troops: troops,
+      builder: (_) => ProviderScope(
+        parent: container,
+        child: _AttackBottomSheet(
+          node: node,
+          settlement: widget.settlement,
+          troops: troops,
+        ),
       ),
     );
   }
 
   void _showPlayerSheet(Map<String, dynamic> playerSettlement, List<Troop> troops) {
+    final container = ProviderScope.containerOf(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFFF5EFE6),
@@ -227,11 +273,257 @@ class _MapViewState extends ConsumerState<_MapView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _PlayerAttackSheet(
-        targetSettlement: playerSettlement,
-        mySettlement: widget.settlement,
-        troops: troops,
+      builder: (_) => ProviderScope(
+        parent: container,
+        child: _PlayerAttackSheet(
+          targetSettlement: playerSettlement,
+          mySettlement: widget.settlement,
+          troops: troops,
+        ),
       ),
+    );
+  }
+
+  void _showMarchInfoSheet(March march, Map<String, dynamic> targetSettlement) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _MarchInfoSheet(
+        march: march,
+        targetSettlement: targetSettlement,
+      ),
+    );
+  }
+}
+
+// ─── Painter เส้นประ + ทหารเคลื่อนที่ ─────────────────────────────────────────
+class _MarchLinePainter extends CustomPainter {
+  final List<March> marches;
+  final Settlement mySettlement;
+  final List<Map<String, dynamic>> nodes;
+  final List<Map<String, dynamic>> nearbySettlements;
+  final double cellSize;
+  final double progress;
+
+  const _MarchLinePainter({
+    required this.marches,
+    required this.mySettlement,
+    required this.nodes,
+    required this.nearbySettlements,
+    required this.cellSize,
+    required this.progress,
+  });
+
+  Offset _settlementOffset() => Offset(
+    mySettlement.mapX * cellSize,
+    mySettlement.mapY * cellSize,
+  );
+
+  Offset? _targetOffset(March march) {
+    if (march.targetNodeId != null) {
+      final node = nodes.where((n) => n['id'] == march.targetNodeId).firstOrNull;
+      if (node != null) {
+        return Offset(
+          (node['map_x'] as int) * cellSize,
+          (node['map_y'] as int) * cellSize,
+        );
+      }
+    }
+    if (march.targetSettlementId != null) {
+      final s = nearbySettlements
+          .where((n) => n['id'] == march.targetSettlementId)
+          .firstOrNull;
+      if (s != null) {
+        return Offset(
+          (s['map_x'] as int) * cellSize,
+          (s['map_y'] as int) * cellSize,
+        );
+      }
+    }
+    return null;
+  }
+
+  // คำนวณจุดบน quadratic bezier
+  Offset _bezierPoint(Offset p0, Offset p2, double t) {
+    final mid = Offset((p0.dx + p2.dx) / 2, (p0.dy + p2.dy) / 2);
+    final ctrl = Offset(mid.dx, mid.dy - (p2 - p0).distance * 0.3);
+    final x = math.pow(1 - t, 2) * p0.dx +
+        2 * (1 - t) * t * ctrl.dx +
+        math.pow(t, 2) * p2.dx;
+    final y = math.pow(1 - t, 2) * p0.dy +
+        2 * (1 - t) * t * ctrl.dy +
+        math.pow(t, 2) * p2.dy;
+    return Offset(x.toDouble(), y.toDouble());
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final from = _settlementOffset();
+
+    for (final march in marches) {
+      final to = _targetOffset(march);
+      if (to == null) continue;
+
+      final isReturning = march.marchType == 'return';
+      final start = isReturning ? to : from;
+      final end   = isReturning ? from : to;
+
+      // ── เส้นประโค้ง ──
+      final mid = Offset((start.dx + end.dx) / 2, (start.dy + end.dy) / 2);
+      final ctrl = Offset(mid.dx, mid.dy - (end - start).distance * 0.3);
+
+      final path = Path();
+      path.moveTo(start.dx, start.dy);
+      path.quadraticBezierTo(ctrl.dx, ctrl.dy, end.dx, end.dy);
+
+      final dashPaint = Paint()
+        ..color = isReturning
+            ? const Color(0xFF5DCAA5).withValues(alpha: 0.7)
+            : const Color(0xFFFAC775).withValues(alpha: 0.7)
+        ..strokeWidth = 1.8
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      _drawDashedPath(canvas, path, dashPaint);
+
+      // ── ทหารเคลื่อนที่ ──
+      // คำนวณ progress จริงจาก departAt → arriveAt
+      final total = march.arriveAt.difference(march.departAt).inSeconds;
+      final elapsed = DateTime.now().difference(march.departAt).inSeconds;
+      final baseT = total > 0 ? (elapsed / total).clamp(0.0, 1.0) : 0.0;
+
+      // ใส่ animation bounce เล็กน้อยรอบตำแหน่งจริง
+      final animT = (baseT + progress * 0.05).clamp(0.0, 1.0);
+      final troopPos = _bezierPoint(start, end, animT);
+
+      // วงกลมพื้นหลัง
+      canvas.drawCircle(
+        troopPos,
+        10,
+        Paint()
+          ..color = isReturning
+              ? const Color(0xFF5DCAA5).withValues(alpha: 0.9)
+              : const Color(0xFF993C1D).withValues(alpha: 0.9),
+      );
+
+      // emoji ทหาร — ใช้ TextPainter
+      final tp = TextPainter(
+        text: TextSpan(
+          text: isReturning ? '🏃' : '⚔️',
+          style: const TextStyle(fontSize: 11),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, troopPos - Offset(tp.width / 2, tp.height / 2));
+    }
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    const dashLen  = 8.0;
+    const gapLen   = 5.0;
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double dist = 0;
+      bool drawing = true;
+      while (dist < metric.length) {
+        final len = drawing ? dashLen : gapLen;
+        if (drawing) {
+          canvas.drawPath(
+            metric.extractPath(dist, dist + len),
+            paint,
+          );
+        }
+        dist += len;
+        drawing = !drawing;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MarchLinePainter old) =>
+      old.progress != progress || old.marches.length != marches.length;
+}
+
+// ─── Countdown overlay ────────────────────────────────────────────────────────
+class _MarchCountdownList extends StatefulWidget {
+  final List<March> marches;
+  const _MarchCountdownList({required this.marches});
+
+  @override
+  State<_MarchCountdownList> createState() => _MarchCountdownListState();
+}
+
+class _MarchCountdownListState extends State<_MarchCountdownList> {
+  late final Stream<int> _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Stream.periodic(const Duration(seconds: 1), (i) => i);
+  }
+
+  String _fmt(Duration d) {
+    if (d.inSeconds <= 0) return 'ถึงแล้ว!';
+    if (d.inHours > 0) {
+      return '${d.inHours}ชม. ${d.inMinutes.remainder(60)}น. ${d.inSeconds.remainder(60)}ว.';
+    }
+    if (d.inMinutes > 0) {
+      return '${d.inMinutes}น. ${d.inSeconds.remainder(60)}ว.';
+    }
+    return '${d.inSeconds}ว.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: _ticker,
+      builder: (_, __) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: widget.marches.map((march) {
+            final remaining = march.timeRemaining;
+            final isReturning = march.marchType == 'return';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A0D00).withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isReturning
+                      ? const Color(0xFF5DCAA5).withValues(alpha: 0.6)
+                      : const Color(0xFFFAC775).withValues(alpha: 0.6),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isReturning ? '🏃 กลับ' : '⚔️ บุก',
+                    style: const TextStyle(fontSize: 11, color: Colors.white),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _fmt(remaining),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isReturning
+                          ? const Color(0xFF5DCAA5)
+                          : const Color(0xFFFAC775),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
@@ -272,9 +564,9 @@ class _GridPainter extends CustomPainter {
 
   Color get _mapBgColor {
     switch (season) {
-      case 'summer': return const Color(0xFF8B7355); // สีดินแห้ง
-      case 'rain':   return const Color(0xFF2D5A27); // สีเขียวเข้ม
-      case 'winter': return const Color(0xFF6B8E9F); // สีฟ้าหมอก
+      case 'summer': return const Color(0xFF8B7355);
+      case 'rain':   return const Color(0xFF2D5A27);
+      case 'winter': return const Color(0xFF6B8E9F);
       default:       return const Color(0xFF4A6741);
     }
   }
@@ -365,30 +657,53 @@ class _MapPin extends StatelessWidget {
 class _PlayerPin extends StatelessWidget {
   final String name;
   final String? photoUrl;
-  const _PlayerPin({required this.name, this.photoUrl});
+  final bool isUnderAttack;
+  const _PlayerPin({required this.name, this.photoUrl, this.isUnderAttack = false});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFFAC775), width: 1.5),
-            color: const Color(0xFF3C2810),
-          ),
-          child: ClipOval(
-            child: photoUrl != null
-                ? Image.network(photoUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        const Center(child: Text('🏯',
-                            style: TextStyle(fontSize: 16))))
-                : const Center(
-                    child: Text('🏯', style: TextStyle(fontSize: 16))),
-          ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isUnderAttack
+                      ? const Color(0xFFF0997B)
+                      : const Color(0xFFFAC775),
+                  width: isUnderAttack ? 2.5 : 1.5,
+                ),
+                color: const Color(0xFF3C2810),
+              ),
+              child: ClipOval(
+                child: photoUrl != null
+                    ? Image.network(photoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Center(child: Text('🏯',
+                                style: TextStyle(fontSize: 20))))
+                    : const Center(
+                        child: Text('🏯', style: TextStyle(fontSize: 20))),
+              ),
+            ),
+            if (isUnderAttack)
+              Positioned(
+                top: -4, right: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF0997B),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('⚔️', style: TextStyle(fontSize: 9)),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 2),
         Container(
@@ -399,7 +714,7 @@ class _PlayerPin extends StatelessWidget {
           ),
           child: Text(
             name.length > 8 ? '${name.substring(0, 8)}…' : name,
-            style: const TextStyle(color: Colors.white, fontSize: 8),
+            style: const TextStyle(color: Colors.white, fontSize: 9),
           ),
         ),
       ],
@@ -463,7 +778,6 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // header — รูปโปรไฟล์ + ชื่อ
           Row(
             children: [
               Container(
@@ -476,7 +790,7 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
                 child: ClipOval(
                   child: photoUrl != null
                       ? Image.network(photoUrl, fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
+                          errorBuilder: (_, __, ___) =>
                               const Center(child: Text('🏯')))
                       : const Center(child: Text('🏯',
                           style: TextStyle(fontSize: 20))),
@@ -509,8 +823,6 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
             ],
           ),
           const Divider(height: 20),
-
-          // เลือกทหาร
           ...widget.troops.where((t) => t.count > 0).map((t) {
             final sel = _selected[t.troopType] ?? 0;
             return Row(
@@ -548,7 +860,6 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
               ],
             );
           }),
-
           const SizedBox(height: 12),
           Text(
             'กำลังรบ $_totalAttack vs 🛡️ $defense  •  '
@@ -590,10 +901,10 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
 
     setState(() => _sending = true);
     try {
-      final service = MarchService(ref.read(supabaseProvider));
+      final service = MarchService(ref.read(gameSupabaseProvider));
       await service.sendAttack(
         settlement: widget.mySettlement,
-        targetNodeId: widget.targetSettlement['id'] as String,
+        targetSettlementId: widget.targetSettlement['id'] as String,
         troops: troops,
         travelMinutes: _travelMinutes,
       );
@@ -603,6 +914,7 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
           const SnackBar(content: Text('⚔️ ส่งกองทัพบุกแล้ว!')),
         );
         ref.invalidate(troopsProvider);
+        ref.invalidate(activeMarchesProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -695,7 +1007,7 @@ class _MarchHistory extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
@@ -922,7 +1234,7 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
 
     setState(() => _sending = true);
     try {
-      final service = MarchService(ref.read(supabaseProvider));
+      final service = MarchService(ref.read(gameSupabaseProvider));
       await service.sendAttack(
         settlement: widget.settlement,
         targetNodeId: widget.node['id'] as String,
@@ -935,6 +1247,7 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
           const SnackBar(content: Text('⚔️ ส่งกองทัพแล้ว!')),
         );
         ref.invalidate(troopsProvider);
+        ref.invalidate(activeMarchesProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -945,6 +1258,166 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+}
+
+// ─── March Info Sheet ─────────────────────────────────────────────────────────
+class _MarchInfoSheet extends StatefulWidget {
+  final March march;
+  final Map<String, dynamic> targetSettlement;
+  const _MarchInfoSheet({required this.march, required this.targetSettlement});
+
+  @override
+  State<_MarchInfoSheet> createState() => _MarchInfoSheetState();
+}
+
+class _MarchInfoSheetState extends State<_MarchInfoSheet> {
+  late final Stream<int> _ticker =
+      Stream.periodic(const Duration(seconds: 1), (i) => i);
+
+  String _fmt(Duration d) {
+    if (d.inSeconds <= 0) return 'ถึงแล้ว!';
+    if (d.inHours > 0) return '${d.inHours}ชม. ${d.inMinutes.remainder(60)}น. ${d.inSeconds.remainder(60)}ว.';
+    if (d.inMinutes > 0) return '${d.inMinutes}น. ${d.inSeconds.remainder(60)}ว.';
+    return '${d.inSeconds}ว.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name      = widget.targetSettlement['display_name'] as String? ?? '???';
+    final photoUrl  = widget.targetSettlement['photo_url'] as String?;
+    final defense   = widget.targetSettlement['defense_power'] as int? ?? 50;
+    final isReturn  = widget.march.marchType == 'return';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFF0997B), width: 2),
+                ),
+                child: ClipOval(
+                  child: photoUrl != null
+                      ? Image.network(photoUrl, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Center(child: Text('🏯')))
+                      : const Center(child: Text('🏯',
+                          style: TextStyle(fontSize: 20))),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(isReturn ? '🏃 กองทัพกำลังเดินทางกลับ' : '⚔️ กำลังบุกอยู่',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: isReturn
+                              ? const Color(0xFF5DCAA5)
+                              : const Color(0xFFF0997B))),
+                  ],
+                ),
+              ),
+              Text('🛡️ $defense',
+                style: const TextStyle(fontSize: 13)),
+            ],
+          ),
+          const Divider(height: 20),
+          StreamBuilder<int>(
+            stream: _ticker,
+            builder: (_, __) {
+              final remaining = widget.march.timeRemaining;
+              final total = widget.march.arriveAt
+                  .difference(widget.march.departAt)
+                  .inSeconds;
+              final elapsed = DateTime.now()
+                  .difference(widget.march.departAt)
+                  .inSeconds;
+              final progress = total > 0
+                  ? (elapsed / total).clamp(0.0, 1.0)
+                  : 1.0;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(isReturn ? 'เดินทางกลับอีก' : 'ถึงเป้าหมายใน',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      Text(_fmt(remaining),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isReturn
+                              ? const Color(0xFF5DCAA5)
+                              : const Color(0xFFFAC775),
+                        )),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: Colors.white24,
+                      valueColor: AlwaysStoppedAnimation(
+                        isReturn
+                            ? const Color(0xFF5DCAA5)
+                            : const Color(0xFFFAC775),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          Text('กองทัพที่ส่ง',
+            style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8, runSpacing: 4,
+            children: widget.march.troopsSent.entries.map((e) {
+              const em = {
+                'swordsman':'🗡️','archer':'🏹','spearman':'🪖',
+                'cavalry':'🐴','elephant':'🐘',
+              };
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3C2810).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                      color: const Color(0xFF3C2810).withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  '${em[e.key] ?? '⚔️'} ${e.value}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'กำลังรบรวม ${widget.march.totalAttackPower} ⚔️  vs  🛡️ $defense  •  '
+            '${widget.march.totalAttackPower > defense ? "✅ น่าจะชนะ" : "⚠️ เสี่ยงแพ้"}',
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
   }
 }
 

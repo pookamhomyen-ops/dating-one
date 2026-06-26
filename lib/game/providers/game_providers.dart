@@ -192,8 +192,8 @@ final nearbySettlementsProvider = FutureProvider<List<Map<String, dynamic>>>((re
   final centerX = viewport == Offset.zero ? settlement.mapX : viewport.dx.toInt();
   final centerY = viewport == Offset.zero ? settlement.mapY : viewport.dy.toInt();
 
-  final mainClient = ref.watch(supabaseProvider);
-  final data = await mainClient.rpc('game.get_nearby_settlements', params: {
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient.rpc('get_nearby_settlements', params: {
     'p_center_x': centerX,
     'p_center_y': centerY,
     'p_radius': 30,
@@ -314,14 +314,10 @@ final notificationsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) a
 });
 
 final mapNodesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final settlement = await ref.watch(settlementProvider.future);
-  if (settlement == null) return [];
-
   final gameClient = ref.watch(gameSupabaseProvider);
   final data = await gameClient
       .from('map_nodes')
-      .select()
-      .eq('owner_settlement_id', settlement.id);
+      .select();
 
   return List<Map<String, dynamic>>.from(data);
 });
@@ -411,4 +407,4 @@ final buildingPositionsProvider = FutureProvider<List<BuildingPosition>>((ref) a
   if (settlement == null) return [];
   final service = ref.read(buildingPositionServiceProvider);
   return service.getPositions(settlement.id);
-});
+});

@@ -18,10 +18,12 @@ class MarchService {
 
   Future<March> sendAttack({
     required Settlement settlement,
-    required String targetNodeId,
+    String? targetNodeId,
+    String? targetSettlementId,
     required Map<String, int> troops,
     required int travelMinutes,
   }) async {
+    assert(targetNodeId != null || targetSettlementId != null);
     await _deductTroops(settlement.id, troops);
 
     final now = DateTime.now();
@@ -33,7 +35,8 @@ class MarchService {
         .insert({
           'settlement_id': settlement.id,
           'march_type': 'attack',
-          'target_node_id': targetNodeId,
+          if (targetNodeId != null) 'target_node_id': targetNodeId,
+          if (targetSettlementId != null) 'target_settlement_id': targetSettlementId,
           'troops_sent': troops,
           'depart_at': now.toIso8601String(),
           'arrive_at': arriveAt.toIso8601String(),
