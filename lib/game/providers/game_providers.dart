@@ -185,18 +185,15 @@ final activeMarchesProvider = FutureProvider<List<March>>((ref) async {
 final mapViewportProvider = StateProvider<Offset>((ref) => Offset.zero);
 
 final nearbySettlementsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  ref.keepAlive();
   final settlement = await ref.watch(settlementProvider.future);
   if (settlement == null) return [];
 
-  final viewport = ref.watch(mapViewportProvider);
-  final centerX = viewport == Offset.zero ? settlement.mapX : viewport.dx.toInt();
-  final centerY = viewport == Offset.zero ? settlement.mapY : viewport.dy.toInt();
-
   final gameClient = ref.watch(gameSupabaseProvider);
   final data = await gameClient.rpc('get_nearby_settlements', params: {
-    'p_center_x': centerX,
-    'p_center_y': centerY,
-    'p_radius': 30,
+    'p_center_x': settlement.mapX,
+    'p_center_y': settlement.mapY,
+    'p_radius': 50,
   });
 
   return List<Map<String, dynamic>>.from(data ?? []);
