@@ -13,7 +13,7 @@ import '../../constants.dart';
 import 'package:flutter/painting.dart';
 import '../models/building_position.dart';
 import '../services/building_position_service.dart';
-
+import '../models/quest.dart';
 
 // 1. Client หลักของแอป
 final supabaseProvider = Provider((ref) => Supabase.instance.client);
@@ -404,4 +404,35 @@ final buildingPositionsProvider = FutureProvider<List<BuildingPosition>>((ref) a
   if (settlement == null) return [];
   final service = ref.read(buildingPositionServiceProvider);
   return service.getPositions(settlement.id);
+});
+
+
+final questsProvider = FutureProvider<List<Quest>>((ref) async {
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('quests')
+      .select()
+      .eq('is_active', true)
+      .order('quest_type');
+  return (data as List).map((e) => Quest.fromJson(e)).toList();
+});
+
+final questProgressProvider = FutureProvider<List<QuestProgress>>((ref) async {
+  final settlement = await ref.watch(settlementProvider.future);
+  if (settlement == null) return [];
+  final gameClient = ref.watch(gameSupabaseProvider);
+  final data = await gameClient
+      .from('quest_progress')
+      .select()
+      .eq('settlement_id', settlement.id);
+  return (data as List).map((e) => QuestProgress.fromJson(e)).toList();
+});
+
+final questsWithProgressProvider = Provider<List<QuestWithProgress>>((ref) {
+  final quests   = ref.watch(questsProvider).valueOrNull ?? [];
+  final progress = ref.watch(questProgressProvider).valueOrNull ?? [];
+  return quests.map((q) {
+    final p = progress.where((p) => p.questId == q.id).firstOrNull;
+    return QuestWithProgress(quest: q, progress: p);
+  }).toList();
 });

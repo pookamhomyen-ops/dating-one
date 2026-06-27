@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
@@ -7,6 +6,7 @@ import '../models/building.dart';
 import '../models/settlement.dart';
 import '../services/building_service.dart';
 import 'arrange_buildings_view.dart';
+import '../models/quest.dart';
 
 class SettlementView extends ConsumerWidget {
   final void Function(int)? onSwitchTab;
@@ -110,7 +110,21 @@ class _SettlementScene extends ConsumerWidget {
   }
 
   int _getTabIndex() => 0;
-
+void _showQuestSheet(BuildContext context) {
+    final container = ProviderScope.containerOf(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFFF5EFE6),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => UncontrolledProviderScope(
+        container: container,
+        child: _QuestSheet(settlement: settlement),
+      ),
+    );
+  }
   // แทนที่ build method ของ _SettlementScene ด้วยโค้ดนี้
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -176,30 +190,43 @@ class _SettlementScene extends ConsumerWidget {
             ),
           ),
         ),
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.small(
-            heroTag: 'arrangeBtn',
-            backgroundColor: const Color(0xFF854F0B),
-            onPressed: () {
-              final container = ProviderScope.containerOf(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProviderScope(
-                    parent: container,
-                    child: ArrangeBuildingsView(
-                      settlement: settlement,
-                      buildings: buildings,
-                    ),
-                  ),
+        // แทนที่ Positioned ของปุ่ม arrangeBtn ด้วยอันนี้
+Positioned(
+  bottom: 16,
+  right: 16,
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      FloatingActionButton.small(
+        heroTag: 'questBtn',
+        backgroundColor: const Color(0xFF3C2810),
+        onPressed: () => _showQuestSheet(context),
+        child: const Text('📜', style: TextStyle(fontSize: 16)),
+      ),
+      const SizedBox(height: 8),
+      FloatingActionButton.small(
+        heroTag: 'arrangeBtn',
+        backgroundColor: const Color(0xFF854F0B),
+        onPressed: () {
+          final container = ProviderScope.containerOf(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => UncontrolledProviderScope(
+                container: container,
+                child: ArrangeBuildingsView(
+                  settlement: settlement,
+                  buildings: buildings,
                 ),
-              );
-            },
-            child: const Icon(Icons.edit, color: Colors.white, size: 20),
-          ),
-        ),
+              ),
+            ),
+          );
+        },
+        child: const Icon(Icons.edit, color: Colors.white, size: 20),
+      ),
+    ],
+  ),
+),
       ],
     );
   }
@@ -230,10 +257,10 @@ class _AyutthayaBackground extends ConsumerWidget {
           child: Image.asset(
             bgPath,
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Image.asset(
+            errorBuilder: (context, e, s) => Image.asset(
               'assets/games/bg/bg.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
+              errorBuilder: (context, e, s) => Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -252,145 +279,6 @@ class _AyutthayaBackground extends ConsumerWidget {
   }
 }
 
-class _WallPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final wallRect = Rect.fromLTWH(
-      size.width * 0.08,
-      size.height * 0.18,
-      size.width * 0.84,
-      size.height * 0.64,
-    );
-
-    final path = Path()
-      ..moveTo(wallRect.left, wallRect.top)
-      ..lineTo(wallRect.right, wallRect.top)
-      ..lineTo(wallRect.right, wallRect.bottom)
-      ..lineTo(wallRect.left, wallRect.bottom)
-      ..close();
-
-    final points = <Offset>[
-      Offset(wallRect.left + wallRect.width * 0.15, wallRect.top),
-      Offset(wallRect.left + wallRect.width * 0.25, wallRect.top),
-      Offset(wallRect.left + wallRect.width * 0.45, wallRect.top),
-      Offset(wallRect.left + wallRect.width * 0.65, wallRect.top),
-      Offset(wallRect.left + wallRect.width * 0.85, wallRect.top),
-      Offset(wallRect.left + wallRect.width * 0.15, wallRect.bottom),
-      Offset(wallRect.left + wallRect.width * 0.85, wallRect.bottom),
-    ];
-
-    // เงา
-    canvas.drawPath(path, Paint()
-      ..color = Colors.black.withValues(alpha: 0.25)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 16
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-
-    // กำแพงไม้ชั้นนอก
-    canvas.drawPath(path, Paint()
-      ..color = const Color(0xFF6B3A10)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 12);
-
-    // ลายไม้
-    canvas.drawPath(path, Paint()
-      ..color = const Color(0xFF8B5E2A)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5);
-
-    // ไฮไลท์
-    canvas.drawPath(path, Paint()
-      ..color = const Color(0xFFD4A057).withValues(alpha: 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2);
-
-    // เสาไม้ตามจุด
-    for (final p in points) {
-      canvas.drawCircle(p, 7, Paint()
-        ..color = const Color(0xFF4A2508)
-        ..style = PaintingStyle.fill);
-      canvas.drawCircle(p, 7, Paint()
-        ..color = const Color(0xFFD4A057).withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5);
-      canvas.drawCircle(Offset(p.dx, p.dy - 3), 4, Paint()
-        ..color = const Color(0xFF8B5E2A)
-        ..style = PaintingStyle.fill);
-    }
-
-    // ประตูบน
-    _drawWoodGate(canvas, points[0], true);
-    // ประตูล่าง
-    _drawWoodGate(canvas, points[5], false);
-  }
-
-  void _drawWoodPosts(Canvas canvas, double cx, double cy,
-      double rx, double ry) {
-    final postPaint = Paint()
-      ..color = const Color(0xFF4A2508)
-      ..style = PaintingStyle.fill;
-    final postBorder = Paint()
-      ..color = const Color(0xFFD4A057).withValues(alpha: 0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    const count = 14;
-    for (int i = 0; i < count; i++) {
-      // หลีกเลี่ยงตำแหน่งประตู (บนและล่าง)
-      if (i == 0 || i == count ~/ 2) continue;
-      final angle = (i / count) * 2 * math.pi;
-      final x = cx + rx * 0.98 * math.cos(angle);
-      final y = cy + ry * 0.98 * math.sin(angle);
-      canvas.drawCircle(Offset(x, y), 7, postPaint);
-      canvas.drawCircle(Offset(x, y), 7, postBorder);
-      // หัวเสา
-      final capPaint = Paint()
-        ..color = const Color(0xFF8B5E2A)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(x, y - 3), 4, capPaint);
-    }
-  }
-
-  void _drawWoodGate(Canvas canvas, Offset center, bool isTop) {
-    final basePaint = Paint()
-      ..color = const Color(0xFF4A2508)
-      ..style = PaintingStyle.fill;
-    final borderPaint = Paint()
-      ..color = const Color(0xFFD4A057)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    final gateRect = Rect.fromCenter(
-      center: center, width: 44, height: 24);
-    canvas.drawRect(gateRect, basePaint);
-    canvas.drawRect(gateRect, borderPaint);
-
-    final archPaint = Paint()
-      ..color = const Color(0xFF2A1A08)
-      ..style = PaintingStyle.fill;
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(center.dx,
-            isTop ? center.dy + 4 : center.dy - 4),
-        width: 18, height: 16),
-      archPaint,
-    );
-
-    final roofPaint = Paint()
-      ..color = const Color(0xFF8B1A1A).withValues(alpha: 0.85)
-      ..style = PaintingStyle.fill;
-    final roofPath = Path()
-      ..moveTo(center.dx, isTop ? center.dy - 20 : center.dy + 20)
-      ..lineTo(center.dx - 24, isTop ? center.dy - 8 : center.dy + 8)
-      ..lineTo(center.dx + 24, isTop ? center.dy - 8 : center.dy + 8)
-      ..close();
-    canvas.drawPath(roofPath, roofPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 // ─── Top Bar ──────────────────────────────────────────────────────────────────
 class _TopBar extends ConsumerWidget {
   final Settlement settlement;
@@ -398,7 +286,6 @@ class _TopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final buildings = ref.watch(buildingsProvider).valueOrNull ?? [];
     final thLevel   = ref.watch(townHallLevelProvider);
 
     return Container(
@@ -494,7 +381,7 @@ class _BuildingIcon extends StatelessWidget {
                                 imagePath!,
                                 width: 100, height: 100,
                                 fit: BoxFit.contain,
-                                errorBuilder: (_, _, _) => Text(emoji,
+                                errorBuilder: (context, e, s) => Text(emoji,
                                   style: const TextStyle(fontSize: 36)),
                               )
                             : Text(emoji,
@@ -873,3 +760,294 @@ class _CostBadge extends StatelessWidget {
   }
 }
 
+// ─── Quest Sheet ──────────────────────────────────────────────────────────────
+// วางต่อท้าย settlement_view.dart
+
+class _QuestSheet extends ConsumerWidget {
+  final Settlement settlement;
+  const _QuestSheet({required this.settlement});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final questsWithProgress = ref.watch(questsWithProgressProvider);
+    final daily   = questsWithProgress.where((q) => q.quest.questType == 'daily').toList();
+    final weekly  = questsWithProgress.where((q) => q.quest.questType == 'weekly').toList();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, controller) => Column(
+        children: [
+          // handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 4),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Row(
+              children: [
+                const Text('📜', style: TextStyle(fontSize: 20)),
+                const SizedBox(width: 8),
+                const Text('ภารกิจ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                // badge จำนวน ready to claim
+                Builder(builder: (_) {
+                  final ready = questsWithProgress
+                      .where((q) => q.isReadyToClaim).length;
+                  if (ready == 0) return const SizedBox.shrink();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF993C1D),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text('$ready รอรับรางวัล',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 11)),
+                  );
+                }),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              controller: controller,
+              padding: const EdgeInsets.all(12),
+              children: [
+                if (daily.isNotEmpty) ...[
+                  _SectionLabel(label: '📅 ภารกิจรายวัน'),
+                  ...daily.map((q) => _QuestCard(
+                    questWithProgress: q,
+                    settlement: settlement,
+                  )),
+                  const SizedBox(height: 8),
+                ],
+                if (weekly.isNotEmpty) ...[
+                  _SectionLabel(label: '📆 ภารกิจรายสัปดาห์'),
+                  ...weekly.map((q) => _QuestCard(
+                    questWithProgress: q,
+                    settlement: settlement,
+                  )),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      child: Text(label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey[600],
+        )),
+    );
+  }
+}
+
+class _QuestCard extends ConsumerWidget {
+  final QuestWithProgress questWithProgress;
+  final Settlement settlement;
+  const _QuestCard({
+    required this.questWithProgress,
+    required this.settlement,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final q    = questWithProgress.quest;
+    final qwp  = questWithProgress;
+
+    Color borderColor;
+    Color bgColor;
+    if (qwp.isClaimed) {
+      borderColor = Colors.grey[300]!;
+      bgColor     = Colors.grey[50]!;
+    } else if (qwp.isReadyToClaim) {
+      borderColor = const Color(0xFF5DCAA5);
+      bgColor     = const Color(0xFF5DCAA5).withValues(alpha: 0.06);
+    } else {
+      borderColor = Colors.black.withValues(alpha: 0.08);
+      bgColor     = Colors.white;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(q.title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: qwp.isClaimed
+                              ? Colors.grey[400]
+                              : Colors.black87,
+                          decoration: qwp.isClaimed
+                              ? TextDecoration.lineThrough
+                              : null,
+                        )),
+                      const SizedBox(height: 2),
+                      Text(q.description,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                        )),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // claim / status button
+                if (qwp.isClaimed)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('✅ รับแล้ว',
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey[500])),
+                  )
+                else if (qwp.isReadyToClaim)
+                  GestureDetector(
+                    onTap: () => _claim(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF5DCAA5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('🎁 รับรางวัล',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        )),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // progress bar
+            if (!qwp.isClaimed) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: qwp.progressFraction,
+                        minHeight: 5,
+                        backgroundColor: Colors.black.withValues(alpha: 0.06),
+                        valueColor: AlwaysStoppedAnimation(
+                          qwp.isCompleted
+                              ? const Color(0xFF5DCAA5)
+                              : const Color(0xFFFAC775),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${qwp.currentAmount}/${q.requirementAmount}',
+                    style: TextStyle(
+                        fontSize: 10, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // rewards
+            Row(
+              children: [
+                Text('รางวัล: ',
+                  style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                if (q.rewardWood > 0)   _RewardChip(icon: '🪵', value: q.rewardWood),
+                if (q.rewardIron > 0)   _RewardChip(icon: '⚙️', value: q.rewardIron),
+                if (q.rewardRice > 0)   _RewardChip(icon: '🌾', value: q.rewardRice),
+                if (q.rewardLiquor > 0) _RewardChip(icon: '🍶', value: q.rewardLiquor),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _claim(BuildContext context, WidgetRef ref) async {
+    try {
+      final gameClient = ref.read(gameSupabaseProvider);
+      await gameClient.rpc('claim_quest_reward', params: {
+        'p_settlement_id': settlement.id,
+        'p_quest_id': questWithProgress.quest.id,
+      });
+      ref.invalidate(questProgressProvider);
+      ref.invalidate(settlementProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('🎁 รับรางวัลเรียบร้อย!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('รับรางวัลไม่ได้: $e')),
+        );
+      }
+    }
+  }
+}
+
+class _RewardChip extends StatelessWidget {
+  final String icon;
+  final int value;
+  const _RewardChip({required this.icon, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Text('$icon$value',
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+    );
+  }
+}

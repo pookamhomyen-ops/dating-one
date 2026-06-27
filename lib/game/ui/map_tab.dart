@@ -137,7 +137,7 @@ class _MapViewState extends ConsumerState<_MapView>
                     ),
                   ),
                 ),
-                // March countdown overlay
+                // March countdown — แถวเดียวด้านบน
                 if (activeMarches.isNotEmpty)
                   Positioned(
                     top: 8,
@@ -145,6 +145,12 @@ class _MapViewState extends ConsumerState<_MapView>
                     right: 60,
                     child: _MarchCountdownList(marches: activeMarches),
                   ),
+                // March history — ลอยด้านล่าง กดเปิดได้
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: _MarchHistoryButton(),
+                ),
                 Positioned(
                   bottom: 12,
                   right: 12,
@@ -184,8 +190,6 @@ class _MapViewState extends ConsumerState<_MapView>
             ),
           ),
         ),
-        const _MarchHistory(),
-        const SizedBox(height: 8),
       ],
     );
   }
@@ -482,46 +486,48 @@ class _MarchCountdownListState extends State<_MarchCountdownList> {
     return StreamBuilder<int>(
       stream: _ticker,
       builder: (_, __) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: widget.marches.map((march) {
-            final remaining = march.timeRemaining;
-            final isReturning = march.marchType == 'return';
-            return Container(
-              margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A0D00).withValues(alpha: 0.82),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isReturning
-                      ? const Color(0xFF5DCAA5).withValues(alpha: 0.6)
-                      : const Color(0xFFFAC775).withValues(alpha: 0.6),
-                  width: 1,
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: widget.marches.map((march) {
+              final remaining = march.timeRemaining;
+              final isReturning = march.marchType == 'return';
+              return Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A0D00).withValues(alpha: 0.82),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isReturning
+                        ? const Color(0xFF5DCAA5).withValues(alpha: 0.6)
+                        : const Color(0xFFFAC775).withValues(alpha: 0.6),
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    isReturning ? '🏃 กลับ' : '⚔️ บุก',
-                    style: const TextStyle(fontSize: 11, color: Colors.white),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _fmt(remaining),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isReturning
-                          ? const Color(0xFF5DCAA5)
-                          : const Color(0xFFFAC775),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      isReturning ? '🏃 กลับ' : '⚔️ บุก',
+                      style: const TextStyle(fontSize: 11, color: Colors.white),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
+                    const SizedBox(width: 6),
+                    Text(
+                      _fmt(remaining),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isReturning
+                            ? const Color(0xFF5DCAA5)
+                            : const Color(0xFFFAC775),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         );
       },
     );
@@ -612,7 +618,7 @@ class _MySettlement extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🏯', style: TextStyle(fontSize: 28)),
+          const Text('🏯', style: TextStyle(fontSize: 36)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
@@ -640,14 +646,14 @@ class _MapPin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 36, height: 36,
+      width: 58, height: 58,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.85),
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white24, width: 1),
       ),
       child: Center(
-        child: Text(emoji, style: const TextStyle(fontSize: 16)),
+        child: Text(emoji, style: const TextStyle(fontSize: 20)),
       ),
     );
   }
@@ -669,7 +675,7 @@ class _PlayerPin extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Container(
-              width: 48, height: 48,
+              width: 55, height: 55,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -1414,6 +1420,94 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
             'กำลังรบรวม ${widget.march.totalAttackPower} ⚔️  vs  🛡️ $defense  •  '
             '${widget.march.totalAttackPower > defense ? "✅ น่าจะชนะ" : "⚠️ เสี่ยงแพ้"}',
             style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+// ─── March History Button ─────────────────────────────────────────────────────
+class _MarchHistoryButton extends ConsumerWidget {
+  const _MarchHistoryButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyAsync = ref.watch(marchHistoryProvider);
+    final marches = historyAsync.valueOrNull ?? [];
+    if (marches.isEmpty) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFFF5EFE6),
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) => _MarchHistorySheet(marches: marches),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A0D00).withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: const Color(0xFFFAC775).withValues(alpha: 0.4), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('📜', style: TextStyle(fontSize: 12)),
+            const SizedBox(width: 4),
+            Text('ประวัติการรบ (${marches.length})',
+              style: const TextStyle(
+                color: Color(0xFFFAC775), fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MarchHistorySheet extends StatelessWidget {
+  final List<dynamic> marches;
+  const _MarchHistorySheet({required this.marches});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (_, controller) => Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 8),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('ประวัติการรบ',
+                style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              controller: controller,
+              padding: const EdgeInsets.all(8),
+              children: marches
+                  .map((m) => _MarchHistoryCard(march: m))
+                  .toList(),
+            ),
           ),
         ],
       ),
