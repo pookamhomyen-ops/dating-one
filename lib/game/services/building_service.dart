@@ -29,12 +29,13 @@ class BuildingService {
         : null;
 
     final data = await _supabase
+        .schema('game')
         .from('buildings')
         .insert({
           'settlement_id': settlement.id,
           'building_type': buildingType,
           'level': 1,
-          'house_variant': ?variant,
+          if (variant != null) 'house_variant': variant,
         })
         .select()
         .single();
@@ -58,6 +59,7 @@ class BuildingService {
     );
 
     await _supabase
+        .schema('game')
         .from('buildings')
         .update({
           'is_upgrading': true,
@@ -72,6 +74,7 @@ class BuildingService {
     if (!building.upgradeComplete) return null;
 
     final data = await _supabase
+        .schema('game')
         .from('buildings')
         .update({
           'level': building.level + 1,
@@ -100,6 +103,7 @@ class BuildingService {
     }
 
     await _supabase
+        .schema('game')
         .from('settlements')
         .update(updates)
         .eq('id', settlement.id);

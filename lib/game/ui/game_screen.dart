@@ -208,7 +208,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     // เช็ค march ที่ถึงที่หมายแล้ว
     if (settlement != null) {
-      final marchService = MarchService(mainClient);
+      final marchService = MarchService(gameClient);
       final marches = await marchService.getActiveMarches(settlement.id);
 
       for (final march in marches) {
