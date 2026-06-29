@@ -36,7 +36,8 @@ class MarchService {
           'settlement_id': settlement.id,
           'march_type': 'attack',
           if (targetNodeId != null) 'target_node_id': targetNodeId,
-          if (targetSettlementId != null) 'target_settlement_id': targetSettlementId,
+          if (targetSettlementId != null)
+            'target_settlement_id': targetSettlementId,
           'troops_sent': troops,
           'depart_at': now.toIso8601String(),
           'arrive_at': arriveAt.toIso8601String(),
@@ -62,6 +63,13 @@ class MarchService {
     if (isVictory) {
       loot = _rollLoot(nodeLootPool);
       troopsLost = _calculateLosses(march.troopsSent, 0.15);
+
+      // อัพเดท quest progress เมื่อชนะ
+      await _supabase.schema('game').rpc('update_quest_progress', params: {
+        'p_settlement_id': march.settlementId,
+        'p_requirement_type': 'win_battle',
+        'p_amount': 1,
+      });
     } else {
       troopsLost = _calculateLosses(march.troopsSent, 0.45);
     }
@@ -102,9 +110,9 @@ class MarchService {
 
     if (march.loot.isNotEmpty) {
       await _supabase.schema('game').from('settlements').update({
-        'wood':   settlement.wood   + (march.loot['wood']   ?? 0),
-        'iron':   settlement.iron   + (march.loot['iron']   ?? 0),
-        'rice':   settlement.rice   + (march.loot['rice']   ?? 0),
+        'wood': settlement.wood + (march.loot['wood'] ?? 0),
+        'iron': settlement.iron + (march.loot['iron'] ?? 0),
+        'rice': settlement.rice + (march.loot['rice'] ?? 0),
         'liquor': settlement.liquor + (march.loot['liquor'] ?? 0),
       }).eq('id', settlement.id);
     }
@@ -134,8 +142,8 @@ class MarchService {
       } else if (value is List && value.length == 2) {
         final min = value[0] as int;
         final max = value[1] as int;
-        loot[key] = min +
-            (DateTime.now().millisecondsSinceEpoch % (max - min + 1));
+        loot[key] =
+            min + (DateTime.now().millisecondsSinceEpoch % (max - min + 1));
       }
     });
     return loot;

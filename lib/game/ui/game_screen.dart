@@ -37,7 +37,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _TabItem(label: 'อาคาร',     icon: Icons.home_work_outlined),
     _TabItem(label: 'ทหาร',      icon: Icons.shield_outlined),
     _TabItem(label: 'คาราวาน',   icon: Icons.local_shipping_outlined),
-    _TabItem(label: 'แจ้งเตือน', icon: Icons.notifications_outlined),
+    _TabItem(label: 'แจ้งเตือน', icon: Icons.notifications_outlined, hasBadge: true),
   ];
 
   void switchTab(int index) {
@@ -109,13 +109,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       .eq('id', attackerSettlementId)
                       .maybeSingle();
 
+                  final attackerName = attackerData?['name'] ?? 'ไม่ทราบชื่อ';
                   await gameClient.from('enemies').insert({
                     'settlement_id': settlement.id,
                     'enemy_settlement_id': attackerSettlementId,
-                    'enemy_name': attackerData?['name'] ?? 'ไม่ทราบชื่อ',
+                    'enemy_name': attackerName,
                     'attacked_at': DateTime.now().toIso8601String(),
                   });
+
+                  // insert notification ถูกโจมตี
+                  await gameClient.from('notifications').insert({
+                    'settlement_id': settlement.id,
+                    'icon': '⚔️',
+                    'text': '🚨 $attackerName กำลังบุกชุมนุมของคุณ! เตรียมรับมือ!',
+                    'accent_color': '#993C1D',
+                    'is_read': false,
+                  });
                   ref.invalidate(recentEnemiesProvider);
+                  ref.invalidate(notificationsProvider);
                 }
               }
             } catch (_) {}
@@ -174,6 +185,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           'icon': '🏗️',
           'text': 'อัปเกรด ${b.displayName} → Lv.${b.level + 1} เสร็จแล้ว!',
           'accent_color': '#AFA9EC',
+          'is_read': false,
         });
         changed = true;
       }
@@ -188,6 +200,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           'icon': '⚔️',
           'text': 'ฝึก${t.displayName} ${t.trainingCount} คน เสร็จแล้ว!',
           'accent_color': '#FAC775',
+          'is_read': false,
         });
         changed = true;
       }
@@ -229,6 +242,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ? 'ชนะการรบ! ได้รับ $lootText'
                 : 'แพ้การรบ กองทัพกำลังถอยกลับ',
             'accent_color': victory ? '#5DCAA5' : '#F0997B',
+            'is_read': false,
           });
           changed = true;
 
@@ -248,6 +262,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               'icon': '🚩',
               'text': 'กองทัพกลับถึงแล้ว! นำของกลับมา $lootText',
               'accent_color': '#5DCAA5',
+              'is_read': false,
             });
           }
           changed = true;
@@ -255,42 +270,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
     }
 
-    // เช็ค caravan ที่ถึงแล้ว
+    // caravan resolve โดย pg_cron แล้ว — แค่ invalidate provider
     if (settlement != null) {
-      final gameClient2 = ref.read(gameSupabaseProvider);
-      final caravanData = await gameClient2
-          .from('caravans')
-          .select()
-          .eq('to_settlement_id', settlement.id)
-          .eq('status', 'traveling');
-
-      for (final c in caravanData) {
-        final arriveAt = DateTime.parse(c['arrive_at']);
-        if (DateTime.now().isBefore(arriveAt)) continue;
-
-        final payload = Map<String, int>.from(c['payload'] ?? {});
-        if (payload.isNotEmpty) {
-          await gameClient2.from('settlements').update({
-            'wood':   settlement.wood   + (payload['wood']   ?? 0),
-            'iron':   settlement.iron   + (payload['iron']   ?? 0),
-            'rice':   settlement.rice   + (payload['rice']   ?? 0),
-            'liquor': settlement.liquor + (payload['liquor'] ?? 0),
-          }).eq('id', settlement.id);
-
-          final payloadText = payload.entries
-              .map((e) => '${_resIcon(e.key)}${e.value}').join(' ');
-          await gameClient2.from('notifications').insert({
-            'settlement_id': settlement.id,
-            'icon': '🚢',
-            'text': 'คาราวานมาถึงแล้ว! ได้รับ $payloadText',
-            'accent_color': '#5DCAA5',
-          });
-        }
-
-        await gameClient2.from('caravans')
-            .update({'status': 'arrived'}).eq('id', c['id']);
-        changed = true;
-      }
+      ref.invalidate(caravansProvider);
     }
 
     if (changed && mounted) {
@@ -600,13 +582,18 @@ class _TabBar extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      tabs[i].icon,
-                      size: 16,
-                      color: selected
-                          ? const Color(0xFFFAC775)
-                          : const Color(0xFF888780),
-                    ),
+                    tabs[i].hasBadge
+                        ? _NotifIcon(
+                            icon: tabs[i].icon,
+                            selected: selected,
+                          )
+                        : Icon(
+                            tabs[i].icon,
+                            size: 16,
+                            color: selected
+                                ? const Color(0xFFFAC775)
+                                : const Color(0xFF888780),
+                          ),
                     const SizedBox(height: 2),
                     Text(
                       tabs[i].label,
@@ -631,8 +618,54 @@ class _TabBar extends StatelessWidget {
   }
 }
 
+class _NotifIcon extends ConsumerWidget {
+  final IconData icon;
+  final bool selected;
+  const _NotifIcon({required this.icon, required this.selected});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifs = ref.watch(notificationsProvider).valueOrNull ?? [];
+    final unread = notifs.where((n) => n['is_read'] == false).length;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: selected
+              ? const Color(0xFFFAC775)
+              : const Color(0xFF888780),
+        ),
+        if (unread > 0)
+          Positioned(
+            right: -5,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFF993C1D),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                unread > 9 ? '9+' : '$unread',
+                style: const TextStyle(
+                  fontSize: 7,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _TabItem {
   final String label;
   final IconData icon;
-  const _TabItem({required this.label, required this.icon});
+  final bool hasBadge;
+  const _TabItem({required this.label, required this.icon, this.hasBadge = false});
 }

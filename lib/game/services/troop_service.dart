@@ -41,10 +41,16 @@ class TroopService {
       Duration(seconds: troop.trainingSeconds),
     );
 
-    await _supabase.from('troops').update({
+    await _supabase.schema('game').from('troops').update({
       'training_count': amount,
       'training_finish_at': finishAt.toIso8601String(),
     }).eq('id', troop.id);
+
+    await _supabase.schema('game').rpc('update_quest_progress', params: {
+      'p_settlement_id':    settlement.id,
+      'p_requirement_type': 'train_troops',
+      'p_amount':           amount,
+    });
   }
 
   // เช็คและ complete training ที่เสร็จแล้ว

@@ -200,11 +200,24 @@ class _CaravanViewState extends ConsumerState<_CaravanView> {
       if (mounted) {
         setState(() { _wood = 0; _iron = 0; _rice = 0; _liquor = 0; });
         _messageController.clear();
-        ref.invalidate(settlementProvider);
-        ref.invalidate(caravansProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ส่งคาราวานแล้ว! 🚢')),
-        );
+        // ✅ อัพเดท quest progress เมื่อส่ง caravan
+      await gameClient.schema('game').rpc('update_quest_progress', params: {
+        'p_settlement_id':    widget.settlement.id,
+        'p_requirement_type': 'send_caravan',
+        'p_amount':           1,
+      });
+
+      await gameClient.schema('game').rpc('update_quest_progress', params: {
+        'p_settlement_id':    widget.settlement.id,
+        'p_requirement_type': 'send_caravan',
+        'p_amount':           1,
+      });
+
+      ref.invalidate(settlementProvider);
+      ref.invalidate(caravansProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ส่งคาราวานแล้ว! 🚢')),
+      );
       }
     } catch (e) {
       if (mounted) {
