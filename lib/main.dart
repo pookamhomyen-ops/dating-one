@@ -5,6 +5,7 @@ import 'constants.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/profile/profile_setup_screen.dart';
+import 'package:dating_one/soi_mash/game_ui.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
@@ -33,7 +34,10 @@ class DatingOneApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: const AuthWrapper(),
-      // ËèÍËØéÁáÍ»·Ñé§ËÁ´´éÇÂ´Õä«¹ì ·éÍ§¿éÒÍÍâÃÃèÒ¾ÒÊà·Å Fluid
+      routes: {
+        '/soi_smash': (_) => const GameUI(),
+      },
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ä«¹ï¿½ ï¿½ï¿½Í§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¾ï¿½ï¿½ï¿½ï¿½ Fluid
       builder: (context, child) {
         return _AuroraFluidBackground(child: child ?? const SizedBox());
       },
@@ -41,7 +45,7 @@ class DatingOneApp extends StatelessWidget {
   }
 }
 
-// ÇÔ´à¨çµ¨Ñ´¡ÒÃ¾×é¹ËÅÑ§ËÅÑ¡¢Í§áÍ»
+// ï¿½Ô´ï¿½çµ¨Ñ´ï¿½ï¿½Ã¾ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½Ñ¡ï¿½Í§ï¿½Í»
 class _AuroraFluidBackground extends StatelessWidget {
   final Widget child;
 
@@ -93,13 +97,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
     
     debugPrint('AuthWrapper: Handling Auth Event: $event, Session: ${session != null}');
 
-    // ¡Ã³Õ·ÕèäÁèä´éÅçÍ¡ÍÔ¹ ËÃ×Í ÅçÍ¡àÍÒ·ì
+    // ï¿½Ã³Õ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¡ï¿½Ô¹ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Í¡ï¿½ï¿½Ò·ï¿½
     if (session == null) {
       _navigateToLogin();
       return;
     }
 
-    // ¡Ã³Õ·ÕèÁÕà«ÊªÑè¹ (SignedIn, TokenRefreshed, InitialSession)
+    // ï¿½Ã³Õ·ï¿½ï¿½ï¿½ï¿½ï¿½Êªï¿½ï¿½ (SignedIn, TokenRefreshed, InitialSession)
     if (event == AuthChangeEvent.signedIn || 
         event == AuthChangeEvent.tokenRefreshed || 
         event == AuthChangeEvent.initialSession) {
@@ -160,7 +164,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          // ãªé Future.microtask à¾×èÍËÅÕ¡àÅÕèÂ§¡ÒÃ¹Ó·Ò§ÃÐËÇèÒ§ Build
+          // ï¿½ï¿½ Future.microtask ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¡ï¿½ï¿½ï¿½ï¿½Â§ï¿½ï¿½Ã¹Ó·Ò§ï¿½ï¿½ï¿½ï¿½ï¿½Ò§ Build
           Future.microtask(() => _handleNavigation(snapshot.data!));
         }
 
@@ -172,13 +176,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 const CircularProgressIndicator(),
                 if (_showTimeoutAction) ...[
                   const SizedBox(height: 24),
-                  const Text('´ÙàËÁ×Í¹¨ÐãªéàÇÅÒ¹Ò¹¼Ô´»¡µÔ'),
+                  const Text('ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¹Ò¹ï¿½Ô´ï¿½ï¿½ï¿½ï¿½'),
                   TextButton(
                     onPressed: () {
                       _isNavigating = false;
                       _navigateToLogin();
                     },
-                    child: const Text('ä»Ë¹éÒÅçÍ¡ÍÔ¹'),
+                    child: const Text('ï¿½Ë¹ï¿½ï¿½ï¿½ï¿½Í¡ï¿½Ô¹'),
                   ),
                 ],
               ],

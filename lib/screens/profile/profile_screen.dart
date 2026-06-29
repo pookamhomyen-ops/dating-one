@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dating_one/soi_mash/game_ui.dart';
 import '../../game/ui/game_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -214,29 +215,33 @@ class ProfileScreenState extends State<ProfileScreen> {
       return const Scaffold(body: Center(child: Text('ไม่พบข้อมูลผู้ใช้')));
     }
 
+    final headerHeight = MediaQuery.of(context).size.height * 0.65;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         top: false,
-        child: RefreshIndicator(
-          onRefresh: _loadUserData,
-          child: CustomScrollView(
-            slivers: [
-              // 1. Header Gallery
-              SliverToBoxAdapter(
-                child: _ProfileHeader(
-                  user: _user!,
-                  onPhotosUpdated: _loadUserData,
-                  onPhotoTap: (index) =>
-                      _viewFullScreen(_user!.photoUrls, index),
-                ),
-              ),
-              // 2. ข้อมูลผู้ใช้
-              SliverToBoxAdapter(
-                child: _ProfileInfoCard(user: _user!),
-              ),
-              // 3. ส่วนความสนใจและรูปภาพอื่นๆ
-              SliverToBoxAdapter(
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _loadUserData,
+              child: CustomScrollView(
+                slivers: [
+                  // 1. Header Gallery
+                  SliverToBoxAdapter(
+                    child: _ProfileHeader(
+                      user: _user!,
+                      onPhotosUpdated: _loadUserData,
+                      onPhotoTap: (index) =>
+                          _viewFullScreen(_user!.photoUrls, index),
+                    ),
+                  ),
+                  // 2. ข้อมูลผู้ใช้
+                  SliverToBoxAdapter(
+                    child: _ProfileInfoCard(user: _user!),
+                  ),
+                  // 3. ส่วนความสนใจและรูปภาพอื่นๆ
+                  SliverToBoxAdapter(
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                   child: Column(
@@ -477,6 +482,50 @@ class ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
+            ),
+
+            // ── ปุ่มบรรลัยวอร์ (อยู่นอก sliver ระดับชื่อผู้ใช้) ──
+            Positioned(
+              top: headerHeight + 6,
+              right: 16,
+              child: _AnimatedSideBarButton(
+                icon: Icons.shield_rounded,
+                label: 'บรรลัยวอร์',
+                color: const Color(0xFFB91C1C),
+                animType: _SideBarAnimType.shake,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProviderScope(
+                        child: GameScreen(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // ── ปุ่มซอยสแมส (อยู่นอก sliver ระดับชื่อผู้ใช้) ──
+            Positioned(
+              top: headerHeight + 70,
+              right: 16,
+              child: _AnimatedSideBarButton(
+                icon: Icons.sports_martial_arts,
+                label: 'ซอยสแมส',
+                color: const Color(0xFF1E88E5),
+                animType: _SideBarAnimType.bounce,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GameUI(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -696,28 +745,6 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
           right: 16,
           child: _ProfileAvatarButton(
             photoUrl: widget.user.primaryPhoto,
-          ),
-        ),
-
-        // ── ปุ่มบรรลัยวอร์ ──
-        Positioned(
-          bottom: -32,
-          right: 16,
-          child: _AnimatedSideBarButton(
-            icon: Icons.shield_rounded,
-            label: 'บรรลัยวอร์',
-            color: const Color(0xFFB91C1C),
-            animType: _SideBarAnimType.shake,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProviderScope(
-                    child: GameScreen(),
-                  ),
-                ),
-              );
-            },
           ),
         ),
 
@@ -1724,4 +1751,3 @@ class _AnimatedSideBarButtonState extends State<_AnimatedSideBarButton>
     );
   }
 }
-
