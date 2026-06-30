@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dating_one/soi_mash/game_ui.dart';
+import '../../cat_vs_mouse/cat_vs_mouse_screen.dart';
 import '../../game/ui/game_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -520,6 +521,26 @@ class ProfileScreenState extends State<ProfileScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => const GameUI(),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // ── ปุ่มแมวปะทะหนู ──
+            Positioned(
+              top: headerHeight + 134,
+              right: 16,
+              child: _AnimatedSideBarButton(
+                icon: Icons.pets_rounded,
+                label: 'แมวปะทะหนู',
+                color: const Color(0xFFF97316),
+                animType: _SideBarAnimType.spin,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CatVsMouseScreen(),
                     ),
                   );
                 },

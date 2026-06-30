@@ -79,6 +79,8 @@ flutter:
     - assets/logos/logo-text-dating-one.png
     - assets/games/buildings/
     - assets/games/bg/
+    - lib/cat_vs_mouse/index.html
+    - lib/cat_vs_mouse/assets/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
