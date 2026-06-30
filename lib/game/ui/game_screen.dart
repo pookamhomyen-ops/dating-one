@@ -12,6 +12,7 @@ import 'building_tab.dart';
 import 'troop_tab.dart';
 import 'caravan_tab.dart';
 import 'notification_tab.dart';
+import 'leaderboard_tab.dart';
 import 'enemy_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -38,6 +39,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _TabItem(label: 'ทหาร',      icon: Icons.shield_outlined),
     _TabItem(label: 'คาราวาน',   icon: Icons.local_shipping_outlined),
     _TabItem(label: 'แจ้งเตือน', icon: Icons.notifications_outlined, hasBadge: true),
+    _TabItem(label: 'อันดับ',    icon: Icons.leaderboard_outlined),
   ];
 
   void switchTab(int index) {
@@ -350,7 +352,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final settlementAsync = ref.watch(settlementProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5EFE6),
+      backgroundColor: const Color(0xFFECF4F4),
       body: SafeArea(
         child: Column(
           children: [
@@ -380,6 +382,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   const TroopTab(),
                   const CaravanTab(),
                   const NotificationTab(),
+                  const LeaderboardTab(),
                 ],
               ),
             ),
@@ -401,7 +404,7 @@ class _ResourceBar extends ConsumerWidget {
     final rate = ProductionService.calculateHourlyRate(buildings);
 
     return Container(
-      color: const Color(0xFF3C2810),
+      color: const Color(0xFF0F2A2A),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
@@ -462,7 +465,7 @@ class _EnemyButton extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
               color: hasEnemy
-                  ? const Color(0xFF993C1D).withValues(alpha: 0.8)
+                  ? const Color(0xFF0F766E).withValues(alpha: 0.9)
                   : Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -510,7 +513,7 @@ class _ResChip extends StatelessWidget {
           Text(
             '$icon $value',
             style: const TextStyle(
-              color: Color(0xFFFAC775),
+              color: Color(0xFF5EEAD4),
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -536,7 +539,7 @@ class _ResourceBarSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 40,
-      color: const Color(0xFF3C2810),
+      color: const Color(0xFF0F2A2A),
     );
   }
 }
@@ -557,7 +560,7 @@ class _TabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
-      color: const Color(0xFFF5EFE6),
+      color: const Color(0xFFECF4F4),
       child: Row(
         children: List.generate(tabs.length, (i) {
           final selected = i == currentIndex;
@@ -569,12 +572,12 @@ class _TabBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 7),
                 decoration: BoxDecoration(
                   color: selected
-                      ? const Color(0xFF3C2810)
+                      ? const Color(0xFF0F2A2A)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: selected
-                        ? const Color(0xFF854F0B)
+                        ? const Color(0xFF0D9488)
                         : Colors.transparent,
                     width: 0.5,
                   ),
@@ -591,7 +594,7 @@ class _TabBar extends StatelessWidget {
                             tabs[i].icon,
                             size: 16,
                             color: selected
-                                ? const Color(0xFFFAC775)
+                                ? const Color(0xFF5EEAD4)
                                 : const Color(0xFF888780),
                           ),
                     const SizedBox(height: 2),

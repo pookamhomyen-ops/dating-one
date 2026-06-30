@@ -89,14 +89,14 @@ class _StatsHeader extends ConsumerWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF3C2810), Color(0xFF5A3A15)],
+          colors: [Color(0xFF0F2A2A), Color(0xFF134E4A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3C2810).withValues(alpha: 0.3),
+            color: const Color(0xFF0F2A2A).withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -111,7 +111,7 @@ class _StatsHeader extends ConsumerWidget {
               label: 'ประชาชน',
               value: '${settlement.population}',
               sub: 'สูงสุด ${settlement.maxPopulation}',
-              valueColor: const Color(0xFFFAEEDA),
+              valueColor: const Color(0xFFCCFBF1),
             ),
           ),
           Container(
@@ -324,7 +324,7 @@ class _SectionLabel extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF3C2810))),
+                color: Color(0xFF0F2A2A))),
         const SizedBox(width: 6),
         Text(sub,
             style: const TextStyle(
@@ -382,7 +382,7 @@ class _TroopCard extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFAEEDA),
+                    color: const Color(0xFFCCFBF1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -395,7 +395,7 @@ class _TroopCard extends ConsumerWidget {
                     style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF3C2810))),
+                        color: Color(0xFF0F2A2A))),
               ],
             ),
             const SizedBox(width: 12),
@@ -461,12 +461,12 @@ class _CostChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5EFE6),
+        color: const Color(0xFFECF4F4),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(label,
           style: const TextStyle(
-              fontSize: 10, color: Color(0xFF633806))),
+              fontSize: 10, color: Color(0xFF0F766E))),
     );
   }
 }
@@ -642,7 +642,7 @@ class _TrainSheetState extends ConsumerState<_TrainSheet> {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF5EFE6),
+        color: Color(0xFFECF4F4),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.fromLTRB(
@@ -655,7 +655,7 @@ class _TrainSheetState extends ConsumerState<_TrainSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFCCC5BB),
+              color: const Color(0xFFB2DFDB),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -668,7 +668,7 @@ class _TrainSheetState extends ConsumerState<_TrainSheet> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFAEEDA),
+                  color: const Color(0xFFCCFBF1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
@@ -684,7 +684,7 @@ class _TrainSheetState extends ConsumerState<_TrainSheet> {
                       style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF3C2810))),
+                          color: Color(0xFF0F2A2A))),
                   Text('มีอยู่ ${widget.troop.count} คน',
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xFF888780))),
@@ -705,14 +705,14 @@ class _TrainSheetState extends ConsumerState<_TrainSheet> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3C2810),
+                  color: const Color(0xFF0F2A2A),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('$_amount คน',
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFFAC775))),
+                        color: Color(0xFF5EEAD4))),
               ),
             ],
           ),
@@ -913,7 +913,7 @@ class _TroopSkeleton extends StatelessWidget {
         Container(
           height: 90,
           decoration: BoxDecoration(
-            color: const Color(0xFFE8DDD0),
+            color: const Color(0xFFD1EAE8),
             borderRadius: BorderRadius.circular(14),
           ),
         ),

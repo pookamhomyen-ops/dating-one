@@ -199,24 +199,56 @@ class _MapViewState extends ConsumerState<_MapView>
       'bandit': '⚔️', 'forest': '🪵',
       'iron_mine': '⚙️', 'npc_settlement': '🏘️',
     };
-    const colors = {
+    const baseColors = {
       'bandit': Color(0xFF993C1D),
       'forest': Color(0xFF185FA5),
       'iron_mine': Color(0xFF185FA5),
       'npc_settlement': Color(0xFF3B6D11),
     };
+    final myId = widget.settlement.id;
+
     return nodes.map((node) {
-      final x = (node['map_x'] as int).toDouble();
-      final y = (node['map_y'] as int).toDouble();
-      final type = node['node_type'] as String;
+      final x       = (node['map_x'] as int).toDouble();
+      final y       = (node['map_y'] as int).toDouble();
+      final type    = node['node_type'] as String;
+      final ownerId = node['owner_settlement_id'] as String?;
+
+      final isMine     = ownerId == myId;
+      final isCaptured = ownerId != null && ownerId != myId;
+
+      final Color pinColor;
+      final String pinEmoji;
+      final String? badge;
+
+      if (isMine) {
+        pinColor = const Color(0xFFD4A843); // ทอง
+        pinEmoji = emoji[type] ?? '❓';
+        badge    = '⭐';
+      } else if (isCaptured) {
+        pinColor = const Color(0xFF6B2020); // แดงเข้ม — ถูกยึดโดยคนอื่น
+        pinEmoji = '🚩';
+        badge    = null;
+      } else {
+        pinColor = baseColors[type] ?? const Color(0xFF555555); // free / respawn
+        pinEmoji = emoji[type] ?? '❓';
+        badge    = null;
+      }
+
       return Positioned(
         left: x * cellSize - cellSize / 2,
         top:  y * cellSize - cellSize / 2,
         child: GestureDetector(
           onTap: () => _showNodeAttackSheet(node, troops),
-          child: _MapPin(
-            emoji: emoji[type] ?? '❓',
-            color: colors[type] ?? const Color(0xFF555555),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _MapPin(emoji: pinEmoji, color: pinColor),
+              if (badge != null)
+                Positioned(
+                  top: -4, right: -4,
+                  child: Text(badge, style: const TextStyle(fontSize: 10)),
+                ),
+            ],
           ),
         ),
       );
@@ -411,7 +443,7 @@ class _MarchLinePainter extends CustomPainter {
         Paint()
           ..color = isReturning
               ? const Color(0xFF5DCAA5).withValues(alpha: 0.9)
-              : const Color(0xFF993C1D).withValues(alpha: 0.9),
+              : const Color(0xFF0F766E).withValues(alpha: 0.9),
       );
 
       // emoji ทหาร — ใช้ TextPainter
@@ -501,7 +533,7 @@ class _MarchCountdownListState extends State<_MarchCountdownList> {
                   border: Border.all(
                     color: isReturning
                         ? const Color(0xFF5DCAA5).withValues(alpha: 0.6)
-                        : const Color(0xFFFAC775).withValues(alpha: 0.6),
+                        : const Color(0xFF5EEAD4).withValues(alpha: 0.6),
                     width: 1,
                   ),
                 ),
@@ -520,7 +552,7 @@ class _MarchCountdownListState extends State<_MarchCountdownList> {
                         fontWeight: FontWeight.w600,
                         color: isReturning
                             ? const Color(0xFF5DCAA5)
-                            : const Color(0xFFFAC775),
+                            : const Color(0xFF5EEAD4),
                       ),
                     ),
                   ],
@@ -622,13 +654,13 @@ class _MySettlement extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: const Color(0xFF3C2810).withValues(alpha: 0.85),
+              color: const Color(0xFF0F2A2A).withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               settlement.name,
               style: const TextStyle(
-                color: Color(0xFFFAC775), fontSize: 9),
+                color: Color(0xFF5EEAD4), fontSize: 9),
             ),
           ),
         ],
@@ -681,10 +713,10 @@ class _PlayerPin extends StatelessWidget {
                 border: Border.all(
                   color: isUnderAttack
                       ? const Color(0xFFF0997B)
-                      : const Color(0xFFFAC775),
+                      : const Color(0xFF5EEAD4),
                   width: isUnderAttack ? 2.5 : 1.5,
                 ),
-                color: const Color(0xFF3C2810),
+                color: const Color(0xFF0F2A2A),
               ),
               child: ClipOval(
                 child: photoUrl != null
@@ -791,7 +823,7 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: const Color(0xFFFAC775), width: 1.5),
+                      color: const Color(0xFF5EEAD4), width: 1.5),
                 ),
                 child: ClipOval(
                   child: photoUrl != null
@@ -877,7 +909,7 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF993C1D),
+                backgroundColor: const Color(0xFF0F766E),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -946,7 +978,7 @@ class _HappinessBar extends ConsumerWidget {
       margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A1A08),
+        color: const Color(0xFF152E2E),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1210,8 +1242,8 @@ class _AttackBottomSheetState extends ConsumerState<_AttackBottomSheet> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3C2810),
-                foregroundColor: const Color(0xFFFAC775),
+                backgroundColor: const Color(0xFF0F2A2A),
+                foregroundColor: const Color(0xFF5EEAD4),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
@@ -1367,7 +1399,7 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
                           fontWeight: FontWeight.w700,
                           color: isReturn
                               ? const Color(0xFF5DCAA5)
-                              : const Color(0xFFFAC775),
+                              : const Color(0xFF5EEAD4),
                         )),
                     ],
                   ),
@@ -1381,7 +1413,7 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
                       valueColor: AlwaysStoppedAnimation(
                         isReturn
                             ? const Color(0xFF5DCAA5)
-                            : const Color(0xFFFAC775),
+                            : const Color(0xFF5EEAD4),
                       ),
                     ),
                   ),
@@ -1403,10 +1435,10 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3C2810).withValues(alpha: 0.1),
+                  color: const Color(0xFF0F2A2A).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                      color: const Color(0xFF3C2810).withValues(alpha: 0.2)),
+                      color: const Color(0xFF0F2A2A).withValues(alpha: 0.2)),
                 ),
                 child: Text(
                   '${em[e.key] ?? '⚔️'} ${e.value}',
@@ -1439,7 +1471,7 @@ class _MarchHistoryButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () => showModalBottomSheet(
         context: context,
-        backgroundColor: const Color(0xFFF5EFE6),
+        backgroundColor: const Color(0xFFECF4F4),
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -1452,7 +1484,7 @@ class _MarchHistoryButton extends ConsumerWidget {
           color: const Color(0xFF1A0D00).withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: const Color(0xFFFAC775).withValues(alpha: 0.4), width: 1),
+            color: const Color(0xFF5EEAD4).withValues(alpha: 0.4), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1582,7 +1614,7 @@ class _CreateSettlementPromptState
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3C2810),
-                  foregroundColor: const Color(0xFFFAC775),
+                  foregroundColor: const Color(0xFF5EEAD4),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -1645,7 +1677,7 @@ class _CreateSettlementPromptState
               : ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3C2810),
-                    foregroundColor: const Color(0xFFFAC775),
+                    foregroundColor: const Color(0xFF5EEAD4),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 14),
                     shape: RoundedRectangleBorder(

@@ -83,7 +83,7 @@ class GameState extends ChangeNotifier {
   }
   
   void _randomizeWind() {
-    wind = (Random().nextDouble() * 300) - 150; 
+    wind = (Random().nextDouble() * 120) - 60;
     owlEffectActive = false;
   }
   
@@ -141,6 +141,16 @@ class GameState extends ChangeNotifier {
       double nextY = p.y + p.vy * dt;
       
       AnimalType ownerAnimal = p.isP1 ? p1Animal : p2Animal;
+      
+      // Screen Edge Collision (ซ้าย-ขวาของจอ ทำตัวเหมือนกำแพง)
+      const double edgeRadius = 8.0;
+      if (nextX < edgeRadius) {
+        p.vx = -p.vx * 0.7;
+        nextX = edgeRadius;
+      } else if (nextX > screenSize.width - edgeRadius) {
+        p.vx = -p.vx * 0.7;
+        nextX = screenSize.width - edgeRadius;
+      }
       
       // Fox Skill
       if (p.isSpecial && ownerAnimal == AnimalType.fox && !p.hasSplit) {
@@ -246,7 +256,10 @@ class GameState extends ChangeNotifier {
     throwsLeft = 1;
     if (currentTurn == 0 && p1Cooldown > 0) p1Cooldown--;
     if (currentTurn == 1 && p2Cooldown > 0) p2Cooldown--;
-    _randomizeWind();
+    // เปลี่ยนลมทุกๆ 2 ตา (ตอนวนกลับมาเป็น Player 1) ลมจะไม่เปลี่ยนทุกตา
+    if (currentTurn == 0) {
+      _randomizeWind();
+    }
   }
 
   @override

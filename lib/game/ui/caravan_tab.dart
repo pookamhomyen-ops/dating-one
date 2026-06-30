@@ -71,19 +71,20 @@ class _CaravanViewState extends ConsumerState<_CaravanView> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFAEEDA),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFFAC775), width: 0.5),
+          color: const Color(0xFFCCFBF1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF0D9488), width: 0.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('💌 ส่งคาราวาน',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
-                    color: Color(0xFF633806))),
+                    color: Color(0xFF0F766E))),
               const SizedBox(height: 2),
               const Text('จะถึงในประมาณ 15 นาทีหลังส่ง',
-                style: TextStyle(fontSize: 11, color: Color(0xFF854F0B))),
+                              style: TextStyle(fontSize: 11, color: Color(0xFF0D9488))),
+
               const SizedBox(height: 12),
               _ResourceSlider(icon: '🪵', label: 'ไม้',  value: _wood,
                 max: widget.settlement.wood,
@@ -125,10 +126,10 @@ class _CaravanViewState extends ConsumerState<_CaravanView> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _canSend
-                        ? const Color(0xFF854F0B)
-                        : Colors.grey[300],
-                    foregroundColor: _canSend
-                        ? const Color(0xFFFAEEDA)
+                        ? const Color(0xFF0D9488)
+                    : Colors.grey[300],
+                  foregroundColor: _canSend
+                    ? Colors.white
                         : Colors.grey[600],
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -274,7 +275,7 @@ class _MatchBanner extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: Color(0xFF888780))),
               Text('🏯 ${matchSettlement!['name']}',
                 style: const TextStyle(fontSize: 13,
-                    fontWeight: FontWeight.w500, color: Color(0xFF633806))),
+                    fontWeight: FontWeight.w500, color: Color(0xFF0F766E))),
             ],
           ),
         ],
@@ -323,7 +324,7 @@ class _CaravanCard extends StatelessWidget {
             ),
           ),
           Text(_fmt(timeLeft),
-            style: const TextStyle(fontSize: 11, color: Color(0xFF854F0B))),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF0D9488))),
         ],
       ),
     );
@@ -360,21 +361,21 @@ class _ResourceSlider extends StatelessWidget {
         children: [
           SizedBox(width: 50,
             child: Text('$icon $label',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF633806)))),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF0F766E)))),
           Expanded(
             child: Slider(
               value: value.toDouble(),
               min: 0, max: max.toDouble(),
               divisions: max > 0 ? max : 1,
-              activeColor: const Color(0xFF854F0B),
-              inactiveColor: const Color(0xFFFAC775),
+              activeColor: const Color(0xFF0D9488),
+              inactiveColor: const Color(0xFFB2DFDB),
               onChanged: (v) => onChanged(v.round()),
             ),
           ),
           SizedBox(width: 32,
             child: Text('$value',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500,
-                  color: Color(0xFF633806)),
+                  color: Color(0xFF0F766E)),
               textAlign: TextAlign.right)),
         ],
       ),

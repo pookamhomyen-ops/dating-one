@@ -145,9 +145,9 @@ class _NotifHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: const BoxDecoration(
-        color: Color(0xFFF5EFE6),
+        color: Color(0xFFECF4F4),
         border: Border(
-          bottom: BorderSide(color: Color(0xFFE8DDD0), width: 1),
+          bottom: BorderSide(color: Color(0xFFD1EAE8), width: 1),
         ),
       ),
       child: Row(
@@ -156,7 +156,7 @@ class _NotifHeader extends StatelessWidget {
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF3C2810))),
+                  color: Color(0xFF0F2A2A))),
           if (unread > 0) ...[
             const SizedBox(width: 8),
             Container(
@@ -181,15 +181,15 @@ class _NotifHeader extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFAEEDA),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: const Color(0xFFFAC775), width: 0.8),
+                  color: const Color(0xFFCCFBF1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF0D9488), width: 0.8),
                 ),
                 child: const Text('อ่านทั้งหมด',
                     style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF854F0B),
+                        color: Color(0xFF0D9488),
                         fontWeight: FontWeight.w500)),
               ),
             ),
@@ -218,7 +218,7 @@ class _DayLabel extends StatelessWidget {
                   letterSpacing: 0.3)),
           const SizedBox(width: 8),
           Expanded(
-            child: Container(height: 0.5, color: const Color(0xFFE0D5C5)),
+            child: Container(height: 0.5, color: const Color(0xFFD1EAE8)),
           ),
         ],
       ),
@@ -271,7 +271,7 @@ class _NotifCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isRead ? Colors.white : const Color(0xFFFFF8EE),
+        color: isRead ? Colors.white : const Color(0xFFEFFEFD),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isRead
@@ -379,7 +379,7 @@ class _LoadingSkeleton extends StatelessWidget {
             Container(
                 width: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0D5C5),
+                  color: const Color(0xFFD1EAE8),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     bottomLeft: Radius.circular(12),
@@ -389,7 +389,7 @@ class _LoadingSkeleton extends StatelessWidget {
             Container(
               width: 40, height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFEEE8DF),
+                color: const Color(0xFFD1EAE8),
                 shape: BoxShape.circle,
               ),
             ),
@@ -403,7 +403,7 @@ class _LoadingSkeleton extends StatelessWidget {
                     height: 10,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEE8DF),
+                      color: const Color(0xFFD1EAE8),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -412,7 +412,7 @@ class _LoadingSkeleton extends StatelessWidget {
                     height: 8,
                     width: 80,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEE8DF),
+                      color: const Color(0xFFD1EAE8),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

@@ -32,7 +32,7 @@ class _EnemySheetState extends ConsumerState<EnemySheet>
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
       decoration: const BoxDecoration(
-        color: Color(0xFF1A0F05),
+        color: Color(0xFF0D1F1F),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -40,24 +40,29 @@ class _EnemySheetState extends ConsumerState<EnemySheet>
           // handle
           Container(
             margin: const EdgeInsets.only(top: 10),
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
               color: Colors.white24,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 12),
-          const Text('⚔️ ชุมนุมศัตรู',
+          const Text(
+            '⚔️ ชุมนุมศัตรู',
             style: TextStyle(
               color: Color(0xFFFAC775),
-              fontSize: 16, fontWeight: FontWeight.w700)),
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 8),
 
           // tabs
           TabBar(
             controller: _tabController,
-            indicatorColor: const Color(0xFF993C1D),
-            labelColor: const Color(0xFFFAC775),
+            indicatorColor: const Color(0xFF0D9488),
+            labelColor: const Color(0xFF5EEAD4),
             unselectedLabelColor: Colors.white38,
             tabs: const [
               Tab(text: '24 ชั่วโมงล่าสุด'),
@@ -68,10 +73,7 @@ class _EnemySheetState extends ConsumerState<EnemySheet>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                _RecentEnemyList(),
-                _EnemyHistoryList(),
-              ],
+              children: const [_RecentEnemyList(), _EnemyHistoryList()],
             ),
           ),
         ],
@@ -96,8 +98,10 @@ class _RecentEnemyList extends ConsumerWidget {
                 children: [
                   Text('🕊️', style: TextStyle(fontSize: 40)),
                   SizedBox(height: 12),
-                  Text('ยังไม่มีใครบุกใน 24 ชั่วโมงที่ผ่านมา',
-                    style: TextStyle(color: Colors.white54)),
+                  Text(
+                    'ยังไม่มีใครบุกใน 24 ชั่วโมงที่ผ่านมา',
+                    style: TextStyle(color: Colors.white54),
+                  ),
                 ],
               ),
             )
@@ -105,10 +109,8 @@ class _RecentEnemyList extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               itemCount: enemies.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _EnemyCard(
-                enemy: enemies[i],
-                showRevengeButton: true,
-              ),
+              itemBuilder: (_, i) =>
+                  _EnemyCard(enemy: enemies[i], showRevengeButton: true),
             ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
@@ -127,17 +129,17 @@ class _EnemyHistoryList extends ConsumerWidget {
     return historyAsync.when(
       data: (enemies) => enemies.isEmpty
           ? const Center(
-              child: Text('ยังไม่มีประวัติ',
-                style: TextStyle(color: Colors.white54)),
+              child: Text(
+                'ยังไม่มีประวัติ',
+                style: TextStyle(color: Colors.white54),
+              ),
             )
           : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: enemies.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _EnemyCard(
-                enemy: enemies[i],
-                showRevengeButton: false,
-              ),
+              itemBuilder: (_, i) =>
+                  _EnemyCard(enemy: enemies[i], showRevengeButton: false),
             ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
@@ -150,10 +152,7 @@ class _EnemyCard extends ConsumerWidget {
   final Map<String, dynamic> enemy;
   final bool showRevengeButton;
 
-  const _EnemyCard({
-    required this.enemy,
-    required this.showRevengeButton,
-  });
+  const _EnemyCard({required this.enemy, required this.showRevengeButton});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -164,7 +163,7 @@ class _EnemyCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A1A08),
+        color: const Color(0xFF152E2E),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isRevenged
@@ -175,20 +174,27 @@ class _EnemyCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Text(isRevenged ? '✅' : '🔥',
-            style: const TextStyle(fontSize: 20)),
+          Text(isRevenged ? '✅' : '🔥', style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('🏯 $name',
+                Text(
+                  '🏯 $name',
                   style: const TextStyle(
                     color: Color(0xFFFAC775),
-                    fontSize: 13, fontWeight: FontWeight.w600)),
-                Text(_timeAgo(attackedAt),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  _timeAgo(attackedAt),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
           ),
@@ -197,21 +203,31 @@ class _EnemyCard extends ConsumerWidget {
               onTap: () => _showRevengeSheet(context, ref),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF993C1D),
+                  color: const Color(0xFF0F766E),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('⚔️ แค้น',
+                child: const Text(
+                  '⚔️ แค้น',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12, fontWeight: FontWeight.w600)),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             )
           else if (isRevenged)
-            Text('แก้แค้นแล้ว',
+            Text(
+              'แก้แค้นแล้ว',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.3), fontSize: 11)),
+                color: Colors.white.withValues(alpha: 0.3),
+                fontSize: 11,
+              ),
+            ),
         ],
       ),
     );
@@ -220,7 +236,7 @@ class _EnemyCard extends ConsumerWidget {
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
-    if (diff.inHours < 24)   return '${diff.inHours} ชั่วโมงที่แล้ว';
+    if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
     return '${diff.inDays} วันที่แล้ว';
   }
 
@@ -234,10 +250,11 @@ class _EnemyCard extends ConsumerWidget {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A0F05),
+      backgroundColor: const Color(0xFF0F766E),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (_) => _RevengeSheet(
         enemyId: enemy['id'] as String,
         enemySettlementId: enemySettlementId,
@@ -275,8 +292,11 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
 
   int get _totalAttack {
     const power = {
-      'swordsman': 10, 'archer': 12, 'spearman': 8,
-      'cavalry': 18,  'elephant': 35,
+      'swordsman': 10,
+      'archer': 12,
+      'spearman': 8,
+      'cavalry': 18,
+      'elephant': 35,
     };
     int total = 0;
     _selected.forEach((type, count) {
@@ -290,7 +310,9 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        left: 16, right: 16, top: 16,
+        left: 16,
+        right: 16,
+        top: 16,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -304,19 +326,28 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('แก้แค้น',
+                    const Text(
+                      'แก้แค้น',
                       style: TextStyle(
                         color: Color(0xFFFAC775),
-                        fontSize: 16, fontWeight: FontWeight.w700)),
-                    Text('🏯 ${widget.enemyName}',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '🏯 ${widget.enemyName}',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Text('กำลังรบ $_totalAttack',
-                style: const TextStyle(
-                  color: Color(0xFFF0997B), fontSize: 12)),
+              Text(
+                'กำลังรบ $_totalAttack',
+                style: const TextStyle(color: Color(0xFFF0997B), fontSize: 12),
+              ),
             ],
           ),
           const Divider(color: Color(0xFF5C3210), height: 20),
@@ -325,16 +356,25 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
             final sel = _selected[t.troopType] ?? 0;
             return Row(
               children: [
-                Text('${t.emoji} ${t.displayName}',
-                  style: const TextStyle(
-                    color: Colors.white70, fontSize: 12)),
+                Text(
+                  '${t.emoji} ${t.displayName}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
                 const Spacer(),
-                Text('มี ${t.count}',
+                Text(
+                  'มี ${t.count}',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.remove, size: 16, color: Colors.white54),
+                  icon: const Icon(
+                    Icons.remove,
+                    size: 16,
+                    color: Colors.white54,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   onPressed: sel > 0
@@ -343,9 +383,11 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
                 ),
                 SizedBox(
                   width: 28,
-                  child: Text('$sel',
+                  child: Text(
+                    '$sel',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, size: 16, color: Colors.white54),
@@ -364,19 +406,25 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF993C1D),
+                backgroundColor: const Color(0xFF0F766E),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: _sending || _selected.values.every((v) => v == 0)
                   ? null
                   : _sendRevenge,
               child: _sending
-                  ? const SizedBox(width: 18, height: 18,
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Text('⚔️ ส่งกองทัพแก้แค้น'),
             ),
           ),
@@ -402,8 +450,9 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
       );
 
       // mark is_revenged
-      final gameClient = ref.read(gameSupabaseProvider);
-      await gameClient
+      final supabase = ref.read(supabaseProvider);
+      await supabase
+          .schema('game')
           .from('enemies')
           .update({'is_revenged': true})
           .eq('id', widget.enemyId);
@@ -412,14 +461,16 @@ class _RevengeSheetState extends ConsumerState<_RevengeSheet> {
         Navigator.pop(context);
         Navigator.pop(context); // ปิด EnemySheet ด้วย
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('⚔️ ส่งกองทัพแก้แค้นแล้ว!')));
+          const SnackBar(content: Text('⚔️ ส่งกองทัพแก้แค้นแล้ว!')),
+        );
         ref.invalidate(troopsProvider);
         ref.invalidate(recentEnemiesProvider);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ส่งไม่ได้: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ส่งไม่ได้: $e')));
       }
     } finally {
       if (mounted) setState(() => _sending = false);

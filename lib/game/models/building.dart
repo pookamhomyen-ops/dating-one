@@ -60,6 +60,7 @@ class Building {
       'elephant_camp': 'โรงช้าง',
       'smithy': 'โรงตีเหล็ก',
       'wall': 'กำแพงเมือง',
+      'cannon': 'ปืนใหญ่',
       'watchtower': 'หอสังเกตการณ์',
       'town_hall': 'ศาลากลาง',
     };
@@ -75,23 +76,26 @@ class Building {
       final config = remoteConfig![buildingType];
       final baseCost = config['base_cost'] as Map<String, dynamic>?;
       if (baseCost != null) {
-        return baseCost.map((k, v) => MapEntry(k, (v as num).toInt() * multiplier));
+        return baseCost.map(
+          (k, v) => MapEntry(k, (v as num).toInt() * multiplier),
+        );
       }
     }
     const baseCosts = {
-      'sawmill':       {'wood': 30, 'iron': 10},
-      'smelter':       {'wood': 20, 'iron': 30},
-      'rice_farm':     {'wood': 40, 'iron': 10},
-      'distillery':    {'wood': 30, 'iron': 20},
-      'house':         {'wood': 50, 'iron': 10},
-      'tavern':        {'wood': 40, 'iron': 20},
-      'shrine':        {'wood': 60, 'iron': 30},
-      'barracks':      {'wood': 50, 'iron': 40},
+      'sawmill': {'wood': 30, 'iron': 10},
+      'smelter': {'wood': 20, 'iron': 30},
+      'rice_farm': {'wood': 40, 'iron': 10},
+      'distillery': {'wood': 30, 'iron': 20},
+      'house': {'wood': 50, 'iron': 10},
+      'tavern': {'wood': 40, 'iron': 20},
+      'shrine': {'wood': 60, 'iron': 30},
+      'barracks': {'wood': 50, 'iron': 40},
       'elephant_camp': {'wood': 80, 'iron': 60},
-      'smithy':        {'wood': 40, 'iron': 50},
+      'smithy': {'wood': 40, 'iron': 50},
       'wall':          {'wood': 30, 'iron': 60},
-      'watchtower':    {'wood': 50, 'iron': 30},
-      'town_hall':     {'wood': 80, 'iron': 80},
+'cannon':        {'wood': 40, 'iron': 80},
+'watchtower':    {'wood': 50, 'iron': 30},
+      'town_hall': {'wood': 80, 'iron': 80},
     };
     final base = baseCosts[buildingType] ?? {'wood': 50, 'iron': 50};
     return base.map((k, v) => MapEntry(k, v * multiplier));
@@ -105,7 +109,7 @@ class Building {
       return (base as num).toInt() * level;
     }
     const baseSeconds = {
-      'sawmill': 180,       // 3 นาที
+      'sawmill': 180, // 3 นาที
       'smelter': 180,
       'rice_farm': 240,
       'distillery': 300,
@@ -116,7 +120,8 @@ class Building {
       'elephant_camp': 600,
       'smithy': 400,
       'wall': 500,
-      'watchtower': 350,
+'cannon': 450,
+'watchtower': 350,
       'town_hall': 600,
     };
     final base = baseSeconds[buildingType] ?? 300;
@@ -130,20 +135,27 @@ class Building {
   // population ที่เพิ่มจากอาคาร
   int get populationBonus {
     switch (buildingType) {
-      case 'house': return 5 * level;
-      case 'tavern': return 2 * level;
-      default: return 0;
+      case 'house':
+        return 5 * level;
+      case 'tavern':
+        return 2 * level;
+      default:
+        return 0;
     }
   }
 
   // defense power ที่เพิ่มจากอาคาร
-  int get defenseBonus {
-    switch (buildingType) {
-      case 'wall':        return 30 * level;
-      case 'watchtower':  return 15 * level;
-      default:            return 0;
-    }
+ int get defenseBonus {
+  switch (buildingType) {
+    case 'wall':
+      const wallBonus = [0, 20, 35, 55, 80, 110];
+      return wallBonus[level.clamp(0, 5)];
+    case 'cannon': // ลด attack ศัตรู 5/10/18%
+      return 0; // handle ใน SQL ไม่ใช่ defense point
+    case 'watchtower':  return 15 * level;
+    default:            return 0;
   }
+}
 
   // production ต่อ tick (5 นาที)
   Map<String, int> get productionPerTick {
@@ -155,19 +167,25 @@ class Building {
         final result = <String, int>{};
         baseProd.forEach((k, v) {
           final baseVal = (v as num).toInt();
-          final lvlVal = prodLvl != null && prodLvl[k] != null ? (prodLvl[k] as num).toInt() : 0;
+          final lvlVal = prodLvl != null && prodLvl[k] != null
+              ? (prodLvl[k] as num).toInt()
+              : 0;
           result[k] = baseVal + (lvlVal * level);
         });
         return result;
       }
     }
     switch (buildingType) {
-      case 'sawmill':    return {'wood': 6 + (level * 3)};   // เยอะสุด
-      case 'rice_farm':  return {'rice': 6 + (level * 3)};   // เท่ากับไม้
-      case 'smelter':    return {'iron': 2 + level};          // น้อยกว่า
-      case 'distillery': return {'liquor': 1 + level};
-      default:           return {};
+      case 'sawmill':
+        return {'wood': 6 + (level * 3)}; // เยอะสุด
+      case 'rice_farm':
+        return {'rice': 6 + (level * 3)}; // เท่ากับไม้
+      case 'smelter':
+        return {'iron': 2 + level}; // น้อยกว่า
+      case 'distillery':
+        return {'liquor': 1 + level};
+      default:
+        return {};
     }
   }
-  
-  }
+}

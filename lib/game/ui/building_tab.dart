@@ -10,40 +10,41 @@ import '../services/building_service.dart';
 // ใช้ emoji แทนก่อน จนกว่าจะมี asset จริง
 // เมื่อมี asset ให้แทนที่ _BuildingArt ด้วย Image.asset(...)
 const _buildingEmoji = {
-  'town_hall':      '🏛️',
-  'sawmill':        '🪵',
-  'smelter':        '⚒️',
-  'rice_farm':      '🌾',
-  'distillery':     '🍶',
-  'house':          '🏠',
-  'tavern':         '🍺',
-  'shrine':         '⛩️',
-  'barracks':       '🪖',
-  'elephant_camp':  '🐘',
-  'smithy':         '🔨',
-  'wall':           '🧱',
-  'watchtower':     '🗼',
+  'town_hall': '🏛️',
+  'sawmill': '🪵',
+  'smelter': '⚒️',
+  'rice_farm': '🌾',
+  'distillery': '🍶',
+  'house': '🏠',
+  'tavern': '🍺',
+  'shrine': '⛩️',
+  'barracks': '🪖',
+  'elephant_camp': '🐘',
+  'smithy': '🔨',
+  'wall': '🧱',
+  'cannon': '💣',
+  'watchtower': '🗼',
 };
 
 // สีธีมของแต่ละประเภทอาคาร
 const _buildingColor = {
-  'town_hall':      Color(0xFF7B5EA7),
-  'sawmill':        Color(0xFF6D8B3A),
-  'smelter':        Color(0xFFB85C2C),
-  'rice_farm':      Color(0xFF5B9B6B),
-  'distillery':     Color(0xFF8B6B3D),
-  'house':          Color(0xFF5B8DB8),
-  'tavern':         Color(0xFFB87333),
-  'shrine':         Color(0xFFD4A843),
-  'barracks':       Color(0xFF8B3A3A),
-  'elephant_camp':  Color(0xFF4A7B6B),
-  'smithy':         Color(0xFF7B6B3A),
-  'wall':           Color(0xFF6B7B8B),
-  'watchtower':     Color(0xFF8B7B4A),
+  'town_hall': Color(0xFF7B5EA7),
+  'sawmill': Color(0xFF6D8B3A),
+  'smelter': Color(0xFFB85C2C),
+  'rice_farm': Color(0xFF5B9B6B),
+  'distillery': Color(0xFF8B6B3D),
+  'house': Color(0xFF5B8DB8),
+  'tavern': Color(0xFFB87333),
+  'shrine': Color(0xFFD4A843),
+  'barracks': Color(0xFF8B3A3A),
+  'elephant_camp': Color(0xFF4A7B6B),
+  'smithy': Color(0xFF7B6B3A),
+  'wall': Color(0xFF6B7B8B),
+  'cannon': Color(0xFF4A4A5A),
+  'watchtower': Color(0xFF8B7B4A),
 };
 
-Color _colorFor(String type) =>
-    _buildingColor[type] ?? const Color(0xFF854F0B);
+Color _colorFor(String type) => _buildingColor[type] ?? const Color(0xFF854F0B);
 
 // ────────────────────────────────────────────────────────────────
 class BuildingTab extends ConsumerWidget {
@@ -72,8 +73,7 @@ class BuildingTab extends ConsumerWidget {
 class _BuildingView extends ConsumerWidget {
   final Settlement settlement;
   final List<Building> buildings;
-  const _BuildingView(
-      {required this.settlement, required this.buildings});
+  const _BuildingView({required this.settlement, required this.buildings});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -99,18 +99,24 @@ class _BuildingView extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                const Text('🏗️',
-                    style: TextStyle(fontSize: 13)),
+                const Text('🏗️', style: TextStyle(fontSize: 13)),
                 const SizedBox(width: 6),
-                const Text('อาคารของคุณ',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF3C2810))),
+                const Text(
+                  'อาคารของคุณ',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F2A2A),
+                  ),
+                ),
                 const SizedBox(width: 6),
-                Text('${buildings.length}/$maxSlots',
-                    style: const TextStyle(
-                        fontSize: 11, color: Color(0xFF888780))),
+                Text(
+                  '${buildings.length}/$maxSlots',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF888780),
+                  ),
+                ),
               ],
             ),
           ),
@@ -121,10 +127,8 @@ class _BuildingView extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (ctx, i) => _BuildingCard(
-                building: buildings[i],
-                settlement: settlement,
-              ),
+              (ctx, i) =>
+                  _BuildingCard(building: buildings[i], settlement: settlement),
               childCount: buildings.length,
             ),
           ),
@@ -167,14 +171,14 @@ class _BuildingHeader extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF3C2810), Color(0xFF6B3F1A)],
+          colors: [Color(0xFF0F2A2A), Color(0xFF134E4A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3C2810).withValues(alpha: 0.35),
+            color: const Color(0xFF0F2A2A).withValues(alpha: 0.35),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -185,22 +189,26 @@ class _BuildingHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('🏯',
-                  style: TextStyle(fontSize: 22)),
+              const Text('🏯', style: TextStyle(fontSize: 22)),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(settlement.name,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFFFAC775))),
                   Text(
-                      'ที่ดิน ${buildings.length}/$maxSlots • happiness ${settlement.happiness}%',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.6))),
+                    settlement.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF5EEAD4),
+                    ),
+                  ),
+                  Text(
+                    'ที่ดิน ${buildings.length}/$maxSlots • happiness ${settlement.happiness}%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
                 ],
               ),
               const Spacer(),
@@ -218,22 +226,21 @@ class _BuildingHeader extends StatelessWidget {
           if (upgrading.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  const Text('🏗️',
-                      style: TextStyle(fontSize: 13)),
+                  const Text('🏗️', style: TextStyle(fontSize: 13)),
                   const SizedBox(width: 6),
                   Text(
                     'กำลังอัปเกรด ${upgrading.map((b) => b.displayName).join(", ")}',
                     style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFFAC775)),
+                      fontSize: 11,
+                      color: Color(0xFF5EEAD4),
+                    ),
                   ),
                 ],
               ),
@@ -252,11 +259,14 @@ class _MiniRes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('$icon $value',
-        style: const TextStyle(
-            fontSize: 11,
-            color: Color(0xFFFAEEDA),
-            fontWeight: FontWeight.w500));
+    return Text(
+      '$icon $value',
+      style: const TextStyle(
+        fontSize: 11,
+        color: Color(0xFFFAEEDA),
+        fontWeight: FontWeight.w500,
+      ),
+    );
   }
 }
 
@@ -264,8 +274,7 @@ class _MiniRes extends StatelessWidget {
 class _BuildingCard extends ConsumerStatefulWidget {
   final Building building;
   final Settlement settlement;
-  const _BuildingCard(
-      {required this.building, required this.settlement});
+  const _BuildingCard({required this.building, required this.settlement});
 
   @override
   ConsumerState<_BuildingCard> createState() => _BuildingCardState();
@@ -278,8 +287,7 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
   void initState() {
     super.initState();
     if (widget.building.isUpgrading) {
-      _timer =
-          Timer.periodic(const Duration(seconds: 1), (_) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
     }
@@ -295,8 +303,10 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
     final b = widget.building;
     if (b.upgradeFinishAt == null) return 0;
     final total = b.upgradeSeconds.toDouble();
-    final remaining =
-        b.upgradeFinishAt!.difference(DateTime.now()).inSeconds.toDouble();
+    final remaining = b.upgradeFinishAt!
+        .difference(DateTime.now())
+        .inSeconds
+        .toDouble();
     return ((total - remaining.clamp(0, total)) / total).clamp(0.0, 1.0);
   }
 
@@ -316,7 +326,8 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
     final color = _colorFor(b.buildingType);
     final isUpgrading = b.isUpgrading;
     final timeLeft = b.upgradeTimeRemaining;
-    final isMaxLevel = b.level >= 5;
+    final maxLevel = b.buildingType == 'cannon' ? 3 : 5;
+    final isMaxLevel = b.level >= maxLevel;
     final emoji = _buildingEmoji[b.buildingType] ?? '🏠';
 
     return GestureDetector(
@@ -347,8 +358,7 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                 ],
               ),
               child: Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(70, 10, 12, 12),
+                padding: const EdgeInsets.fromLTRB(70, 10, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -357,31 +367,38 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Text(b.displayName,
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF2C1A05))),
+                          child: Text(
+                            b.displayName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2C1A05),
+                            ),
+                          ),
                         ),
                         // Level badge
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: isMaxLevel
-                                ? const Color(0xFFFFD700)
-                                    .withValues(alpha: 0.15)
+                                ? const Color(
+                                    0xFFFFD700,
+                                  ).withValues(alpha: 0.15)
                                 : color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             isMaxLevel ? '⭐ MAX' : 'Lv.${b.level}',
                             style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: isMaxLevel
-                                    ? const Color(0xFFB8860B)
-                                    : color),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isMaxLevel
+                                  ? const Color(0xFFB8860B)
+                                  : color,
+                            ),
                           ),
                         ),
                       ],
@@ -393,8 +410,7 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                       Wrap(
                         spacing: 4,
                         children: b.productionPerTick.entries
-                            .map((e) => _ProdChip(
-                                res: e.key, amount: e.value))
+                            .map((e) => _ProdChip(res: e.key, amount: e.value))
                             .toList(),
                       ),
 
@@ -406,12 +422,14 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                         children: [
                           if (b.defenseBonus > 0)
                             _BonusChip(
-                                label: '🛡️ +${b.defenseBonus}',
-                                color: const Color(0xFF7BAFD4)),
+                              label: '🛡️ +${b.defenseBonus}',
+                              color: const Color(0xFF7BAFD4),
+                            ),
                           if (b.populationBonus > 0)
                             _BonusChip(
-                                label: '👥 +${b.populationBonus}',
-                                color: const Color(0xFF5DCAA5)),
+                              label: '👥 +${b.populationBonus}',
+                              color: const Color(0xFF5DCAA5),
+                            ),
                         ],
                       ),
                     ],
@@ -422,16 +440,11 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: isUpgrading
-                            ? _upgradeProgress()
-                            : b.level / 5,
+                        value: isUpgrading ? _upgradeProgress() : b.level / 5,
                         minHeight: 5,
-                        backgroundColor:
-                            Colors.black.withValues(alpha: 0.06),
+                        backgroundColor: Colors.black.withValues(alpha: 0.06),
                         valueColor: AlwaysStoppedAnimation(
-                          isUpgrading
-                              ? const Color(0xFFF0997B)
-                              : color,
+                          isUpgrading ? const Color(0xFFF0997B) : color,
                         ),
                       ),
                     ),
@@ -450,17 +463,23 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          Text('อัปเกรด • ${_fmt(timeLeft)}',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFF993C1D),
-                                  fontWeight: FontWeight.w500)),
+                          Text(
+                            'อัปเกรด • ${_fmt(timeLeft)}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF993C1D),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ] else if (isMaxLevel) ...[
-                          const Text('⭐ ระดับสูงสุด',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFFB8860B),
-                                  fontWeight: FontWeight.w500)),
+                          const Text(
+                            '⭐ ระดับสูงสุด',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFFB8860B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ] else ...[
                           Container(
                             width: 6,
@@ -471,10 +490,13 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          Text('กดเพื่ออัปเกรด',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[500])),
+                          Text(
+                            'กดเพื่ออัปเกรด',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -503,14 +525,16 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
 
   void _onTap(BuildContext context) {
     final b = widget.building;
-    if (b.level >= 5) {
+    final maxLv = b.buildingType == 'cannon' ? 3 : 5;
+    if (b.level >= maxLv) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('⭐ อาคารนี้ถึงระดับสูงสุดแล้ว'),
           backgroundColor: const Color(0xFFB8860B),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -520,11 +544,13 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              '🏗️ กำลัง upgrade อยู่ • เหลือ ${t != null ? _fmt(t) : '...'}'),
+            '🏗️ กำลัง upgrade อยู่ • เหลือ ${t != null ? _fmt(t) : '...'}',
+          ),
           backgroundColor: const Color(0xFF993C1D),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -537,11 +563,12 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
         building: b,
         settlement: widget.settlement,
         onUpgrade: () async {
-          final service =
-              BuildingService(ref.read(gameSupabaseProvider));
+          final service = BuildingService(ref.read(gameSupabaseProvider));
           try {
             await service.startUpgrade(
-                building: b, settlement: widget.settlement);
+              building: b,
+              settlement: widget.settlement,
+            );
             ref.invalidate(buildingsProvider);
             ref.invalidate(settlementProvider);
             if (context.mounted) Navigator.pop(context);
@@ -553,7 +580,8 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                   backgroundColor: const Color(0xFF993C1D),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               );
             }
@@ -611,7 +639,9 @@ class _BuildingArt extends StatelessWidget {
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: color.withValues(alpha: 0.3), width: 1),
+                  color: color.withValues(alpha: 0.3),
+                  width: 1,
+                ),
               ),
               child: Center(
                 child: Text(
@@ -634,12 +664,10 @@ class _BuildingArt extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0997B),
                   shape: BoxShape.circle,
-                  border:
-                      Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(color: Colors.white, width: 1.5),
                 ),
                 child: const Center(
-                  child: Text('🔨',
-                      style: TextStyle(fontSize: 8)),
+                  child: Text('🔨', style: TextStyle(fontSize: 8)),
                 ),
               ),
             ),
@@ -668,7 +696,7 @@ class _ProdChip extends StatelessWidget {
     'wood': '🪵',
     'iron': '⚙️',
     'rice': '🌾',
-    'liquor': '🍶'
+    'liquor': '🍶',
   };
 
   @override
@@ -682,9 +710,10 @@ class _ProdChip extends StatelessWidget {
       child: Text(
         '${_icons[res] ?? res}+$amount/5นาที',
         style: const TextStyle(
-            fontSize: 9,
-            color: Color(0xFF633806),
-            fontWeight: FontWeight.w500),
+          fontSize: 9,
+          color: Color(0xFF633806),
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -703,11 +732,14 @@ class _BonusChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 9,
-              color: color,
-              fontWeight: FontWeight.w600)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
@@ -737,16 +769,21 @@ class _UpgradeSheet extends StatelessWidget {
     final cost = building.upgradeCost;
     final color = _colorFor(building.buildingType);
     final emoji = _buildingEmoji[building.buildingType] ?? '🏠';
-    final canAfford = settlement.wood >= (cost['wood'] ?? 0) &&
+    final canAfford =
+        settlement.wood >= (cost['wood'] ?? 0) &&
         settlement.iron >= (cost['iron'] ?? 0);
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF5EFE6),
+        color: Color(0xFFECF4F4),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(
-          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+        20,
+        16,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -771,32 +808,38 @@ class _UpgradeSheet extends StatelessWidget {
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                      color: color.withValues(alpha: 0.3), width: 1.5),
+                    color: color.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
                 ),
                 child: Center(
-                  child: Text(emoji,
-                      style: const TextStyle(fontSize: 36)),
+                  child: Text(emoji, style: const TextStyle(fontSize: 36)),
                 ),
               ),
               const SizedBox(width: 14),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(building.displayName,
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2C1A05))),
+                  Text(
+                    building.displayName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2C1A05),
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       _LevelBadge(level: building.level, color: color),
-                      const Text(' → ',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF888780))),
-                      _LevelBadge(
-                          level: building.level + 1, color: color),
+                      const Text(
+                        ' → ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF888780),
+                        ),
+                      ),
+                      _LevelBadge(level: building.level + 1, color: color),
                     ],
                   ),
                 ],
@@ -812,13 +855,15 @@ class _UpgradeSheet extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  width: 0.5),
+                color: Colors.black.withValues(alpha: 0.06),
+                width: 0.5,
+              ),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2)),
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             child: Column(
@@ -833,10 +878,10 @@ class _UpgradeSheet extends StatelessWidget {
                       have: settlement.wood,
                     ),
                     Container(
-                        width: 1,
-                        height: 36,
-                        color: Colors.black
-                            .withValues(alpha: 0.06)),
+                      width: 1,
+                      height: 36,
+                      color: Colors.black.withValues(alpha: 0.06),
+                    ),
                     _CostItem(
                       icon: '⚙️',
                       label: 'เหล็ก',
@@ -844,10 +889,10 @@ class _UpgradeSheet extends StatelessWidget {
                       have: settlement.iron,
                     ),
                     Container(
-                        width: 1,
-                        height: 36,
-                        color: Colors.black
-                            .withValues(alpha: 0.06)),
+                      width: 1,
+                      height: 36,
+                      color: Colors.black.withValues(alpha: 0.06),
+                    ),
                     _CostItem(
                       icon: '⏱️',
                       label: 'เวลา',
@@ -868,14 +913,12 @@ class _UpgradeSheet extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    canAfford ? color : Colors.grey[300],
-                foregroundColor:
-                    canAfford ? Colors.white : Colors.grey[600],
-                padding:
-                    const EdgeInsets.symmetric(vertical: 15),
+                backgroundColor: canAfford ? color : Colors.grey[300],
+                foregroundColor: canAfford ? Colors.white : Colors.grey[600],
+                padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 elevation: 0,
               ),
               onPressed: canAfford ? onUpgrade : null,
@@ -884,7 +927,9 @@ class _UpgradeSheet extends StatelessWidget {
                     ? 'อัปเกรด ${building.displayName} $emoji'
                     : 'ทรัพยากรไม่พอ',
                 style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -902,17 +947,19 @@ class _LevelBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text('Lv.$level',
-          style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color)),
+      child: Text(
+        'Lv.$level',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -942,22 +989,23 @@ class _CostItem extends StatelessWidget {
         Text(
           isTime ? (timeStr ?? '$need') : '$need',
           style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: ok
-                  ? const Color(0xFF2C1A05)
-                  : const Color(0xFF993C1D)),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: ok ? const Color(0xFF2C1A05) : const Color(0xFF993C1D),
+          ),
         ),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 10, color: Color(0xFF888780))),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Color(0xFF888780)),
+        ),
         if (!isTime)
-          Text('มี $have',
-              style: TextStyle(
-                  fontSize: 9,
-                  color: ok
-                      ? const Color(0xFF5DCAA5)
-                      : const Color(0xFFF0997B))),
+          Text(
+            'มี $have',
+            style: TextStyle(
+              fontSize: 9,
+              color: ok ? const Color(0xFF5DCAA5) : const Color(0xFFF0997B),
+            ),
+          ),
       ],
     );
   }
@@ -976,9 +1024,19 @@ class _AddBuildingCard extends ConsumerWidget {
   });
 
   static const _buildable = [
-    'sawmill', 'smelter', 'rice_farm', 'distillery',
-    'house', 'tavern', 'shrine', 'barracks',
-    'elephant_camp', 'smithy', 'wall', 'watchtower',
+    'sawmill',
+    'smelter',
+    'rice_farm',
+    'distillery',
+    'house',
+    'tavern',
+    'shrine',
+    'barracks',
+    'elephant_camp',
+    'smithy',
+    'wall',
+    'cannon',
+    'watchtower',
   ];
 
   @override
@@ -992,8 +1050,9 @@ class _AddBuildingCard extends ConsumerWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: Colors.black.withValues(alpha: 0.06),
-              width: 0.5),
+            color: Colors.black.withValues(alpha: 0.06),
+            width: 0.5,
+          ),
         ),
         child: Row(
           children: [
@@ -1005,24 +1064,29 @@ class _AddBuildingCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Center(
-                  child: Text('🏛️',
-                      style: TextStyle(fontSize: 22))),
+                child: Text('🏛️', style: TextStyle(fontSize: 22)),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('ที่ดินเต็มแล้ว',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF3C2810))),
+                  const Text(
+                    'ที่ดินเต็มแล้ว',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F2A2A),
+                    ),
+                  ),
                   Text(
-                      'อัพ Town Hall เพื่อปลดล็อกที่ดินเพิ่ม ($maxSlots slots)',
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF888780))),
+                    'อัพ Town Hall เพื่อปลดล็อกที่ดินเพิ่ม ($maxSlots slots)',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF888780),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1038,13 +1102,13 @@ class _AddBuildingCard extends ConsumerWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFF3C2810).withValues(alpha: 0.06),
-              const Color(0xFF854F0B).withValues(alpha: 0.04),
+              const Color(0xFF0F2A2A).withValues(alpha: 0.06),
+              const Color(0xFF0D9488).withValues(alpha: 0.04),
             ],
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: const Color(0xFF854F0B).withValues(alpha: 0.25),
+            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
             width: 1,
           ),
         ),
@@ -1057,13 +1121,16 @@ class _AddBuildingCard extends ConsumerWidget {
                 color: const Color(0xFF854F0B).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                    color: const Color(0xFF854F0B)
-                        .withValues(alpha: 0.3),
-                    width: 1),
+                  color: const Color(0xFF854F0B).withValues(alpha: 0.3),
+                  width: 1,
+                ),
               ),
               child: const Center(
-                child: Icon(Icons.add_rounded,
-                    color: Color(0xFF854F0B), size: 26),
+                child: Icon(
+                  Icons.add_rounded,
+                  color: Color(0xFF854F0B),
+                  size: 26,
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -1071,31 +1138,38 @@ class _AddBuildingCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('สร้างอาคารใหม่',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF3C2810))),
+                  const Text(
+                    'สร้างอาคารใหม่',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F2A2A),
+                    ),
+                  ),
                   Text(
-                      'ช่องว่าง ${buildings.length}/$maxSlots',
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF888780))),
+                    'ช่องว่าง ${buildings.length}/$maxSlots',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF888780),
+                    ),
+                  ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF3C2810),
+                color: const Color(0xFF0F2A2A),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text('สร้าง',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFFFAC775),
-                      fontWeight: FontWeight.w600)),
+              child: const Text(
+                'สร้าง',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF5EEAD4),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -1108,17 +1182,20 @@ class _AddBuildingCard extends ConsumerWidget {
         .where((b) => b.buildingType != 'house')
         .map((b) => b.buildingType)
         .toSet();
-    final available =
-        _buildable.where((t) => !existing.contains(t)).toList();
+   final hasWall = existing.contains('wall');
+    final available = _buildable
+        .where((t) => !existing.contains(t))
+        .where((t) => t != 'cannon' || hasWall) // cannon ต้องมี wall ก่อน
+        .toList();
 
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              const Text('สร้างอาคารครบทุกประเภทแล้ว'),
+          content: const Text('สร้างอาคารครบทุกประเภทแล้ว'),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -1132,11 +1209,12 @@ class _AddBuildingCard extends ConsumerWidget {
         available: available,
         settlement: settlement,
         onBuild: (type) async {
-          final service =
-              BuildingService(ref.read(gameSupabaseProvider));
+          final service = BuildingService(ref.read(gameSupabaseProvider));
           try {
             await service.constructBuilding(
-                settlement: settlement, buildingType: type);
+              settlement: settlement,
+              buildingType: type,
+            );
             ref.invalidate(buildingsProvider);
             ref.invalidate(settlementProvider);
             if (context.mounted) Navigator.pop(context);
@@ -1148,7 +1226,8 @@ class _AddBuildingCard extends ConsumerWidget {
                   backgroundColor: const Color(0xFF993C1D),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               );
             }
@@ -1172,32 +1251,34 @@ class _BuildSheet extends ConsumerWidget {
   });
 
   static const _costs = {
-    'sawmill':       {'wood': 100, 'iron': 50},
-    'smelter':       {'wood': 150, 'iron': 100},
-    'rice_farm':     {'wood': 80,  'iron': 40},
-    'distillery':    {'wood': 120, 'iron': 80},
-    'house':         {'wood': 50,  'iron': 25},
-    'tavern':        {'wood': 100, 'iron': 60},
-    'shrine':        {'wood': 110, 'iron': 70},
-    'barracks':      {'wood': 200, 'iron': 150},
+    'sawmill': {'wood': 100, 'iron': 50},
+    'smelter': {'wood': 150, 'iron': 100},
+    'rice_farm': {'wood': 80, 'iron': 40},
+    'distillery': {'wood': 120, 'iron': 80},
+    'house': {'wood': 50, 'iron': 25},
+    'tavern': {'wood': 100, 'iron': 60},
+    'shrine': {'wood': 110, 'iron': 70},
+    'barracks': {'wood': 200, 'iron': 150},
     'elephant_camp': {'wood': 250, 'iron': 180},
-    'smithy':        {'wood': 160, 'iron': 120},
+    'smithy': {'wood': 160, 'iron': 120},
     'wall':          {'wood': 180, 'iron': 100},
+    'cannon':        {'wood': 120, 'iron': 160},
     'watchtower':    {'wood': 140, 'iron': 90},
   };
 
   static const _desc = {
-    'sawmill':       'ผลิตไม้ต่อ 5 นาที',
-    'smelter':       'ผลิตเหล็กต่อ 5 นาที',
-    'rice_farm':     'ผลิตข้าวต่อ 5 นาที',
-    'distillery':    'ผลิตสุราต่อ 5 นาที',
-    'house':         'เพิ่มประชากร +5 ต่อ level',
-    'tavern':        'เพิ่มความสุข +2 ต่อ level',
-    'shrine':        'เพิ่มความสุขและ buff',
-    'barracks':      'ปลดล็อกการฝึกทหาร',
+    'sawmill': 'ผลิตไม้ต่อ 5 นาที',
+    'smelter': 'ผลิตเหล็กต่อ 5 นาที',
+    'rice_farm': 'ผลิตข้าวต่อ 5 นาที',
+    'distillery': 'ผลิตสุราต่อ 5 นาที',
+    'house': 'เพิ่มประชากร +5 ต่อ level',
+    'tavern': 'เพิ่มความสุข +2 ต่อ level',
+    'shrine': 'เพิ่มความสุขและ buff',
+    'barracks': 'ปลดล็อกการฝึกทหาร',
     'elephant_camp': 'ปลดล็อกช้างศึก',
-    'smithy':        'เพิ่ม attack power',
-    'wall':          'เพิ่ม defense +30 ต่อ level',
+    'smithy': 'เพิ่ม attack power',
+    'wall':          'เพิ่ม defense +20 ถึง +110 ต่อ level',
+    'cannon':        'ลด attack ศัตรู 5/10/18% (ต้องมีกำแพงก่อน)',
     'watchtower':    'เพิ่ม defense +15 ต่อ level',
   };
 
@@ -1205,15 +1286,15 @@ class _BuildSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF5EFE6),
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(24)),
+        color: Color(0xFFECF4F4),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(
-          20,
-          16,
-          20,
-          MediaQuery.of(context).viewInsets.bottom + 24),
+        20,
+        16,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1230,15 +1311,19 @@ class _BuildSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text('เลือกอาคารที่จะสร้าง',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2C1A05))),
+          const Text(
+            'เลือกอาคารที่จะสร้าง',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2C1A05),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('มีทรัพยากร 🪵${settlement.wood}  ⚙️${settlement.iron}',
-              style: const TextStyle(
-                  fontSize: 12, color: Color(0xFF888780))),
+          Text(
+            'มีทรัพยากร 🪵${settlement.wood}  ⚙️${settlement.iron}',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF888780)),
+          ),
           const SizedBox(height: 14),
           ConstrainedBox(
             constraints: BoxConstraints(
@@ -1247,16 +1332,14 @@ class _BuildSheet extends ConsumerWidget {
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: available.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: 8),
-              itemBuilder: (_, i) =>
-                  _BuildOption(
-                    type: available[i],
-                    cost: _costs[available[i]] ?? {},
-                    desc: _desc[available[i]] ?? '',
-                    settlement: settlement,
-                    onBuild: onBuild,
-                  ),
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, i) => _BuildOption(
+                type: available[i],
+                cost: _costs[available[i]] ?? {},
+                desc: _desc[available[i]] ?? '',
+                settlement: settlement,
+                onBuild: onBuild,
+              ),
             ),
           ),
         ],
@@ -1284,7 +1367,8 @@ class _BuildOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _colorFor(type);
     final emoji = _buildingEmoji[type] ?? '🏠';
-    final canAfford = settlement.wood >= (cost['wood'] ?? 0) &&
+    final canAfford =
+        settlement.wood >= (cost['wood'] ?? 0) &&
         settlement.iron >= (cost['iron'] ?? 0);
 
     return GestureDetector(
@@ -1308,13 +1392,11 @@ class _BuildOption extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: color.withValues(
-                    alpha: canAfford ? 0.12 : 0.05),
+                color: color.withValues(alpha: canAfford ? 0.12 : 0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
-                child: Text(emoji,
-                    style: const TextStyle(fontSize: 24)),
+                child: Text(emoji, style: const TextStyle(fontSize: 24)),
               ),
             ),
             const SizedBox(width: 12),
@@ -1333,28 +1415,31 @@ class _BuildOption extends StatelessWidget {
                       createdAt: DateTime.now(),
                     ).displayName,
                     style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: canAfford
-                            ? const Color(0xFF2C1A05)
-                            : Colors.grey[500]),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: canAfford
+                          ? const Color(0xFF2C1A05)
+                          : Colors.grey[500],
+                    ),
                   ),
-                  Text(desc,
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[500])),
+                  Text(
+                    desc,
+                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       _SmallCost(
-                          icon: '🪵',
-                          need: cost['wood'] ?? 0,
-                          have: settlement.wood),
+                        icon: '🪵',
+                        need: cost['wood'] ?? 0,
+                        have: settlement.wood,
+                      ),
                       const SizedBox(width: 6),
                       _SmallCost(
-                          icon: '⚙️',
-                          need: cost['iron'] ?? 0,
-                          have: settlement.iron),
+                        icon: '⚙️',
+                        need: cost['iron'] ?? 0,
+                        have: settlement.iron,
+                      ),
                     ],
                   ),
                 ],
@@ -1362,22 +1447,18 @@ class _BuildOption extends StatelessWidget {
             ),
             // Build button
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: canAfford
-                    ? color
-                    : Colors.grey[200],
+                color: canAfford ? color : Colors.grey[200],
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 canAfford ? 'สร้าง' : 'ไม่พอ',
                 style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: canAfford
-                        ? Colors.white
-                        : Colors.grey[500]),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: canAfford ? Colors.white : Colors.grey[500],
+                ),
               ),
             ),
           ],
@@ -1390,8 +1471,11 @@ class _BuildOption extends StatelessWidget {
 class _SmallCost extends StatelessWidget {
   final String icon;
   final int need, have;
-  const _SmallCost(
-      {required this.icon, required this.need, required this.have});
+  const _SmallCost({
+    required this.icon,
+    required this.need,
+    required this.have,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1399,11 +1483,10 @@ class _SmallCost extends StatelessWidget {
     return Text(
       '$icon$need',
       style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: ok
-              ? const Color(0xFF5DCAA5)
-              : const Color(0xFF993C1D)),
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        color: ok ? const Color(0xFF5DCAA5) : const Color(0xFF993C1D),
+      ),
     );
   }
 }
@@ -1434,8 +1517,9 @@ class _BuildingSkeleton extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  width: 0.5),
+                color: Colors.black.withValues(alpha: 0.06),
+                width: 0.5,
+              ),
             ),
           ),
         ),

@@ -250,7 +250,10 @@ class _GameUIState extends State<GameUI> {
                         Column(
                           children: [
                             Text("Turn: Player ${state.currentTurn + 1}", style: const TextStyle(color: Colors.yellow, fontSize: 24, fontWeight: FontWeight.bold)),
-                            Text("Wind: ${state.owlEffectActive ? 0 : state.wind.toStringAsFixed(1)}", style: const TextStyle(color: Colors.lightBlueAccent, fontSize: 18)),
+                            const SizedBox(height: 4),
+                            _WindIndicator(
+                              wind: state.owlEffectActive ? 0 : state.wind,
+                            ),
                           ],
                         ),
                         Text("P2 HP: ${state.p2Hp}", style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
@@ -308,6 +311,75 @@ class _GameUIState extends State<GameUI> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _WindIndicator extends StatelessWidget {
+  final double wind;
+  const _WindIndicator({required this.wind});
+
+  static const double _maxWind = 60.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final double clamped = wind.clamp(-_maxWind, _maxWind);
+    final double strength = (clamped.abs() / _maxWind).clamp(0.0, 1.0);
+
+    // ลมบวก = พัดไปทางขวา -> ลูกศรชี้ขวา (มุมบวกตามแกน atan2 คือหมุนตามเข็ม)
+    // ใช้ช่วงมุม -55deg (ชี้ซ้ายเฉียงขึ้น) ถึง +55deg (ชี้ขวาเฉียงขึ้น) จากแนวตั้งฉาก (ชี้ขึ้น = ลมสงบ)
+    final double angle = (clamped / _maxWind) * (pi * 0.55);
+
+    final Color arrowColor = Color.lerp(
+      Colors.lightBlueAccent.withValues(alpha: 0.55),
+      Colors.cyanAccent,
+      strength,
+    )!;
+
+    final double size = 26 + strength * 16; // 26 ~ 42
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: arrowColor.withValues(alpha: 0.45 * strength + 0.1),
+                blurRadius: 14,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 450),
+            curve: Curves.easeOutBack,
+            turns: angle / (2 * pi),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
+              width: size,
+              height: size,
+              child: Icon(
+                Icons.navigation_rounded,
+                size: size,
+                color: arrowColor,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          wind.abs() < 3 ? "นิ่ง" : clamped > 0 ? "พัดขวา" : "พัดซ้าย",
+          style: TextStyle(
+            color: arrowColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

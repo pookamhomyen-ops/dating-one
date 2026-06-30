@@ -49,7 +49,8 @@ class BuildingService {
     required Settlement settlement,
   }) async {
     if (building.isUpgrading) throw Exception('อาคารนี้กำลัง upgrade อยู่แล้ว');
-    if (building.level >= 5) throw Exception('อาคารนี้ถึงระดับสูงสุดแล้ว');
+    final maxLevel = building.buildingType == 'cannon' ? 3 : 5;
+if (building.level >= maxLevel) throw Exception('อาคารนี้ถึงระดับสูงสุดแล้ว');
 
     final cost = building.upgradeCost;
     await _deductResources(settlement, cost);
