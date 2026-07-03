@@ -1,0 +1,6 @@
+วางไฟล์ install.bat และ uninstall.bat ไว้ในโฟลเดอร์เดียวกับ dart_to_md.bat
+ดับเบิลคลิกที่ install.bat — ระบบจะขอสิทธิ์ Administrator ผ่าน UAC ให้อัตโนมัติ ไม่ต้องคลิกขวาเลือก "Run as administrator" เอง
+สคริปต์จะอ่านตำแหน่งโฟลเดอร์ปัจจุบันด้วย %~dp0 แล้วเขียนลง Registry ที่ HKCR\SystemFileAssociations\.dart\shell\... (ไม่แตะ default handler ของ .dart โดยตรง จึงไม่พังของเดิม)
+คลิกขวาไฟล์ .dart ใดๆ จะเห็นเมนู "⚡ Dart to Markdown" ทันที
+
+เมื่อย้ายโฟลเดอร์: แค่รัน install.bat ซ้ำอีกครั้งในตำแหน่งใหม่ ระบบจะเขียนทับค่าเดิมด้วย path ใหม่ให้เองโดยอัตโนมัติ ไม่ต้องลบของเก่าก่อน
