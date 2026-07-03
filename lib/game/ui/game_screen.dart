@@ -214,8 +214,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       for (final march in marches) {
         if (!march.hasArrived) continue;
 
-        if (march.marchType == 'attack') {
-          // ดึงข้อมูลโหนด
+        if (march.marchType == 'attack' && march.targetNodeId != null) {
+          // ดึงข้อมูลโหนด (เฉพาะโจมตีโหนด — PvP ผู้เล่นให้ pg_cron resolve ฝั่ง server แทน)
           final nodeData = await gameClient
               .from('map_nodes')
               .select()

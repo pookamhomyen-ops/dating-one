@@ -1054,68 +1054,109 @@ class _MarchHistoryCard extends StatelessWidget {
   final dynamic march;
   const _MarchHistoryCard({required this.march});
 
+  Map<String, int> _asIntMap(dynamic raw) {
+    if (raw == null) return {};
+    final map = raw as Map;
+    return map.map(
+        (k, v) => MapEntry(k.toString(), (v as num).toInt()));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isVictory = march.loot.isNotEmpty;
-    final lootText = (march.loot as Map<String, int>).entries
-        .map((e) => '${_icon(e.key)}${e.value}').join(' ');
-    final troopsText = (march.troopsSent as Map<String, int>).entries
-        .map((e) => '${e.value}${_troopEmoji(e.key)}').join(' ');
+    try {
+      final loot = _asIntMap(march.loot);
+      final troopsSent = _asIntMap(march.troopsSent);
+      final DateTime arriveAt = march.arriveAt as DateTime;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      final isVictory = loot.isNotEmpty;
+      final lootText =
+          loot.entries.map((e) => '${_icon(e.key)}${e.value}').join(' ');
+      final troopsText = troopsSent.entries
+          .map((e) => '${e.value}${_troopEmoji(e.key)}')
+          .join(' ');
+
+      return ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        border: Border(
-          left: BorderSide(
-            color: isVictory
-                ? const Color(0xFF5DCAA5)
-                : const Color(0xFFF0997B),
-            width: 3,
-          ),
-          top:    BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-          right:  BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-          bottom: BorderSide(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(isVictory ? '🏆' : '💀',
-            style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(isVictory ? 'ชนะ — ได้ $lootText' : 'แพ้ — ไม่ได้ของ',
-                  style: const TextStyle(fontSize: 12)),
-                Text('ส่ง $troopsText • ${_timeAgo(march.arriveAt)}',
-                  style: TextStyle(fontSize: 10, color: Colors.grey[500])),
-              ],
+        child: Container(
+        margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            left: BorderSide(
+              color: isVictory
+                  ? const Color(0xFF5DCAA5)
+                  : const Color(0xFFF0997B),
+              width: 3,
             ),
+            top: BorderSide(
+                color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+            right: BorderSide(
+                color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+            bottom: BorderSide(
+                color: Colors.black.withValues(alpha: 0.06), width: 0.5),
           ),
-        ],
-      ),
-    );
+        ),
+        child: Row(
+          children: [
+            Text(isVictory ? '🏆' : '💀',
+                style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      isVictory
+                          ? 'ชนะ — ได้ $lootText'
+                          : 'แพ้ — ไม่ได้ของ',
+                      style: const TextStyle(fontSize: 12)),
+                  Text('ส่ง $troopsText • ${_timeAgo(arriveAt)}',
+                      style:
+                          TextStyle(fontSize: 10, color: Colors.grey[500])),
+                ],
+              ),
+            ),
+          ],
+        ),
+        ),
+      );
+    } catch (e) {
+      // ถ้ายังพัง จะโชว์ error จริงตรงนี้แทนกล่องขาวว่างๆ
+      return Container(
+        margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.red[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red[200]!),
+        ),
+        child: Text('เกิดข้อผิดพลาด: $e',
+            style: TextStyle(fontSize: 11, color: Colors.red[700])),
+      );
+    }
   }
 
   String _icon(String res) {
-    const m = {'wood':'🪵','iron':'⚙️','rice':'🌾','liquor':'🍶'};
+    const m = {'wood': '🪵', 'iron': '⚙️', 'rice': '🌾', 'liquor': '🍶'};
     return m[res] ?? res;
   }
 
   String _troopEmoji(String type) {
-    const m = {'swordsman':'🗡️','archer':'🏹','spearman':'🪖',
-               'cavalry':'🐴','elephant':'🐘'};
+    const m = {
+      'swordsman': '🗡️',
+      'archer': '🏹',
+      'spearman': '🪖',
+      'cavalry': '🐴',
+      'elephant': '🐘'
+    };
     return m[type] ?? '⚔️';
   }
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
-    if (diff.inHours < 24)   return '${diff.inHours} ชั่วโมงที่แล้ว';
+    if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
     return '${diff.inDays} วันที่แล้ว';
   }
 }
@@ -1533,13 +1574,30 @@ class _MarchHistorySheet extends StatelessWidget {
           ),
           const Divider(height: 1),
           Expanded(
-            child: ListView(
-              controller: controller,
-              padding: const EdgeInsets.all(8),
-              children: marches
-                  .map((m) => _MarchHistoryCard(march: m))
-                  .toList(),
-            ),
+            child: marches.isEmpty
+                ? ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.all(24),
+                    children: [
+                      const SizedBox(height: 40),
+                      Center(
+                        child: Text('📜', style: TextStyle(fontSize: 40)),
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Text('ยังไม่มีประวัติการรบ',
+                          style: TextStyle(
+                            fontSize: 13, color: Colors.grey[500])),
+                      ),
+                    ],
+                  )
+                : ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.all(8),
+                    children: marches
+                        .map((m) => _MarchHistoryCard(march: m))
+                        .toList(),
+                  ),
           ),
         ],
       ),
