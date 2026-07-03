@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_providers.dart';
-import '../models/caravan.dart';
 import '../services/building_service.dart';
 import '../services/troop_service.dart';
 import '../services/march_service.dart';
@@ -44,7 +43,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   void switchTab(int index) {
     setState(() => _currentTab = index);
-    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override

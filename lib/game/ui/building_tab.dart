@@ -44,7 +44,7 @@ const _buildingColor = {
   'watchtower': Color(0xFF8B7B4A),
 };
 
-Color _colorFor(String type) => _buildingColor[type] ?? const Color(0xFF854F0B);
+Color _colorFor(String type) => _buildingColor[type] ?? const Color(0xFF0D9488);
 
 // ────────────────────────────────────────────────────────────────
 class BuildingTab extends ConsumerWidget {
@@ -263,7 +263,7 @@ class _MiniRes extends StatelessWidget {
       '$icon $value',
       style: const TextStyle(
         fontSize: 11,
-        color: Color(0xFFFAEEDA),
+        color: Color(0xFFCCFBF1),
         fontWeight: FontWeight.w500,
       ),
     );
@@ -467,7 +467,7 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
                             'อัปเกรด • ${_fmt(timeLeft)}',
                             style: const TextStyle(
                               fontSize: 10,
-                              color: Color(0xFF993C1D),
+                              color: Color(0xFF0F766E),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -546,7 +546,7 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
           content: Text(
             '🏗️ กำลัง upgrade อยู่ • เหลือ ${t != null ? _fmt(t) : '...'}',
           ),
-          backgroundColor: const Color(0xFF993C1D),
+          backgroundColor: const Color(0xFF0F766E),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -577,7 +577,7 @@ class _BuildingCardState extends ConsumerState<_BuildingCard> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('$e'),
-                  backgroundColor: const Color(0xFF993C1D),
+                  backgroundColor: const Color(0xFF0F766E),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -704,7 +704,7 @@ class _ProdChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5EFE6),
+        color: const Color(0xFFECF4F4),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -991,7 +991,7 @@ class _CostItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: ok ? const Color(0xFF2C1A05) : const Color(0xFF993C1D),
+            color: ok ? const Color(0xFF2C1A05) : const Color(0xFF0F766E),
           ),
         ),
         Text(
@@ -1060,7 +1060,7 @@ class _AddBuildingCard extends ConsumerWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5EFE6),
+                color: const Color(0xFFECF4F4),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Center(
@@ -1118,17 +1118,17 @@ class _AddBuildingCard extends ConsumerWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFF854F0B).withValues(alpha: 0.1),
+                color: const Color(0xFF0D9488).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: const Color(0xFF854F0B).withValues(alpha: 0.3),
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
               child: const Center(
                 child: Icon(
                   Icons.add_rounded,
-                  color: Color(0xFF854F0B),
+                  color: Color(0xFF0D9488),
                   size: 26,
                 ),
               ),
@@ -1223,7 +1223,7 @@ class _AddBuildingCard extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('$e'),
-                  backgroundColor: const Color(0xFF993C1D),
+                  backgroundColor: const Color(0xFF0F766E),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -1332,7 +1332,7 @@ class _BuildSheet extends ConsumerWidget {
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: available.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, i) => _BuildOption(
                 type: available[i],
                 cost: _costs[available[i]] ?? {},
@@ -1485,7 +1485,7 @@ class _SmallCost extends StatelessWidget {
       style: TextStyle(
         fontSize: 10,
         fontWeight: FontWeight.w500,
-        color: ok ? const Color(0xFF5DCAA5) : const Color(0xFF993C1D),
+        color: ok ? const Color(0xFF5DCAA5) : const Color(0xFF0F766E),
       ),
     );
   }
@@ -1503,7 +1503,7 @@ class _BuildingSkeleton extends StatelessWidget {
         Container(
           height: 100,
           decoration: BoxDecoration(
-            color: const Color(0xFFE8DDD0),
+            color: const Color(0xFFD1EAE8),
             borderRadius: BorderRadius.circular(16),
           ),
         ),

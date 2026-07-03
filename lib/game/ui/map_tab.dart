@@ -118,7 +118,7 @@ class _MapViewState extends ConsumerState<_MapView>
                         if (activeMarches.isNotEmpty)
                           AnimatedBuilder(
                             animation: _marchAnimController,
-                            builder: (_, __) => CustomPaint(
+                            builder: (_, _) => CustomPaint(
                               size: Size(mapSize * cellSize, mapSize * cellSize),
                               painter: _MarchLinePainter(
                                 marches: activeMarches,
@@ -517,7 +517,7 @@ class _MarchCountdownListState extends State<_MarchCountdownList> {
   Widget build(BuildContext context) {
     return StreamBuilder<int>(
       stream: _ticker,
-      builder: (_, __) {
+      builder: (_, _) {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -722,7 +722,7 @@ class _PlayerPin extends StatelessWidget {
                 child: photoUrl != null
                     ? Image.network(photoUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        errorBuilder: (_, _, _) =>
                             const Center(child: Text('🏯',
                                 style: TextStyle(fontSize: 20))))
                     : const Center(
@@ -828,7 +828,7 @@ class _PlayerAttackSheetState extends ConsumerState<_PlayerAttackSheet> {
                 child: ClipOval(
                   child: photoUrl != null
                       ? Image.network(photoUrl, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
+                          errorBuilder: (_, _, _) =>
                               const Center(child: Text('🏯')))
                       : const Center(child: Text('🏯',
                           style: TextStyle(fontSize: 20))),
@@ -1045,7 +1045,7 @@ class _MarchHistory extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
@@ -1344,7 +1344,7 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
                 child: ClipOval(
                   child: photoUrl != null
                       ? Image.network(photoUrl, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
+                          errorBuilder: (_, _, _) =>
                               const Center(child: Text('🏯')))
                       : const Center(child: Text('🏯',
                           style: TextStyle(fontSize: 20))),
@@ -1374,7 +1374,7 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
           const Divider(height: 20),
           StreamBuilder<int>(
             stream: _ticker,
-            builder: (_, __) {
+            builder: (_, _) {
               final remaining = widget.march.timeRemaining;
               final total = widget.march.arriveAt
                   .difference(widget.march.departAt)

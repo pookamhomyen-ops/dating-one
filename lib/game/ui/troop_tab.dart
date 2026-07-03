@@ -631,7 +631,7 @@ class _TrainSheetState extends ConsumerState<_TrainSheet> {
   String _fmtDuration(int secondsPer10) {
     // trainingSeconds คือต่อ 10 คน → คำนวณตามจำนวนจริง
     final total = (secondsPer10 * _amount / 10).ceil();
-    if (total < 60) return '${total}วิ';
+    if (total < 60) return '$totalวิ';
     return '${total ~/ 60}นาที ${total % 60}วิ';
   }
 

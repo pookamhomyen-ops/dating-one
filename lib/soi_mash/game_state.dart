@@ -93,8 +93,11 @@ class GameState extends ChangeNotifier {
     AnimalType currentAnimal = currentTurn == 0 ? p1Animal : p2Animal;
     
     if (isSpecial) {
-      if (currentTurn == 0) p1Cooldown = 3; // 2 turns cooldown + 1 active
-      else p2Cooldown = 3;
+      if (currentTurn == 0) {
+        p1Cooldown = 3; // 2 turns cooldown + 1 active
+      } else {
+        p2Cooldown = 3;
+      }
       
       if (currentAnimal == AnimalType.owl) {
         owlEffectActive = true;

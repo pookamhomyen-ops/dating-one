@@ -133,7 +133,7 @@ class _ProfileSetupStep1ScreenState extends State<ProfileSetupStep1Screen> {
                   Expanded(
                     flex: 2,
                     child: DropdownButtonFormField<Gender>(
-                      value: _gender,
+                      initialValue: _gender,
                       decoration: const InputDecoration(labelText: 'เพศ'),
                       items: Gender.values
                           .map((g) => DropdownMenuItem(value: g, child: Text(g.labelTh)))

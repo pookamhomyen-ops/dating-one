@@ -401,7 +401,7 @@ class _AnimatedInterestChipState extends State<_AnimatedInterestChip>
       child: ChoiceChip(
         label: Text(widget.label),
         selected: widget.isSelected,
-        selectedColor: AppColors.brandPink.withOpacity(0.15),
+        selectedColor: AppColors.brandPink.withValues(alpha: 0.15),
         checkmarkColor: AppColors.brandPink,
         labelStyle: TextStyle(
           color: widget.isSelected ? AppColors.brandPink : Colors.black87,

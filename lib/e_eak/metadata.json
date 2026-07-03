@@ -1,0 +1,6 @@
+{
+  "name": "E-eak Kart Battle Arena",
+  "description": "มินิเกมแข่งรถต่อสู้มุมมองเฉียง สไตล์คาร์ทแบทเทิล ขับเคลื่อนด้วยระบบฟิสิกส์ บอทอัจฉริยะ และระบบไอเทมสกิลแบบดุดันสะใจ",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

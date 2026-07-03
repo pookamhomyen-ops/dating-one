@@ -35,9 +35,8 @@ class MarchService {
         .insert({
           'settlement_id': settlement.id,
           'march_type': 'attack',
-          if (targetNodeId != null) 'target_node_id': targetNodeId,
-          if (targetSettlementId != null)
-            'target_settlement_id': targetSettlementId,
+          'target_node_id': ?targetNodeId,
+          'target_settlement_id': ?targetSettlementId,
           'troops_sent': troops,
           'depart_at': now.toIso8601String(),
           'arrive_at': arriveAt.toIso8601String(),

@@ -4,7 +4,7 @@ class WallComponent extends StatelessWidget {
   final double width;
   final double height;
   
-  const WallComponent({Key? key, required this.width, required this.height}) : super(key: key);
+  const WallComponent({super.key, required this.width, required this.height});
 
   @override
   Widget build(BuildContext context) {

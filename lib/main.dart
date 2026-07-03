@@ -8,6 +8,7 @@ import 'screens/profile/profile_setup_screen.dart';
 import 'package:dating_one/soi_mash/game_ui.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,7 @@ Future<void> main() async {
   ),
 );
 
-  runApp(const DatingOneApp());
+  runApp(const ProviderScope(child: DatingOneApp()));
 }
 
 class DatingOneApp extends StatelessWidget {

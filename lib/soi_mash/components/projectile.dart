@@ -4,7 +4,7 @@ import 'package:dating_one/soi_mash/game_state.dart';
 class ProjectileComponent extends StatelessWidget {
   final Projectile projectile;
 
-  const ProjectileComponent({Key? key, required this.projectile}) : super(key: key);
+  const ProjectileComponent({super.key, required this.projectile});
 
   @override
   Widget build(BuildContext context) {

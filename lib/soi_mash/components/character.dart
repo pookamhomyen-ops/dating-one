@@ -8,12 +8,12 @@ class CharacterComponent extends StatelessWidget {
   final bool isTurn;
 
   const CharacterComponent({
-    Key? key,
+    super.key,
     required this.animalType,
     required this.hp,
     this.isFlipped = false,
     this.isTurn = false,
-  }) : super(key: key);
+  });
 
   IconData _getIcon() {
     switch (animalType) {

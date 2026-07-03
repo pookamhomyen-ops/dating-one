@@ -6,7 +6,7 @@ import 'package:dating_one/soi_mash/components/character.dart';
 import 'package:dating_one/soi_mash/components/projectile.dart';
 
 class GameUI extends StatefulWidget {
-  const GameUI({Key? key}) : super(key: key);
+  const GameUI({super.key});
 
   @override
   State<GameUI> createState() => _GameUIState();

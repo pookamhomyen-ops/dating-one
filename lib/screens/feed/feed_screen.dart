@@ -5,7 +5,6 @@ import '../../models/feed_post.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/avatar_image.dart';
-import '../../widgets/network_image_box.dart';
 import '../../widgets/soulive_header.dart';
 import 'create_post_sheet.dart';
 
