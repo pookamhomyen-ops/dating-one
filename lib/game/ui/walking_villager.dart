@@ -25,7 +25,7 @@ class _SheetInfo {
 
 /// NPC เดินตกแต่งฉาก settlement — ไม่ผูกกับ DB/gameplay ใดๆ
 /// เดินจากอาคาร "ซ้ายบนสุด" ไป "ขวาล่างสุด" (คำนวณใหม่ทุกรอบ เผื่อผู้เล่นย้ายตึก)
-/// หลบตึกที่ขวางเส้นทาง แล้วสลับทิศไป-กลับทุกรอบ
+/// หลบตึกตามขนาด grid จริง (3 cols x 2 rows, anchor = กลางล่าง), หยุดที่ขอบอาคารก่อนหาย
 class WalkingVillager extends StatefulWidget {
   final Map<String, Offset> buildingPositions; // fractional (dx,dy) 0..1 ของจอ
 
@@ -55,12 +55,22 @@ class _WalkingVillagerState extends State<WalkingVillager>
     validFrames: 34, // เฟรม 34-35 เป็นช่องว่างเปล่า ไม่ใช้
   );
 
+  // ── ระยะ/ขนาดอาคารจริง (อิงจาก arrange_buildings_view.dart) ──
+  // grid 20x20, มุม diamond: vTop(0.503,0.066) vRight(0.992,0.444) vBottom(0.519,0.860) vLeft(0.026,0.324)
+  // อาคาร 1 หลัง ยึด 3 cols x 2 rows, anchor = กลางล่างของพื้นที่นั้น
+  static const double _gridCellW = 0.0483; // (vRight.dx-vLeft.dx)/20 โดยประมาณ
+  static const double _gridCellH = 0.0397; // (vBottom.dy-vTop.dy)/20 โดยประมาณ
+  static const double _buildingHalfWidth = (3 * _gridCellW) / 2; // ~0.0725
+  static const double _buildingHeight = 2 * _gridCellH; // ~0.0794
+  static const double _obstacleCenterYOffset = _buildingHeight / 2; // เลื่อนจุดเช็คชนขึ้นจาก anchor (bottom) ไปกลางอาคารจริง
+  static const double _obstacleRadius = 0.11; // รัศมีครอบคลุมอาคาร (คำนวณจาก halfWidth/height) + กันชน
+
   // ── ปรับจูนได้ ──
-  static const double _displaySize = 64;       // ขนาดตัวละครที่แสดงบนแผนที่
-  static const double _obstacleMargin = 0.06;  // ระยะหลบตึก (fraction ของจอ)
-  static const int _msPerFractionUnit = 15000; // ความเร็วเดิน: ms ต่อระยะทาง 1.0 (เต็มจอ)
+  static const double _displaySize = 44;       // ขนาดตัวละครที่แสดงบนแผนที่ (ลดจาก 64)
+  static const double _arrivalOffset = 0.055;  // ระยะหยุด/โผล่ ก่อนถึงศูนย์กลางอาคารต้นทาง-ปลายทาง
+  static const int _msPerFractionUnit = 35000; // ความเร็วเดิน: ms ต่อระยะทาง 1.0 (เต็มจอ)
   static const Duration _restDuration = Duration(seconds: 10); // TODO: กลับเป็น 5 นาทีหลังทดสอบเสร็จ
-  static const Duration _frameInterval = Duration(milliseconds: 110);
+  static const Duration _gaitCycleDuration = Duration(milliseconds: 1400); // เวลาเดินครบ 1 รอบก้าว เท่ากันทั้ง 2 sheet
 
   bool _visible = false;
   Offset _currentPos = Offset.zero;
@@ -112,14 +122,34 @@ class _WalkingVillagerState extends State<WalkingVillager>
     final end = _reverse ? topLeft : bottomRight;
     final obstacles = positions.where((p) => p != start && p != end).toList();
 
-    _path = _buildPath(start, end, obstacles);
+    final rawPath = _buildPath(start, end, obstacles);
+
+    // ปรับจุดเริ่ม/จบให้ "โผล่จากขอบอาคาร" และ "หยุดที่ขอบอาคาร" แทนการอยู่กลางอาคารเป๊ะๆ
+    if (rawPath.length >= 2) {
+      rawPath[0] = _offsetFromCenter(rawPath.first, rawPath[1], _arrivalOffset);
+      rawPath[rawPath.length - 1] = _offsetFromCenter(
+          rawPath.last, rawPath[rawPath.length - 2], _arrivalOffset);
+    }
+
+    _path = rawPath;
     _segmentIndex = 0;
-    _currentPos = start;
+    _currentPos = _path.first;
 
     setState(() => _visible = true);
     _walkNextSegment();
   }
 
+  /// เลื่อนจุด center ออกไปทาง towards เป็นระยะ dist (ใช้ทำให้ตัวละครโผล่/หยุดที่ขอบอาคาร)
+  Offset _offsetFromCenter(Offset center, Offset towards, double dist) {
+    final delta = towards - center;
+    final len = delta.distance;
+    if (len <= dist || len == 0) return center;
+    final unit = Offset(delta.dx / len, delta.dy / len);
+    return center + unit * dist;
+  }
+
+  /// แทรก waypoint อ้อมตึกที่ขวางเส้นทางตรงระหว่าง start -> end
+  /// ใช้จุดศูนย์กลางอาคารจริง (เลื่อนขึ้นจาก anchor) + รัศมีตามขนาดอาคารจริง (3x2 grid)
   List<Offset> _buildPath(Offset start, Offset end, List<Offset> obstacles) {
     final dir = end - start;
     final len = dir.distance;
@@ -129,14 +159,15 @@ class _WalkingVillagerState extends State<WalkingVillager>
 
     final blockers = <MapEntry<double, Offset>>[];
     for (final ob in obstacles) {
-      final toOb = ob - start;
+      final obCenter = Offset(ob.dx, ob.dy - _obstacleCenterYOffset);
+      final toOb = obCenter - start;
       final t = toOb.dx * unit.dx + toOb.dy * unit.dy;
       if (t <= 0.02 || t >= len - 0.02) continue;
       final perp = toOb.dx * normal.dx + toOb.dy * normal.dy;
-      if (perp.abs() < _obstacleMargin) {
+      if (perp.abs() < _obstacleRadius) {
         final basePoint = start + unit * t;
         final side = perp >= 0 ? 1 : -1;
-        final detour = basePoint + normal * (side * _obstacleMargin * 1.4);
+        final detour = basePoint + normal * (side * _obstacleRadius * 1.4);
         blockers.add(MapEntry(t, detour));
       }
     }
@@ -186,9 +217,15 @@ class _WalkingVillagerState extends State<WalkingVillager>
     });
   }
 
+  /// interval ต่อเฟรม คำนวณจากจำนวนเฟรมของ sheet ปัจจุบัน หาร _gaitCycleDuration
+  /// ทำให้ทั้ง 2 sheet เดินครบ 1 รอบก้าวในเวลาเท่ากันเสมอ (ขาไป-ขากลับจังหวะเท่ากัน)
   void _startFrameLoop() {
     _frameTimer?.cancel();
-    _frameTimer = Timer.periodic(_frameInterval, (_) {
+    final interval = Duration(
+      milliseconds:
+          (_gaitCycleDuration.inMilliseconds / _currentSheet.totalFrames).round(),
+    );
+    _frameTimer = Timer.periodic(interval, (_) {
       if (!mounted) return;
       setState(() => _frameIndex = (_frameIndex + 1) % _currentSheet.totalFrames);
     });

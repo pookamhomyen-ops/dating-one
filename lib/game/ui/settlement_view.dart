@@ -5,7 +5,7 @@ import '../providers/game_providers.dart';
 import '../models/building.dart';
 import '../models/settlement.dart';
 import '../services/building_service.dart';
-import 'arrange_buildings_view.dart';
+import 'arrange_mode_overlay.dart';
 import '../models/quest.dart';
 import 'walking_villager.dart';
 
@@ -56,6 +56,8 @@ class _SettlementScene extends ConsumerStatefulWidget {
 
 class _SettlementSceneState extends ConsumerState<_SettlementScene> {
   bool _showNames = true;
+  bool _isArranging = false;
+  bool _showGrid = false;
 
   // ขอบเขตพื้นที่ (fraction) สำหรับแปลง grid <-> offset
   static const Offset _vTop    = Offset(0.503, 0.066);
@@ -176,24 +178,27 @@ void _showQuestSheet(BuildContext context) {
               settlement: widget.settlement,
               showNames: _showNames,
               onToggleNames: () => setState(() => _showNames = !_showNames),
+              showGrid: _showGrid,
+              onToggleGrid: () => setState(() => _showGrid = !_showGrid),
             ),
           ),
         ),
-        ...widget.buildings.map((b) {
-          final pos = positionsMap[b.id];
-          if (pos == null) return const SizedBox.shrink();
-          final imagePath = _getImagePath(b);
-          return _BuildingIcon(
-            building: b,
-            imagePath: imagePath.isNotEmpty ? imagePath : null,
-            emoji: _emoji[b.buildingType] ?? '🏛️',
-            position: pos,
-            settlement: widget.settlement,
-            onSwitchTab: widget.onSwitchTab,
-            showName: _showNames,
-          );
-        }),
-        WalkingVillager(buildingPositions: positionsMap),
+        if (!_isArranging)
+          ...widget.buildings.map((b) {
+            final pos = positionsMap[b.id];
+            if (pos == null) return const SizedBox.shrink();
+            final imagePath = _getImagePath(b);
+            return _BuildingIcon(
+              building: b,
+              imagePath: imagePath.isNotEmpty ? imagePath : null,
+              emoji: _emoji[b.buildingType] ?? '🏛️',
+              position: pos,
+              settlement: widget.settlement,
+              onSwitchTab: widget.onSwitchTab,
+              showName: _showNames,
+            );
+          }),
+        if (!_isArranging) WalkingVillager(buildingPositions: positionsMap),
         Positioned(
           top: 0, left: 0,
           child: SafeArea(
@@ -224,26 +229,21 @@ Positioned(
       FloatingActionButton.small(
         heroTag: 'arrangeBtn',
         backgroundColor: const Color(0xFF0D9488),
-        onPressed: () {
-          final container = ProviderScope.containerOf(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UncontrolledProviderScope(
-                container: container,
-                child: ArrangeBuildingsView(
-                  settlement: widget.settlement,
-                  buildings: widget.buildings,
-                ),
-              ),
-            ),
-          );
-        },
+        onPressed: () => setState(() => _isArranging = true),
         child: const Icon(Icons.edit, color: Colors.white, size: 20),
       ),
     ],
   ),
 ),
+        if (_isArranging)
+          Positioned.fill(
+            child: ArrangeModeOverlay(
+              settlement: widget.settlement,
+              buildings: widget.buildings,
+              showGrid: _showGrid,
+              onExit: () => setState(() => _isArranging = false),
+            ),
+          ),
       ],
     );
   }
@@ -301,10 +301,14 @@ class _TopBar extends ConsumerWidget {
   final Settlement settlement;
   final bool showNames;
   final VoidCallback onToggleNames;
+  final bool showGrid;
+  final VoidCallback onToggleGrid;
   const _TopBar({
     required this.settlement,
     required this.showNames,
     required this.onToggleNames,
+    required this.showGrid,
+    required this.onToggleGrid,
   });
 
   @override
@@ -326,21 +330,14 @@ class _TopBar extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              Text(settlement.name,
-                style: const TextStyle(
-                  color: Color(0xFF5EEAD4),
-                  fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0D9488).withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text('🏛️ Lv.$thLevel',
-                  style: const TextStyle(color: Color(0xFF5EEAD4), fontSize: 10)),
+              Flexible(
+                child: Text(settlement.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF5EEAD4),
+                    fontSize: 13, fontWeight: FontWeight.w600)),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               _ResChip(icon: '🪵', value: settlement.wood),
               const SizedBox(width: 4),
               _ResChip(icon: '⚙️', value: settlement.iron),
@@ -354,22 +351,45 @@ class _TopBar extends ConsumerWidget {
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.only(right: 12),
-          child: GestureDetector(
-            onTap: onToggleNames,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: onToggleGrid,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    showGrid ? Icons.grid_on : Icons.grid_off,
+                    color: showGrid
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFFF9800),
+                    size: 16,
+                  ),
+                ),
               ),
-              child: Icon(
-                showNames ? Icons.visibility : Icons.visibility_off,
-                color: showNames
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFFFF9800),
-                size: 16,
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onToggleNames,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    showNames ? Icons.visibility : Icons.visibility_off,
+                    color: showNames
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFFF9800),
+                    size: 16,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ],
