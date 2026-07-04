@@ -7,6 +7,7 @@ import '../models/settlement.dart';
 import '../services/building_service.dart';
 import 'arrange_buildings_view.dart';
 import '../models/quest.dart';
+import 'walking_villager.dart';
 
 class SettlementView extends ConsumerWidget {
   final void Function(int)? onSwitchTab;
@@ -39,7 +40,7 @@ class SettlementView extends ConsumerWidget {
 }
 
 // ─── Scene หลัก ───────────────────────────────────────────────────────────────
-class _SettlementScene extends ConsumerWidget {
+class _SettlementScene extends ConsumerStatefulWidget {
   final Settlement settlement;
   final List<Building> buildings;
   final void Function(int)? onSwitchTab;
@@ -49,18 +50,28 @@ class _SettlementScene extends ConsumerWidget {
     this.onSwitchTab,
   });
 
+  @override
+  ConsumerState<_SettlementScene> createState() => _SettlementSceneState();
+}
+
+class _SettlementSceneState extends ConsumerState<_SettlementScene> {
+  bool _showNames = true;
+
   // ขอบเขตพื้นที่ (fraction) สำหรับแปลง grid <-> offset
-  static const double _left = 0.10;
-  static const double _right = 0.90;
-  static const double _top = 0.20;
-  static const double _bottom = 0.90;
+  static const Offset _vTop    = Offset(0.503, 0.066);
+  static const Offset _vRight  = Offset(0.992, 0.444);
+  static const Offset _vBottom = Offset(0.519, 0.860);
+  static const Offset _vLeft   = Offset(0.026, 0.324);
   static const int _gridSize = 20;
 
   static Offset _gridToOffset(int x, int y) {
-    return Offset(
-      _left + (x / _gridSize) * (_right - _left),
-      _top + (y / _gridSize) * (_bottom - _top),
-    );
+    final u = x / _gridSize;
+    final v = y / _gridSize;
+    final dx = (1 - u) * (1 - v) * _vTop.dx + u * (1 - v) * _vRight.dx
+             + (1 - u) * v * _vLeft.dx      + u * v * _vBottom.dx;
+    final dy = (1 - u) * (1 - v) * _vTop.dy + u * (1 - v) * _vRight.dy
+             + (1 - u) * v * _vLeft.dy      + u * v * _vBottom.dy;
+    return Offset(dx, dy);
   }
 
   // hardcoded fallback
@@ -121,19 +132,19 @@ void _showQuestSheet(BuildContext context) {
       ),
       builder: (_) => UncontrolledProviderScope(
         container: container,
-        child: _QuestSheet(settlement: settlement),
+        child: _QuestSheet(settlement: widget.settlement),
       ),
     );
   }
   // แทนที่ build method ของ _SettlementScene ด้วยโค้ดนี้
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final positionsAsync = ref.watch(buildingPositionsProvider);
     final positionsMap = <String, Offset>{};
 
     positionsAsync.maybeWhen(
       data: (posList) {
-        for (var b in buildings) {
+        for (var b in widget.buildings) {
           final found = posList.firstWhereOrNull((p) => p.buildingId == b.id);
           if (found != null) {
             positionsMap[b.id] = _gridToOffset(found.posX, found.posY);
@@ -146,7 +157,7 @@ void _showQuestSheet(BuildContext context) {
         }
       },
       orElse: () {
-        for (var b in buildings) {
+        for (var b in widget.buildings) {
           final defaultOffset = _positions[b.buildingType];
           if (defaultOffset != null) {
             positionsMap[b.id] = defaultOffset;
@@ -161,10 +172,14 @@ void _showQuestSheet(BuildContext context) {
         Positioned(
           top: 0, left: 0, right: 0,
           child: SafeArea(
-            child: _TopBar(settlement: settlement),
+            child: _TopBar(
+              settlement: widget.settlement,
+              showNames: _showNames,
+              onToggleNames: () => setState(() => _showNames = !_showNames),
+            ),
           ),
         ),
-        ...buildings.map((b) {
+        ...widget.buildings.map((b) {
           final pos = positionsMap[b.id];
           if (pos == null) return const SizedBox.shrink();
           final imagePath = _getImagePath(b);
@@ -173,10 +188,12 @@ void _showQuestSheet(BuildContext context) {
             imagePath: imagePath.isNotEmpty ? imagePath : null,
             emoji: _emoji[b.buildingType] ?? '🏛️',
             position: pos,
-            settlement: settlement,
-            onSwitchTab: onSwitchTab,
+            settlement: widget.settlement,
+            onSwitchTab: widget.onSwitchTab,
+            showName: _showNames,
           );
         }),
+        WalkingVillager(buildingPositions: positionsMap),
         Positioned(
           top: 0, left: 0,
           child: SafeArea(
@@ -185,7 +202,7 @@ void _showQuestSheet(BuildContext context) {
                 color: Color(0xFF5EEAD4), size: 20),
               onPressed: () {
                 Navigator.pop(context);
-                onSwitchTab?.call(_getTabIndex());
+                widget.onSwitchTab?.call(_getTabIndex());
               },
             ),
           ),
@@ -215,8 +232,8 @@ Positioned(
               builder: (context) => UncontrolledProviderScope(
                 container: container,
                 child: ArrangeBuildingsView(
-                  settlement: settlement,
-                  buildings: buildings,
+                  settlement: widget.settlement,
+                  buildings: widget.buildings,
                 ),
               ),
             ),
@@ -282,47 +299,80 @@ class _AyutthayaBackground extends ConsumerWidget {
 // ─── Top Bar ──────────────────────────────────────────────────────────────────
 class _TopBar extends ConsumerWidget {
   final Settlement settlement;
-  const _TopBar({required this.settlement});
+  final bool showNames;
+  final VoidCallback onToggleNames;
+  const _TopBar({
+    required this.settlement,
+    required this.showNames,
+    required this.onToggleNames,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final thLevel   = ref.watch(townHallLevelProvider);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(44, 8, 12, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFF8B6914).withValues(alpha: 0.5), width: 0.5),
-      ),
-      child: Row(
-        children: [
-          Text(settlement.name,
-            style: const TextStyle(
-              color: Color(0xFF5EEAD4),
-              fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D9488).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text('🏛️ Lv.$thLevel',
-              style: const TextStyle(color: Color(0xFF5EEAD4), fontSize: 10)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(44, 8, 12, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: const Color(0xFF8B6914).withValues(alpha: 0.5), width: 0.5),
           ),
-          const Spacer(),
-          _ResChip(icon: '🪵', value: settlement.wood),
-          const SizedBox(width: 4),
-          _ResChip(icon: '⚙️', value: settlement.iron),
-          const SizedBox(width: 4),
-          _ResChip(icon: '🌾', value: settlement.rice),
-          const SizedBox(width: 4),
-          _ResChip(icon: '🍶', value: settlement.liquor),
-        ],
-      ),
+          child: Row(
+            children: [
+              Text(settlement.name,
+                style: const TextStyle(
+                  color: Color(0xFF5EEAD4),
+                  fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('🏛️ Lv.$thLevel',
+                  style: const TextStyle(color: Color(0xFF5EEAD4), fontSize: 10)),
+              ),
+              const Spacer(),
+              _ResChip(icon: '🪵', value: settlement.wood),
+              const SizedBox(width: 4),
+              _ResChip(icon: '⚙️', value: settlement.iron),
+              const SizedBox(width: 4),
+              _ResChip(icon: '🌾', value: settlement.rice),
+              const SizedBox(width: 4),
+              _ResChip(icon: '🍶', value: settlement.liquor),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: GestureDetector(
+            onTap: onToggleNames,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                showNames ? Icons.visibility : Icons.visibility_off,
+                color: showNames
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFFFF9800),
+                size: 16,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -347,6 +397,7 @@ class _BuildingIcon extends StatelessWidget {
   final Offset position;
   final Settlement settlement;
   final void Function(int)? onSwitchTab;
+  final bool showName;
 
   const _BuildingIcon({
     required this.building,
@@ -355,6 +406,7 @@ class _BuildingIcon extends StatelessWidget {
     required this.position,
     required this.settlement,
     this.onSwitchTab,
+    required this.showName,
   });
 
   @override
@@ -371,92 +423,37 @@ class _BuildingIcon extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // อาคาร
-                Stack(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        imagePath != null
-                            ? Image.asset(
-                                imagePath!,
-                                width: 100, height: 100,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, e, s) => Text(emoji,
-                                  style: const TextStyle(fontSize: 36)),
-                              )
-                            : Text(emoji,
-                                style: const TextStyle(fontSize: 36)),
-                        if (building.isUpgrading)
-                          Positioned(
-                            bottom: 0, left: 0, right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0997B).withValues(alpha: 0.85),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                building.upgradeTimeRemaining != null
-                                    ? _fmt(building.upgradeTimeRemaining!)
-                                    : '',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 8, color: Colors.white,
-                                  fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    // countdown badge
-                    if (building.isUpgrading &&
-                        building.upgradeTimeRemaining != null)
-                      Positioned(
-                        bottom: 0, left: 0, right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0997B).withValues(alpha: 0.9),
-                            borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(10)),
-                          ),
-                          child: Text(
-                            _fmt(building.upgradeTimeRemaining!),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 8, color: Colors.white,
-                              fontWeight: FontWeight.w600),
-                          ),
-                        ),
+                imagePath != null
+                    ? Image.asset(
+                        imagePath!,
+                        width: 100, height: 100,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, e, s) => Text(emoji,
+                          style: const TextStyle(fontSize: 36)),
+                      )
+                    : Text(emoji,
+                        style: const TextStyle(fontSize: 36)),
+                if (showName)
+                  Transform.translate(
+                    offset: const Offset(0, -18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                  ],
-                ),
-                Transform.translate(
-                  offset: const Offset(0, -18),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${building.displayName} ${building.level}',
-                      style: const TextStyle(
-                        color: Color(0xFFFAC775), fontSize: 8),
+                      child: Text(
+                        '${building.displayName} ${building.level}',
+                        style: const TextStyle(
+                          color: Color(0xFFFAC775), fontSize: 8),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
         );
-  }
-
-  String _fmt(Duration d) {
-    if (d.inHours > 0)   return '${d.inHours}ชม.${d.inMinutes.remainder(60)}น.';
-    if (d.inMinutes > 0) return '${d.inMinutes}น.${d.inSeconds.remainder(60)}ว.';
-    return '${d.inSeconds}ว.';
   }
 
   void _showBuildingPopup(BuildContext context) {

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dating One - Admin Panel</title>
+    <!-- Google Fonts: Outfit (Brand/Headings) & Inter (UI/Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-heart">💖</span>
+                <div class="brand-text">
+                    <h1>Dating One</h1>
+                    <p>ระบบควบคุม & จัดการสมาชิก</p>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-simple"></i>
+                    <span>แดชบอร์ด</span>
+                </button>
+                <button class="nav-item" data-tab="members">
+                    <i class="fa-solid fa-users"></i>
+                    <span>จัดการสมาชิก</span>
+                </button>
+                <button class="nav-item" data-tab="reports">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>การรายงาน</span>
+                    <span class="badge badge-danger" id="badge-reports-count" style="display: none;">0</span>
+                </button>
+                <button class="nav-item" data-tab="posts">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>จัดการฟีด & โพสต์</span>
+                </button>
+                <button class="nav-item" data-tab="interests">
+                    <i class="fa-solid fa-tags"></i>
+                    <span>จัดการแท็กความสนใจ</span>
+                </button>
+                <button class="nav-item" data-tab="settlements">
+                    <i class="fa-solid fa-chess-rook"></i>
+                    <span>จัดการนิคม (มินิเกม)</span>
+                </button>
+                <button class="nav-item nav-item-settings" data-tab="settings">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>ตั้งค่าการเชื่อมต่อ</span>
+                </button>
+            </nav>
+
+            <div class="connection-status-panel">
+                <div class="status-indicator" id="db-status-dot"></div>
+                <span id="db-status-text">กำลังตรวจสอบการเชื่อมต่อ...</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Content Header -->
+            <header class="content-header">
+                <div class="header-info">
+                    <h2 id="current-tab-title">แดชบอร์ด</h2>
+                    <p id="current-tab-desc">ดูข้อมูลภาพรวมและสถิติการใช้งานระบบ Dating One</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="btn-global-refresh">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>รีเฟรชข้อมูล</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Alerts & Toasts Container -->
+            <div id="toast-container" class="toast-container"></div>
+
+            <!-- TAB CONTENT VIEWS -->
+            
+            <!-- 1. DASHBOARD VIEW -->
+            <section class="tab-content active" id="tab-dashboard">
+                <!-- Statistics Card Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-primary"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-info">
+                            <h3>สมาชิกทั้งหมด</h3>
+                            <p class="stat-value" id="stat-total-members">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-success"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="stat-info">
+                            <h3>ยืนยันโปรไฟล์แล้ว</h3>
+                            <p class="stat-value" id="stat-verified-members">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-info"><i class="fa-solid fa-wifi"></i></div>
+                        <div class="stat-info">
+                            <h3>กำลังออนไลน์</h3>
+                            <p class="stat-value" id="stat-online-members">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-pink"><i class="fa-solid fa-heart"></i></div>
+                        <div class="stat-info">
+                            <h3>คู่แมตช์ทั้งหมด</h3>
+                            <p class="stat-value" id="stat-total-matches">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="stat-info">
+                            <h3>รายงานค้างพิจารณา</h3>
+                            <p class="stat-value" id="stat-pending-reports">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-purple"><i class="fa-solid fa-message"></i></div>
+                        <div class="stat-info">
+                            <h3>โพสต์ทั้งหมด</h3>
+                            <p class="stat-value" id="stat-total-posts">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities Section -->
+                <div class="dashboard-sections">
+                    <div class="card-section">
+                        <div class="section-header">
+                            <h3><i class="fa-solid fa-user-plus text-primary"></i> สมาชิกสมัครใหม่ล่าสุด</h3>
+                            <button class="btn btn-link btn-view-all-members">ดูทั้งหมด</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="table-recent-members">
+                                <thead>
+                                    <tr>
+                                        <th>รูป</th>
+                                        <th>ชื่อโปรไฟล์</th>
+                                        <th>เพศ</th>
+                                        <th>อายุ</th>
+                                        <th>ที่อยู่</th>
+                                        <th>วันที่สมัคร</th>
+                                        <th>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="7" class="text-center">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-header">
+                            <h3><i class="fa-solid fa-flag text-danger"></i> รายงานที่รอดำเนินการ</h3>
+                            <button class="btn btn-link btn-view-all-reports">ดูทั้งหมด</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="table-recent-reports">
+                                <thead>
+                                    <tr>
+                                        <th>ผู้รายงาน</th>
+                                        <th>ผู้ถูกรายงาน</th>
+                                        <th>เหตุผล</th>
+                                        <th>วันที่แจ้ง</th>
+                                        <th>สถานะ</th>
+                                        <th>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="6" class="text-center">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. MEMBERS VIEW -->
+            <section class="tab-content" id="tab-members">
+                <!-- Search and Filters Panel -->
+                <div class="filter-card">
+                    <div class="filter-row">
+                        <div class="form-group flex-2">
+                            <label for="search-member"><i class="fa-solid fa-magnifying-glass"></i> ค้นหาสมาชิก</label>
+                            <input type="text" id="search-member" placeholder="ค้นหาด้วยชื่อ หรือ ID...">
+                        </div>
+                        <div class="form-group">
+                            <label for="filter-gender">เพศ</label>
+                            <select id="filter-gender">
+                                <option value="all">ทั้งหมด</option>
+                                <option value="female">หญิง (Female)</option>
+                                <option value="male">ชาย (Male)</option>
+                                <option value="other">อื่นๆ (Other)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="filter-status">สถานะ</label>
+                            <select id="filter-status">
+                                <option value="all">ทั้งหมด</option>
+                                <option value="verified">ยืนยันโปรไฟล์แล้ว</option>
+                                <option value="unverified">ยังไม่ยืนยันโปรไฟล์</option>
+                                <option value="online">กำลังออนไลน์</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="filter-province">จังหวัด</label>
+                            <input type="text" id="filter-province" placeholder="กรองตามจังหวัด...">
+                        </div>
+                    </div>
+                    <div class="filter-row align-items-center">
+                        <div class="form-group flex-1">
+                            <label>ช่วงอายุ: <span id="label-age-range">18 - 60 ปี</span></label>
+                            <div class="range-slider">
+                                <input type="range" id="filter-age-min" min="18" max="99" value="18" class="slider">
+                                <input type="range" id="filter-age-max" min="18" max="99" value="60" class="slider">
+                            </div>
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="btn btn-primary" id="btn-apply-filters">ค้นหา / กรองข้อมูล</button>
+                            <button class="btn btn-secondary" id="btn-clear-filters">ล้างตัวกรอง</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members List Card -->
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-users"></i> สมาชิกทั้งหมดในระบบ (<span id="total-members-count">0</span> รายการ)</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="table-members">
+                            <thead>
+                                <tr>
+                                    <th>รูป</th>
+                                    <th>ชื่อโปรไฟล์</th>
+                                    <th>เพศ</th>
+                                    <th>อายุ</th>
+                                    <th>จังหวัด / อำเภอ</th>
+                                    <th>สถานะยืนยัน</th>
+                                    <th>สถานะออนไลน์</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="8" class="text-center">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-container">
+                        <button class="btn btn-secondary" id="btn-prev-page" disabled><i class="fa-solid fa-chevron-left"></i> ย้อนกลับ</button>
+                        <span id="page-indicator">หน้า 1 / 1</span>
+                        <button class="btn btn-secondary" id="btn-next-page">ถัดไป <i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. REPORTS VIEW -->
+            <section class="tab-content" id="tab-reports">
+                <div class="filter-card">
+                    <div class="filter-row">
+                        <div class="form-group flex-1">
+                            <label>กรองตามสถานะ</label>
+                            <div class="segmented-control" id="report-status-tabs">
+                                <button class="segment-btn active" data-status="pending">ค้างดำเนินการ (<span id="count-pending-rep">0</span>)</button>
+                                <button class="segment-btn" data-status="reviewed">กำลังตรวจสอบ (<span id="count-reviewed-rep">0</span>)</button>
+                                <button class="segment-btn" data-status="resolved">แก้ไขแล้ว (<span id="count-resolved-rep">0</span>)</button>
+                                <button class="segment-btn" data-status="dismissed">ยกเลิกรายงาน (<span id="count-dismissed-rep">0</span>)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-circle-exclamation"></i> รายการแจ้งรายงานความประพฤติ</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="table-reports">
+                            <thead>
+                                <tr>
+                                    <th>ผู้รายงาน</th>
+                                    <th>ผู้ถูกรายงาน</th>
+                                    <th>หัวข้อ/เหตุผล</th>
+                                    <th>รายละเอียดเพิ่มเติม</th>
+                                    <th>วันที่แจ้ง</th>
+                                    <th>สถานะ</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="7" class="text-center">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. FEED & POSTS VIEW -->
+            <section class="tab-content" id="tab-posts">
+                <div class="filter-card">
+                    <div class="filter-row">
+                        <div class="form-group flex-3">
+                            <label for="search-post">ค้นหาโพสต์</label>
+                            <input type="text" id="search-post" placeholder="ค้นหาด้วยเนื้อหาโพสต์ หรือชื่อผู้เขียน...">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" id="btn-search-posts">ค้นหา</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="posts-list-container" id="posts-container">
+                    <div class="text-center py-5">กำลังโหลดข้อมูลโพสต์ฟีด...</div>
+                </div>
+            </section>
+
+            <!-- 5. INTERESTS VIEW -->
+            <section class="tab-content" id="tab-interests">
+                <div class="card-section" style="max-width: 600px; margin-bottom: 24px;">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-plus text-primary"></i> เพิ่มแท็กความสนใจใหม่</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="form-add-interest" class="inline-form">
+                            <div class="form-group flex-1">
+                                <input type="text" id="input-new-interest" placeholder="พิมพ์ชื่อแท็กความสนใจ เช่น ดูหนัง, ทำอาหาร" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">เพิ่มแท็ก</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-tags"></i> แท็กความสนใจทั้งหมดในระบบ</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="interests-grid" id="interests-container">
+                            <div class="text-center">กำลังโหลดข้อมูลแท็กความสนใจ...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. SETTLEMENTS VIEW (GAME INTEGRATION) -->
+            <section class="tab-content" id="tab-settlements">
+                <div class="filter-card">
+                    <div class="filter-row">
+                        <div class="form-group flex-3">
+                            <label for="search-settlement"><i class="fa-solid fa-magnifying-glass"></i> ค้นหานิคม/เมือง</label>
+                            <input type="text" id="search-settlement" placeholder="ค้นหาด้วยชื่อนิคม หรือชื่อผู้เล่น...">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" id="btn-search-settlement">ค้นหา</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-chess-rook"></i> รายการนิคม/เมืองของผู้เล่นในแผนที่</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="table-settlements">
+                            <thead>
+                                <tr>
+                                    <th>เจ้าของ (ผู้เล่น)</th>
+                                    <th>ชื่อนิคม/เมือง</th>
+                                    <th>พิกัด (X, Y)</th>
+                                    <th><i class="fa-solid fa-tree text-success"></i> Wood (ไม้)</th>
+                                    <th><i class="fa-solid fa-cubes-stacked text-info"></i> Iron (เหล็ก)</th>
+                                    <th><i class="fa-solid fa-wheat-awn text-warning"></i> Rice (ข้าว)</th>
+                                    <th><i class="fa-solid fa-wine-glass text-danger"></i> Liquor (เหล้า)</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="8" class="text-center">กำลังโหลดข้อมูล...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. CONNECTION SETTINGS VIEW -->
+            <section class="tab-content" id="tab-settings">
+                <div class="card-section" style="max-width: 700px;">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-gears text-primary"></i> ตั้งค่าการเชื่อมต่อ Supabase Database</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning" style="margin-bottom: 20px;">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <div>
+                                <strong>คำเตือน:</strong> หากไม่มีการตั้งค่า <strong>Service Role Key</strong> จะทำงานได้ในโหมด <strong>Read-Only</strong> เท่านั้น (ไม่สามารถแก้ไขข้อมูล สลับการยืนยันโปรไฟล์ หรือลบข้อมูลสมาชิกได้) เนื่องจากติดข้อบังคับด้านความปลอดภัย (RLS) ของระบบฐานข้อมูล
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settings-supabase-url">Supabase API URL</label>
+                            <input type="text" id="settings-supabase-url" placeholder="https://xxxx.supabase.co" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settings-supabase-anon">Public Anon Key</label>
+                            <input type="password" id="settings-supabase-anon" placeholder="eyJhb..." class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <div class="label-with-hint">
+                                <label for="settings-supabase-service">Service Role Key (ใช้สำหรับสิทธิ์ผู้ดูแลระบบ)</label>
+                                <span class="hint-text">ไม่ส่งออกนอกระบบ จัดเก็บในอุปกรณ์ของผู้ดูแลเท่านั้น</span>
+                            </div>
+                            <div class="input-password-container">
+                                <input type="password" id="settings-supabase-service" placeholder="eyJhb... (Service Role Key)" class="form-control">
+                                <button class="btn btn-icon-only" type="button" id="btn-toggle-service-key-visibility">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 24px;">
+                            <button class="btn btn-primary" id="btn-save-settings">บันทึกการตั้งค่า</button>
+                            <button class="btn btn-secondary" id="btn-reset-settings">ใช้ค่าเริ่มต้นโปรเจ็กต์</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODALS SECTION -->
+    <!-- ========================================== -->
+
+    <!-- 1. PROFILE DETAILS MODAL -->
+    <div class="modal-backdrop" id="modal-profile-details">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3>รายละเอียดโปรไฟล์สมาชิก</h3>
+                <button class="btn-close" id="btn-close-profile-details">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-layout-container">
+                    <!-- Left Section: Basic Card + Verification Toggle -->
+                    <div class="profile-left-panel">
+                        <div class="profile-avatar-card">
+                            <img src="" id="profile-detail-avatar" class="profile-main-avatar" alt="Avatar">
+                            <h2 id="profile-detail-name">DisplayName</h2>
+                            <p class="profile-detail-gender-age"><span id="profile-detail-gender">Male</span>, <span id="profile-detail-age">25</span> ปี</p>
+                            <div class="profile-status-badges" style="margin-top: 10px;">
+                                <span class="badge" id="badge-detail-verified">ยืนยันแล้ว</span>
+                                <span class="badge" id="badge-detail-online">ออนไลน์</span>
+                            </div>
+                        </div>
+
+                        <div class="profile-stats-list">
+                            <div class="profile-stat-row">
+                                <span>ยอดผู้เข้าชมโปรไฟล์</span>
+                                <strong id="profile-detail-views">0</strong>
+                            </div>
+                            <div class="profile-stat-row">
+                                <span>ยอดถูกใจที่ได้รับ</span>
+                                <strong id="profile-detail-likes">0</strong>
+                            </div>
+                            <div class="profile-stat-row">
+                                <span>สมัครสมาชิกเมื่อ</span>
+                                <strong id="profile-detail-joined">--/--/----</strong>
+                            </div>
+                        </div>
+
+                        <!-- Moderation Panel -->
+                        <div class="moderation-panel">
+                            <h4><i class="fa-solid fa-shield-halved text-primary"></i> จัดการสิทธิ์ความปลอดภัย</h4>
+                            <div class="moderation-actions">
+                                <button class="btn btn-block" id="btn-toggle-verify-profile">
+                                    <i class="fa-solid fa-circle-check"></i> <span>ยืนยันตัวตน</span>
+                                </button>
+                                <button class="btn btn-secondary btn-block" id="btn-edit-profile-trigger">
+                                    <i class="fa-solid fa-user-pen"></i> แก้ไขข้อมูลโปรไฟล์
+                                </button>
+                                <button class="btn btn-danger btn-block" id="btn-delete-profile-trigger">
+                                    <i class="fa-solid fa-user-minus"></i> ลบโปรไฟล์สมาชิก
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Section: Details, Photos, Interests, Game Info -->
+                    <div class="profile-right-panel">
+                        <!-- Navigation tabs in profile modal -->
+                        <div class="profile-tabs">
+                            <button class="profile-tab-btn active" data-profile-tab="info">ข้อมูลทั่วไป</button>
+                            <button class="profile-tab-btn" data-profile-tab="photos">รูปภาพทั้งหมด (<span id="photo-count-indicator">0</span>)</button>
+                            <button class="profile-tab-btn" data-profile-tab="game">ข้อมูลสิ่งปลูกสร้างในมินิเกม</button>
+                        </div>
+
+                        <!-- Profile Modal Tabs Content -->
+                        <!-- A: Info Tab -->
+                        <div class="profile-tab-content active" id="profile-tab-info">
+                            <div class="detail-section">
+                                <h4>คำแนะนำตัว (Bio)</h4>
+                                <p id="profile-detail-bio" class="bio-text">ไม่มีคำแนะนำตัว</p>
+                            </div>
+
+                            <div class="detail-section">
+                                <h4>ข้อมูลเบื้องต้น</h4>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>การศึกษา</label>
+                                        <span id="profile-detail-university">มหาวิทยาลัยเทคโนโลยี...</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>อาชีพ</label>
+                                        <span id="profile-detail-occupation">วิศวกรซอฟต์แวร์</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>จังหวัด</label>
+                                        <span id="profile-detail-province">กรุงเทพมหานคร</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>อำเภอ / เขต</label>
+                                        <span id="profile-detail-district">ปทุมวัน</span>
+                                    </div>
+                                    <div class="info-item flex-2">
+                                        <label>พิกัดตำแหน่ง (GPS)</label>
+                                        <span id="profile-detail-location">Latitude: -, Longitude: -</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="detail-section">
+                                <h4>ช่องทางโซเชียลมีเดีย</h4>
+                                <div class="social-links-grid">
+                                    <div class="social-link-item line">
+                                        <i class="fa-brands fa-line"></i>
+                                        <div>
+                                            <label>Line ID</label>
+                                            <span id="profile-detail-line">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="social-link-item instagram">
+                                        <i class="fa-brands fa-instagram"></i>
+                                        <div>
+                                            <label>Instagram</label>
+                                            <span id="profile-detail-ig">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="social-link-item facebook">
+                                        <i class="fa-brands fa-facebook"></i>
+                                        <div>
+                                            <label>Facebook</label>
+                                            <span id="profile-detail-fb">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="social-link-item twitter">
+                                        <i class="fa-brands fa-x-twitter"></i>
+                                        <div>
+                                            <label>X / Twitter</label>
+                                            <span id="profile-detail-x">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="detail-section">
+                                <h4>แท็กความสนใจ (Interests)</h4>
+                                <div class="profile-interests-container">
+                                    <div id="profile-detail-interests" class="interests-tags-flex">
+                                        <!-- Tags loaded dynamically -->
+                                    </div>
+                                    <div class="add-interest-inline" style="margin-top: 10px;">
+                                        <select id="select-add-member-interest">
+                                            <option value="">-- เลือกแท็กที่ต้องการเพิ่ม --</option>
+                                        </select>
+                                        <button class="btn btn-secondary btn-sm" id="btn-add-member-interest-action">เพิ่ม</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- B: Photos Tab -->
+                        <div class="profile-tab-content" id="profile-tab-photos">
+                            <div class="photos-subsection">
+                                <h4>รูปโปรไฟล์สาธารณะ (Profile Photos)</h4>
+                                <div class="photos-grid" id="grid-profile-photos">
+                                    <!-- Public photos loaded dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="photos-subsection" style="margin-top: 24px;">
+                                <h4>รูปภาพลับเฉพาะ (Secret Photos)</h4>
+                                <div class="photos-grid" id="grid-secret-photos">
+                                    <!-- Secret photos loaded dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- C: Mini-Game Tab -->
+                        <div class="profile-tab-content" id="profile-tab-game">
+                            <div class="game-summary-card" id="profile-game-info-card">
+                                <!-- Loaded dynamically or display "No settlement" -->
+                                <p class="text-center py-5">กำลังโหลดข้อมูลเมืองมินิเกม...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-close-profile-details-footer">ปิดหน้านี้</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. EDIT PROFILE MODAL -->
+    <div class="modal-backdrop" id="modal-edit-profile">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>แก้ไขข้อมูลโปรไฟล์</h3>
+                <button class="btn-close" id="btn-close-edit-profile">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-edit-profile">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="edit-display-name">ชื่อที่แสดง</label>
+                            <input type="text" id="edit-display-name" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-gender">เพศ</label>
+                            <select id="edit-gender" class="form-control">
+                                <option value="male">ชาย</option>
+                                <option value="female">หญิง</option>
+                                <option value="other">อื่นๆ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-birth-date">วันเกิด</label>
+                            <input type="date" id="edit-birth-date" required class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-bio">คำแนะนำตัว (Bio)</label>
+                        <textarea id="edit-bio" rows="3" class="form-control"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="edit-province">จังหวัด</label>
+                            <input type="text" id="edit-province" class="form-control">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="edit-district">อำเภอ/เขต</label>
+                            <input type="text" id="edit-district" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="edit-university">มหาวิทยาลัย</label>
+                            <input type="text" id="edit-university" class="form-control">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="edit-occupation">อาชีพ</label>
+                            <input type="text" id="edit-occupation" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="edit-line-id">Line ID</label>
+                            <input type="text" id="edit-line-id" class="form-control">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="edit-instagram">Instagram</label>
+                            <input type="text" id="edit-instagram" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="edit-facebook">Facebook</label>
+                            <input type="text" id="edit-facebook" class="form-control">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="edit-x-handle">X / Twitter</label>
+                            <input type="text" id="edit-x-handle" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-cancel-edit-profile">ยกเลิก</button>
+                <button class="btn btn-primary" id="btn-save-edit-profile-action">บันทึกการเปลี่ยนแปลง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. CHEAT RESOURCES MODAL -->
+    <div class="modal-backdrop" id="modal-cheat-resources">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>แก้ไขทรัพยากรเมือง (<span id="cheat-settlement-title">SettlementName</span>)</h3>
+                <button class="btn-close" id="btn-close-cheat-resources">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-cheat-resources">
+                    <input type="hidden" id="cheat-settlement-id">
+                    
+                    <div class="form-group">
+                        <label for="cheat-settlement-name">ชื่อนิคม/เมือง</label>
+                        <input type="text" id="cheat-settlement-name" required class="form-control">
+                    </div>
+
+                    <div class="form-row" style="margin-top: 15px;">
+                        <div class="form-group flex-1">
+                            <label for="cheat-wood"><i class="fa-solid fa-tree text-success"></i> Wood (ไม้)</label>
+                            <input type="number" id="cheat-wood" min="0" required class="form-control">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="cheat-iron"><i class="fa-solid fa-cubes-stacked text-info"></i> Iron (เหล็ก)</label>
+                            <input type="number" id="cheat-iron" min="0" required class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="margin-top: 15px;">
+                        <div class="form-group flex-1">
+                            <label for="cheat-rice"><i class="fa-solid fa-wheat-awn text-warning"></i> Rice (ข้าว)</label>
+                            <input type="number" id="cheat-rice" min="0" required class="form-control">
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="cheat-liquor"><i class="fa-solid fa-wine-glass text-danger"></i> Liquor (เหล้า)</label>
+                            <input type="number" id="cheat-liquor" min="0" required class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-cancel-cheat-resources">ยกเลิก</button>
+                <button class="btn btn-primary" id="btn-save-cheat-resources-action">บันทึกทรัพยากร</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase JS Client loaded from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Application Controller Logic -->
+    <script src="app.js"></script>
+</body>
+</html>

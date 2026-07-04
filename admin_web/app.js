@@ -431,20 +431,26 @@ function populateSettlementsTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${playerName}</strong><br><small class="text-muted">${settlement.player_id.substring(0, 8)}...</small></td>
-            <td><strong>${settlement.name}</strong></td>
-            <td>${settlement.map_x}, ${settlement.map_y}</td>
+            <td><strong>${settlement.name}</strong><br><small class="text-muted">พิกัด: ${settlement.map_x}, ${settlement.map_y}</small></td>
             <td>
-                <span class="badge badge-success"><i class="fa-solid fa-tree"></i> W: ${settlement.wood}</span>
-                <span class="badge badge-info"><i class="fa-solid fa-cubes-stacked"></i> I: ${settlement.iron}</span>
-                <span class="badge badge-warning"><i class="fa-solid fa-wheat-awn"></i> R: ${settlement.rice}</span>
-                <span class="badge badge-danger"><i class="fa-solid fa-wine-bottle"></i> L: ${settlement.liquor}</span>
+                <span class="badge badge-info"><i class="fa-solid fa-users"></i> Pop: ${settlement.population}/${settlement.max_population}</span>
+                <span class="badge badge-${settlement.happiness >= 50 ? 'success' : 'danger'}" style="margin-top: 4px;"><i class="fa-solid fa-face-smile"></i> Happy: ${settlement.happiness}%</span>
+            </td>
+            <td>
+                <span class="badge badge-success">W: ${settlement.wood}</span>
+                <span class="badge badge-info">I: ${settlement.iron}</span>
+                <span class="badge badge-warning" style="margin-top: 4px;">R: ${settlement.rice}</span>
+                <span class="badge badge-danger" style="margin-top: 4px;">L: ${settlement.liquor}</span>
             </td>
             <td>
                 <button class="btn btn-secondary btn-sm" onclick="openDetailsModal('${settlement.id}')">
-                    <i class="fa-solid fa-eye"></i> Buildings/Troops
+                    <i class="fa-solid fa-eye"></i> View
                 </button>
                 <button class="btn btn-primary btn-sm" onclick="openEditSettlementModal('${settlement.id}')">
-                    <i class="fa-solid fa-pencil"></i> Resources
+                    <i class="fa-solid fa-pencil"></i> Edit
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="openGodModeModal('${settlement.id}')" style="margin-left: 4px;">
+                    <i class="fa-solid fa-bolt"></i> God Mode
                 </button>
             </td>
         `;
@@ -463,6 +469,8 @@ function openEditSettlementModal(settlementId) {
     document.getElementById('edit-iron').value = settlement.iron;
     document.getElementById('edit-rice').value = settlement.rice;
     document.getElementById('edit-liquor').value = settlement.liquor;
+    document.getElementById('edit-population').value = settlement.population || 0;
+    document.getElementById('edit-happiness').value = settlement.happiness || 100;
 
     document.getElementById('edit-settlement-modal').classList.add('active');
 }
@@ -478,19 +486,28 @@ async function updateSettlementData() {
     const iron = parseInt(document.getElementById('edit-iron').value) || 0;
     const rice = parseInt(document.getElementById('edit-rice').value) || 0;
     const liquor = parseInt(document.getElementById('edit-liquor').value) || 0;
+    const population = parseInt(document.getElementById('edit-population').value) || 0;
+    const happiness = parseInt(document.getElementById('edit-happiness').value) || 0;
 
     try {
         const res = await fetch(`${SUPABASE_URL}/settlements?id=eq.${id}`, {
             method: 'PATCH',
             headers: getHeaders(),
-            body: JSON.stringify({ name, wood, iron, rice, liquor })
+            body: JSON.stringify({ name, wood, iron, rice, liquor, population, happiness })
         });
         if (!res.ok) throw new Error('Update resources failed');
+        
+        fetch(`${SUPABASE_URL}/admin_action_logs`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ action_type: 'update_settlement_resources', target_id: id, details: { wood, iron, rice, liquor, population, happiness } })
+        }).catch(e => console.log('Log recorded error:', e));
+
         closeSettlementModal();
         refreshDashboardData();
-        showToast('Settlement resources updated successfully!', 'success');
+        showToast('Settlement data updated successfully!', 'success');
     } catch (err) {
-        showToast('Error updating resources: ' + err.message, 'danger');
+        showToast('Error updating data: ' + err.message, 'danger');
     }
 }
 
@@ -751,6 +768,130 @@ function getTroopDisplayName(type) {
         elephant: '🐘 ช้างศึก (Elephant)'
     };
     return names[type] || type;
+}
+
+// ==========================================
+// God Mode Operations
+// ==========================================
+
+let activeGodSettlementId = null;
+
+function openGodModeModal(settlementId) {
+    activeGodSettlementId = settlementId;
+    const settlement = appData.settlements.find(s => s.id === settlementId);
+    document.getElementById('god-mode-title').innerText = `${settlement.name} — God Mode`;
+    document.getElementById('god-mode-modal').classList.add('active');
+    showGodTab('marches');
+}
+
+function closeGodModeModal() {
+    document.getElementById('god-mode-modal').classList.remove('active');
+    activeGodSettlementId = null;
+}
+
+function showGodTab(tabName) {
+    document.getElementById('btn-god-marches').className = tabName === 'marches' ? 'modal-tabactive' : 'modal-tab';
+    document.getElementById('btn-god-caravans').className = tabName === 'caravans' ? 'modal-tabactive' : 'modal-tab';
+    
+    document.getElementById('god-tab-marches').style.display = tabName === 'marches' ? 'block' : 'none';
+    document.getElementById('god-tab-caravans').style.display = tabName === 'caravans' ? 'block' : 'none';
+    
+    if (tabName === 'marches') {
+        loadGodMarches();
+    } else {
+        loadGodCaravans();
+    }
+}
+
+async function loadGodMarches() {
+    const listBody = document.getElementById('god-marches-list');
+    listBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading marches...</td></tr>';
+    try {
+        const res = await fetch(`${SUPABASE_URL}/march_queues?settlement_id=eq.${activeGodSettlementId}&select=*`, { headers: getHeaders() });
+        const marches = await res.json();
+        listBody.innerHTML = '';
+        if (marches.length === 0) {
+            listBody.innerHTML = '<tr><td colspan="4" class="text-center">No active marches.</td></tr>';
+            return;
+        }
+        marches.forEach(m => {
+            const finish = new Date(m.arrive_at);
+            const remainingSecs = Math.max(0, Math.floor((finish - new Date()) / 1000));
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><small>${m.target_node_id || m.target_settlement_id}</small></td>
+                <td><span class="badge ${m.march_type === 'attack' ? 'badge-danger' : 'badge-success'}">${m.march_type}</span></td>
+                <td>${remainingSecs}s left</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="finishMarch('${m.id}')">Finish Now</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRecord('march_queues', '${m.id}', loadGodMarches)">Delete</button>
+                </td>
+            `;
+            listBody.appendChild(tr);
+        });
+    } catch (err) {
+        listBody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">${err.message}</td></tr>`;
+    }
+}
+
+async function loadGodCaravans() {
+    const listBody = document.getElementById('god-caravans-list');
+    listBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading caravans...</td></tr>';
+    try {
+        const res = await fetch(`${SUPABASE_URL}/caravans?from_settlement_id=eq.${activeGodSettlementId}&select=*`, { headers: getHeaders() });
+        const caravans = await res.json();
+        listBody.innerHTML = '';
+        if (caravans.length === 0) {
+            listBody.innerHTML = '<tr><td colspan="4" class="text-center">No active caravans.</td></tr>';
+            return;
+        }
+        caravans.forEach(c => {
+            const finish = new Date(c.arrive_at);
+            const remainingSecs = Math.max(0, Math.floor((finish - new Date()) / 1000));
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><small>${c.to_settlement_id}</small></td>
+                <td>W:${c.payload.wood||0} I:${c.payload.iron||0} R:${c.payload.rice||0} L:${c.payload.liquor||0}</td>
+                <td>${remainingSecs}s left</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" onclick="finishCaravan('${c.id}')">Finish Now</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRecord('caravans', '${c.id}', loadGodCaravans)">Delete</button>
+                </td>
+            `;
+            listBody.appendChild(tr);
+        });
+    } catch (err) {
+        listBody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">${err.message}</td></tr>`;
+    }
+}
+
+async function finishMarch(id) {
+    try {
+        await fetch(`${SUPABASE_URL}/march_queues?id=eq.${id}`, {
+            method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ arrive_at: new Date().toISOString() })
+        });
+        showToast('March instantly arrived!', 'success');
+        loadGodMarches();
+    } catch (err) { showToast(err.message, 'danger'); }
+}
+
+async function finishCaravan(id) {
+    try {
+        await fetch(`${SUPABASE_URL}/caravans?id=eq.${id}`, {
+            method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ arrive_at: new Date().toISOString() })
+        });
+        showToast('Caravan instantly arrived!', 'success');
+        loadGodCaravans();
+    } catch (err) { showToast(err.message, 'danger'); }
+}
+
+async function deleteRecord(table, id, callback) {
+    if(!confirm('Are you sure you want to delete this record?')) return;
+    try {
+        await fetch(`${SUPABASE_URL}/${table}?id=eq.${id}`, { method: 'DELETE', headers: getHeaders() });
+        showToast('Record deleted!', 'success');
+        callback();
+    } catch (err) { showToast(err.message, 'danger'); }
 }
 
 // ==========================================

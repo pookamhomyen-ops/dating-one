@@ -266,8 +266,8 @@
                                     <tr>
                                         <th data-th="ชื่อผู้เล่น" data-en="Player Name">Player Name</th>
                                         <th data-th="ชื่อเมือง / นิคม" data-en="Settlement Name">Settlement Name</th>
-                                        <th data-th="พิกัด (X, Y)" data-en="Coordinates (X, Y)">Coordinates (X, Y)</th>
-                                        <th data-th="ทรัพยากรที่มี (ไม้, เหล็ก, ข้าว, สุรา)" data-en="Resources (Wood, Iron, Rice, Liquor)">Resources (Wood, Iron, Rice, Liquor)</th>
+                                        <th data-th="สถานะเมือง" data-en="City Status">City Status</th>
+                                        <th data-th="ทรัพยากร (W, I, R, L)" data-en="Resources (W, I, R, L)">Resources (W, I, R, L)</th>
                                         <th data-th="จัดการ" data-en="Actions">Actions</th>
                                     </tr>
                                 </thead>
@@ -353,8 +353,6 @@
                         <label for="edit-iron" data-th="เหล็ก" data-en="Iron">Iron</label>
                         <input type="number" id="edit-iron" class="form-control">
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group col">
                         <label for="edit-rice" data-th="ข้าว" data-en="Rice">Rice</label>
                         <input type="number" id="edit-rice" class="form-control">
@@ -364,6 +362,17 @@
                         <input type="number" id="edit-liquor" class="form-control">
                     </div>
                 </div>
+                <div class="form-row" style="margin-top: 16px;">
+                    <div class="form-group col">
+                        <label for="edit-population" data-th="ประชากร (ปัจจุบัน)" data-en="Population (Current)">Population (Current)</label>
+                        <input type="number" id="edit-population" class="form-control">
+                    </div>
+                    <div class="form-group col">
+                        <label for="edit-happiness" data-th="ความสุข (0-100)" data-en="Happiness (0-100)">Happiness (0-100)</label>
+                        <input type="number" id="edit-happiness" class="form-control" min="0" max="100">
+                    </div>
+                </div>
+                <p class="form-text text-muted" data-th="* สามารถบวก/ลบ ทรัพยากรให้ผู้เล่นคนนี้ได้โดยตรง" data-en="* You can directly add/deduct resources here.">* You can directly add/deduct resources here.</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeSettlementModal()" data-th="ยกเลิก" data-en="Cancel">Cancel</button>
@@ -429,6 +438,57 @@
     </div>
 
     <!-- Load custom javascript -->
+    <div id="god-mode-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="god-mode-title" data-th="จัดการระดับพระเจ้า" data-en="God Mode Panel">God Mode Panel</h3>
+                <span class="close-modal" onclick="closeGodModeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="tabs-container">
+                    <div class="modal-tabs">
+                        <button class="modal-tabactive" id="btn-god-marches" onclick="showGodTab('marches')" data-th="กองทัพที่กำลังเดิน" data-en="Active Marches">Active Marches</button>
+                        <button class="modal-tab" id="btn-god-caravans" onclick="showGodTab('caravans')" data-th="คาราวานที่เดินทาง" data-en="Active Caravans">Active Caravans</button>
+                    </div>
+                    
+                    <div class="modal-tab-content active" id="god-tab-marches">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="เป้าหมาย" data-en="Target">Target</th>
+                                        <th data-th="ประเภท" data-en="Type">Type</th>
+                                        <th data-th="เวลาที่เหลือ" data-en="Time Left">Time Left</th>
+                                        <th data-th="จัดการ" data-en="Actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="god-marches-list">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-tab-content" id="god-tab-caravans">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th data-th="ผู้รับ" data-en="Recipient">Recipient</th>
+                                        <th data-th="ทรัพยากร" data-en="Payload">Payload</th>
+                                        <th data-th="เวลาที่เหลือ" data-en="Time Left">Time Left</th>
+                                        <th data-th="จัดการ" data-en="Actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="god-caravans-list">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

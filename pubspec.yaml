@@ -81,6 +81,7 @@ flutter:
     - assets/games/bg/
     - lib/cat_vs_mouse/index.html
     - lib/cat_vs_mouse/assets/
+    - assets/games/sprite_sheet/woman_walking_2.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

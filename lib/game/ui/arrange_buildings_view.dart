@@ -19,48 +19,60 @@ class ArrangeBuildingsView extends ConsumerStatefulWidget {
       _ArrangeBuildingsViewState();
 }
 
-
 class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
   // boundary ในหน่วย fraction ของหน้าจอ
-  static const double _left   = 0.10;
-  static const double _right  = 0.90;
-  static const double _top    = 0.20;
-  static const double _bottom = 0.90;
-  static const int _gridSize  = 20;
+  static const Offset _vTop = Offset(0.503, 0.066);
+  static const Offset _vRight = Offset(0.992, 0.444);
+  static const Offset _vBottom = Offset(0.519, 0.860);
+  static const Offset _vLeft = Offset(0.026, 0.324);
+  static const int _gridSize = 20;
 
   // อาคาร 1 หลัง ยึด 3 cols x 2 rows, anchor = กลางล่าง
   static const int _bldW = 3; // แนวนอน
   static const int _bldH = 2; // แนวตั้ง
 
   static const _defaultOffsets = <String, Offset>{
-    'town_hall':     Offset(0.42, 0.32),
-    'barracks':      Offset(0.62, 0.52),
-    'sawmill':       Offset(0.25, 0.38),
-    'smelter':       Offset(0.68, 0.36),
-    'rice_farm':     Offset(0.28, 0.62),
-    'distillery':    Offset(0.58, 0.68),
-    'house':         Offset(0.42, 0.55),
-    'tavern':        Offset(0.50, 0.44),
-    'shrine':        Offset(0.72, 0.60),
+    'town_hall': Offset(0.42, 0.32),
+    'barracks': Offset(0.62, 0.52),
+    'sawmill': Offset(0.25, 0.38),
+    'smelter': Offset(0.68, 0.36),
+    'rice_farm': Offset(0.28, 0.62),
+    'distillery': Offset(0.58, 0.68),
+    'house': Offset(0.42, 0.55),
+    'tavern': Offset(0.50, 0.44),
+    'shrine': Offset(0.72, 0.60),
     'elephant_camp': Offset(0.22, 0.52),
-    'smithy':        Offset(0.65, 0.44),
-    'wall':          Offset(0.35, 0.46),
-    'watchtower':    Offset(0.55, 0.38),
+    'smithy': Offset(0.65, 0.44),
+    'wall': Offset(0.35, 0.46),
+    'watchtower': Offset(0.55, 0.38),
   };
 
-  // แปลง grid -> fraction offset (anchor = กลางล่าง)
   static Offset _gridToOffset(int x, int y) {
-    return Offset(
-      _left + (x / _gridSize) * (_right - _left),
-      _top  + (y / _gridSize) * (_bottom - _top),
-    );
+    final u = x / _gridSize;
+    final v = y / _gridSize;
+    final dx =
+        (1 - u) * (1 - v) * _vTop.dx +
+        u * (1 - v) * _vRight.dx +
+        (1 - u) * v * _vLeft.dx +
+        u * v * _vBottom.dx;
+    final dy =
+        (1 - u) * (1 - v) * _vTop.dy +
+        u * (1 - v) * _vRight.dy +
+        (1 - u) * v * _vLeft.dy +
+        u * v * _vBottom.dy;
+    return Offset(dx, dy);
   }
 
   static ({int x, int y}) _offsetToGrid(Offset offset) {
-    final x = ((offset.dx - _left) / (_right - _left) * _gridSize)
-        .round().clamp(1, _gridSize - 2); // clamp เผื่อ _bldW=3
-    final y = ((offset.dy - _top) / (_bottom - _top) * _gridSize)
-        .round().clamp(1, _gridSize - 1);
+    // ผกผันแบบเชิงเส้น โดยใช้ top เป็นจุดอ้างอิง แกน u=top->right, v=top->left
+    final ux = _vRight.dx - _vTop.dx, uy = _vRight.dy - _vTop.dy;
+    final vx = _vLeft.dx - _vTop.dx, vy = _vLeft.dy - _vTop.dy;
+    final px = offset.dx - _vTop.dx, py = offset.dy - _vTop.dy;
+    final det = ux * vy - uy * vx;
+    final u = (px * vy - py * vx) / det;
+    final v = (ux * py - uy * px) / det;
+    final x = (u * _gridSize).round().clamp(1, _gridSize - 2);
+    final y = (v * _gridSize).round().clamp(1, _gridSize - 1);
     return (x: x, y: y);
   }
 
@@ -116,7 +128,11 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
   bool _canPlace(int ax, int ay, String excludeId) {
     final cells = _occupiedCells(ax, ay);
     for (final cell in cells) {
-      if (cell.x < 0 || cell.x >= _gridSize || cell.y < 0 || cell.y >= _gridSize) return false;
+      if (cell.x < 0 ||
+          cell.x >= _gridSize ||
+          cell.y < 0 ||
+          cell.y >= _gridSize)
+        return false;
       if (!_isInsideOval(cell.x, cell.y)) return false;
       // เช็คชนกับอาคารอื่น
       for (final entry in _positions.entries) {
@@ -128,16 +144,23 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
     return true;
   }
 
-  bool _isInsideOval(int x, int y) {
-    const cx = (_left + _right) / 2;
-    const cy = (_top + _bottom) / 2;
-    const rx = (_right - _left) / 2;
-    const ry = (_bottom - _top) / 2;
-    final fx = _left + (x / _gridSize) * (_right - _left);
-    final fy = _top  + (y / _gridSize) * (_bottom - _top);
-    final dx = (fx - cx) / rx;
-    final dy = (fy - cy) / ry;
-    return (dx * dx + dy * dy) <= 1.0;
+  static bool _isInsideOval(int x, int y) {
+    final p = _gridToOffset(x, y);
+    const verts = [_vTop, _vRight, _vBottom, _vLeft];
+    int sign = 0;
+    for (int i = 0; i < 4; i++) {
+      final v1 = verts[i], v2 = verts[(i + 1) % 4];
+      final cross =
+          (v2.dx - v1.dx) * (p.dy - v1.dy) - (v2.dy - v1.dy) * (p.dx - v1.dx);
+      final s = cross > 0 ? 1 : (cross < 0 ? -1 : 0);
+      if (s != 0) {
+        if (sign == 0)
+          sign = s;
+        else if (s != sign)
+          return false;
+      }
+    }
+    return true;
   }
 
   void _tryMove(String buildingId, int dx, int dy) {
@@ -148,7 +171,8 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
     int nextY = current.y + dy;
 
     while (true) {
-      if (nextX < 0 || nextX >= _gridSize || nextY < 0 || nextY >= _gridSize) return;
+      if (nextX < 0 || nextX >= _gridSize || nextY < 0 || nextY >= _gridSize)
+        return;
       if (_canPlace(nextX, nextY, buildingId)) break;
       nextX += dx;
       nextY += dy;
@@ -166,24 +190,30 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
     });
   }
 
-  Future<void> _saveAndPop() async {
+  Future<void> _place() async {
+    final id = _selectedBuildingId;
+    final pos = id != null ? _positions[id] : null;
+    if (id == null || pos == null) return;
     try {
-      final positionsList = _positions.entries.map((entry) {
-        return BuildingPosition(
+      final service = ref.read(buildingPositionServiceProvider);
+      await service.savePositions([
+        BuildingPosition(
           id: '',
           settlementId: widget.settlement.id,
-          buildingId: entry.key,
-          posX: entry.value.x,
-          posY: entry.value.y,
+          buildingId: id,
+          posX: pos.x,
+          posY: pos.y,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-        );
-      }).toList();
-
-      final service = ref.read(buildingPositionServiceProvider);
-      await service.savePositions(positionsList);
+        ),
+      ]);
       ref.invalidate(buildingPositionsProvider);
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        setState(() {
+          _originalPositions[id] = pos;
+          _selectedBuildingId = null;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,10 +230,15 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    // คำนวณ cell size ให้เป็นสี่เหลี่ยมจัตุรัส
-    final gridW = size.width  * (_right - _left);
-    final gridH = size.height * (_bottom - _top);
-    final cellSize = (gridW < gridH ? gridW : gridH) / _gridSize;
+    final uPx = Offset(
+      (_vRight.dx - _vTop.dx) * size.width,
+      (_vRight.dy - _vTop.dy) * size.height,
+    ).distance;
+    final vPx = Offset(
+      (_vLeft.dx - _vTop.dx) * size.width,
+      (_vLeft.dy - _vTop.dy) * size.height,
+    ).distance;
+    final cellSize = (uPx < vPx ? uPx : vPx) / _gridSize;
 
     return Scaffold(
       backgroundColor: const Color(0xFF2A1A08),
@@ -216,7 +251,9 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
             ),
           ),
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: SafeArea(child: _TopBar(settlement: widget.settlement)),
           ),
           ...widget.buildings.map((b) {
@@ -233,22 +270,49 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
               selected: isSelected,
               onTap: () {
                 setState(() {
-                  _selectedBuildingId = (_selectedBuildingId == b.id) ? null : b.id;
+                  _selectedBuildingId = (_selectedBuildingId == b.id)
+                      ? null
+                      : b.id;
                 });
               },
             );
           }),
-          // Bottom control panel - always shows save/cancel, shows D-pad when building selected
+          // Bottom control panel - แสดงเฉพาะตอนเลือกอาคาร
           Positioned(
-            bottom: 0, left: 0, right: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: _BottomControlPanel(
               selectedBuildingId: _selectedBuildingId,
               buildings: widget.buildings,
               onMove: (dx, dy) => _tryMove(_selectedBuildingId!, dx, dy),
               onCancel: _cancel,
-              onSave: _saveAndPop,
+              onSave: _place,
             ),
           ),
+          // ปุ่มย้อนกลับ - แสดงเฉพาะตอนยังไม่ได้เลือกอาคาร
+          if (_selectedBuildingId == null)
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: SafeArea(
+                top: false,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color(0xFF854F0B).withValues(alpha: 0.85),
+                    foregroundColor: const Color(0xFFFAC775),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                  ),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                  label: const Text('ย้อนกลับ'),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -257,44 +321,52 @@ class _ArrangeBuildingsViewState extends ConsumerState<ArrangeBuildingsView> {
 
 class _GridPainter extends CustomPainter {
   final int gridSize;
-  final double cellSize;
+  final double cellSize; // เก็บไว้เพื่อไม่กระทบจุดเรียกใช้เดิม (ไม่ใช้ในนี้แล้ว)
   const _GridPainter({required this.gridSize, required this.cellSize});
 
-  static const double _left   = 0.17;
-  static const double _right  = 0.98;
-  static const double _top    = 0.22;
-  static const double _bottom = 0.79;
+  static const Offset _vTop    = Offset(0.503, 0.066);
+  static const Offset _vRight  = Offset(0.992, 0.444);
+  static const Offset _vBottom = Offset(0.519, 0.860);
+  static const Offset _vLeft   = Offset(0.026, 0.324);
+
+  Offset _toPixel(double u, double v, Size size) {
+    final dx = (1 - u) * (1 - v) * _vTop.dx + u * (1 - v) * _vRight.dx
+             + (1 - u) * v * _vLeft.dx      + u * v * _vBottom.dx;
+    final dy = (1 - u) * (1 - v) * _vTop.dy + u * (1 - v) * _vRight.dy
+             + (1 - u) * v * _vLeft.dy      + u * v * _vBottom.dy;
+    return Offset(dx * size.width, dy * size.height);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width  * (_left + _right)  / 2;
-    final cy = size.height * (_top  + _bottom) / 2;
-    final rx = size.width  * (_right - _left)  / 2;
-    final ry = size.height * (_bottom - _top)  / 2;
-
-    final ovalRect = Rect.fromCenter(
-      center: Offset(cx, cy), width: rx * 2, height: ry * 2);
-
-    canvas.save();
-    canvas.clipPath(Path()..addOval(ovalRect));
-
     final gridPaint = Paint()
-      ..color = Colors.blue.withValues(alpha: 0.5)
+      ..color = Colors.white.withValues(alpha: 0.22)
+      ..strokeWidth = 1.0;
+    final majorPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.4)
       ..strokeWidth = 1.2;
 
-    // ใช้ cellSize เดียวกันทั้ง W และ H → สี่เหลี่ยมจัตุรัส
-    final left = size.width * _left;
-    final top  = size.height * _top;
+    const segments = 6; // ย่อยเส้นเป็นช่วงๆ ให้โค้งตามขอบ diamond จริง
 
     for (int i = 0; i <= gridSize; i++) {
-      final x = left + i * cellSize;
-      canvas.drawLine(Offset(x, top), Offset(x, top + cellSize * gridSize), gridPaint);
+      final v = i / gridSize;
+      final path = Path();
+      for (int s = 0; s <= segments; s++) {
+        final p = _toPixel(s / segments, v, size);
+        s == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
+      }
+      canvas.drawPath(path, i % 5 == 0 ? majorPaint : gridPaint);
     }
+
     for (int i = 0; i <= gridSize; i++) {
-      final y = top + i * cellSize;
-      canvas.drawLine(Offset(left, y), Offset(left + cellSize * gridSize, y), gridPaint);
+      final u = i / gridSize;
+      final path = Path();
+      for (int s = 0; s <= segments; s++) {
+        final p = _toPixel(u, s / segments, size);
+        s == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
+      }
+      canvas.drawPath(path, i % 5 == 0 ? majorPaint : gridPaint);
     }
-    canvas.restore();
   }
 
   @override
@@ -306,10 +378,14 @@ class _AyutthayaBackground extends ConsumerWidget {
 
   String _getBgPath(String season) {
     switch (season) {
-      case 'summer': return 'assets/games/bg/bg_summer.png';
-      case 'rain':   return 'assets/games/bg/bg_rain.png';
-      case 'winter': return 'assets/games/bg/bg_winter.png';
-      default:       return 'assets/games/bg/bg.png';
+      case 'summer':
+        return 'assets/games/bg/bg_summer.png';
+      case 'rain':
+        return 'assets/games/bg/bg_rain.png';
+      case 'winter':
+        return 'assets/games/bg/bg_winter.png';
+      default:
+        return 'assets/games/bg/bg.png';
     }
   }
 
@@ -333,7 +409,12 @@ class _AyutthayaBackground extends ConsumerWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFF1A0F05), Color(0xFF3D1F08), Color(0xFF5C3210), Color(0xFF4A6741)],
+                    colors: [
+                      Color(0xFF1A0F05),
+                      Color(0xFF3D1F08),
+                      Color(0xFF5C3210),
+                      Color(0xFF4A6741),
+                    ],
                   ),
                 ),
               ),
@@ -360,14 +441,20 @@ class _TopBar extends ConsumerWidget {
         color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: const Color(0xFF8B6914).withValues(alpha: 0.5), width: 0.5),
+          color: const Color(0xFF8B6914).withValues(alpha: 0.5),
+          width: 0.5,
+        ),
       ),
       child: Row(
         children: [
-          Text(settlement.name,
+          Text(
+            settlement.name,
             style: const TextStyle(
               color: Color(0xFFFAC775),
-              fontSize: 13, fontWeight: FontWeight.w600)),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -375,8 +462,10 @@ class _TopBar extends ConsumerWidget {
               color: const Color(0xFF854F0B).withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text('🏛️ Lv.$thLevel',
-              style: const TextStyle(color: Color(0xFFFAC775), fontSize: 10)),
+            child: Text(
+              '🏛️ Lv.$thLevel',
+              style: const TextStyle(color: Color(0xFFFAC775), fontSize: 10),
+            ),
           ),
           const Spacer(),
           _ResChip(icon: '🪵', value: settlement.wood),
@@ -399,8 +488,10 @@ class _ResChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('$icon$value',
-      style: const TextStyle(color: Color(0xFFFAC775), fontSize: 10));
+    return Text(
+      '$icon$value',
+      style: const TextStyle(color: Color(0xFFFAC775), fontSize: 10),
+    );
   }
 }
 
@@ -424,21 +515,21 @@ class _ArrangeBuildingIcon extends StatelessWidget {
   });
 
   static const _imageMap = <String, String>{
-    'town_hall':   'town_hall.webp',
-    'barracks':    'barracks.webp',
-    'sawmill':     'sawmill.webp',
-    'smelter':     'smelter.webp',
-    'rice_farm':   'rice_farm.webp',
-    'shrine':      'shrine.webp',
+    'town_hall': 'town_hall.webp',
+    'barracks': 'barracks.webp',
+    'sawmill': 'sawmill.webp',
+    'smelter': 'smelter.webp',
+    'rice_farm': 'rice_farm.webp',
+    'shrine': 'shrine.webp',
   };
   static const _emoji = <String, String>{
-    'distillery':    '🍶',
-    'house':         '🏠',
-    'tavern':        '🍺',
+    'distillery': '🍶',
+    'house': '🏠',
+    'tavern': '🍺',
     'elephant_camp': '🐘',
-    'smithy':        '🔨',
-    'wall':          '🧱',
-    'watchtower':    '🗼',
+    'smithy': '🔨',
+    'wall': '🧱',
+    'watchtower': '🗼',
   };
   static const _assetPath = 'assets/games/buildings';
 
@@ -456,7 +547,7 @@ class _ArrangeBuildingIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final left = offset.dx * size.width - 28;
-    final top  = offset.dy * size.height - 40;
+    final top = offset.dy * size.height - 40;
     final imagePath = _getImagePath(building);
 
     return Positioned(
@@ -474,66 +565,21 @@ class _ArrangeBuildingIcon extends StatelessWidget {
                     : null,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  imagePath.isNotEmpty
-                      ? Image.asset(
-                          imagePath,
-                          width: 100, height: 100,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => Text(
-                            _emoji[building.buildingType] ?? '🏛️',
-                            style: const TextStyle(fontSize: 36),
-                          ),
-                        )
-                      : Text(
-                          _emoji[building.buildingType] ?? '🏛️',
-                          style: const TextStyle(fontSize: 36),
-                        ),
-                  if (building.isUpgrading)
-                    Positioned(
-                      bottom: 0, left: 0, right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0997B).withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          '⏳',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 8, color: Colors.white,
-                            fontWeight: FontWeight.w600),
-                        ),
+              child: imagePath.isNotEmpty
+                  ? Image.asset(
+                      imagePath,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => Text(
+                        _emoji[building.buildingType] ?? '🏛️',
+                        style: const TextStyle(fontSize: 36),
                       ),
+                    )
+                  : Text(
+                      _emoji[building.buildingType] ?? '🏛️',
+                      style: const TextStyle(fontSize: 36),
                     ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 3),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${building.displayName} ${building.level}',
-                    style: const TextStyle(
-                      color: Color(0xFFFAC775), fontSize: 8),
-                  ),
-                  Text(
-                    '($gridX,$gridY)',
-                    style: const TextStyle(
-                      color: Colors.white70, fontSize: 7),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -562,6 +608,8 @@ class _BottomControlPanel extends StatelessWidget {
     final selectedBuilding = selectedBuildingId != null
         ? buildings.where((b) => b.id == selectedBuildingId).firstOrNull
         : null;
+
+    if (selectedBuilding == null) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
@@ -609,7 +657,9 @@ class _BottomControlPanel extends StatelessWidget {
                 children: [
                   // ขึ้น
                   Positioned(
-                    top: 0, left: 0, right: 0,
+                    top: 0,
+                    left: 0,
+                    right: 0,
                     child: Center(
                       child: _ArrowButton(
                         icon: Icons.arrow_upward_rounded,
@@ -619,7 +669,9 @@ class _BottomControlPanel extends StatelessWidget {
                   ),
                   // ซ้าย
                   Positioned(
-                    left: 0, top: 0, bottom: 0,
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
                     child: Center(
                       child: _ArrowButton(
                         icon: Icons.arrow_back_rounded,
@@ -648,7 +700,9 @@ class _BottomControlPanel extends StatelessWidget {
                   ),
                   // ขวา
                   Positioned(
-                    right: 0, top: 0, bottom: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
                     child: Center(
                       child: _ArrowButton(
                         icon: Icons.arrow_forward_rounded,
@@ -658,7 +712,9 @@ class _BottomControlPanel extends StatelessWidget {
                   ),
                   // ลง
                   Positioned(
-                    bottom: 0, left: 0, right: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
                     child: Center(
                       child: _ArrowButton(
                         icon: Icons.arrow_downward_rounded,
@@ -695,7 +751,7 @@ class _BottomControlPanel extends StatelessWidget {
                     foregroundColor: Colors.black87,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  child: const Text('บันทึก'),
+                  child: const Text('วาง'),
                 ),
               ),
             ],
@@ -707,19 +763,19 @@ class _BottomControlPanel extends StatelessWidget {
 
   String _buildingEmoji(String type) {
     const emojis = {
-      'town_hall':     '🏛️',
-      'barracks':      '⚔️',
-      'sawmill':       '🪵',
-      'smelter':       '🔥',
-      'rice_farm':     '🌾',
-      'distillery':    '🍶',
-      'house':         '🏠',
-      'tavern':        '🍺',
-      'shrine':        '⛩️',
+      'town_hall': '🏛️',
+      'barracks': '⚔️',
+      'sawmill': '🪵',
+      'smelter': '🔥',
+      'rice_farm': '🌾',
+      'distillery': '🍶',
+      'house': '🏠',
+      'tavern': '🍺',
+      'shrine': '⛩️',
       'elephant_camp': '🐘',
-      'smithy':        '🔨',
-      'wall':          '🧱',
-      'watchtower':    '🗼',
+      'smithy': '🔨',
+      'wall': '🧱',
+      'watchtower': '🗼',
     };
     return emojis[type] ?? '🏛️';
   }
