@@ -7,7 +7,7 @@ import '../models/building_position.dart';
 import '../providers/game_providers.dart';
 
 /// โหมดจัดวางตำแหน่งอาคาร แสดงทับบน SettlementView โดยตรง (ไม่ push หน้าใหม่ เพื่อความเร็ว)
-/// เดิมเป็นหน้าแยก ArrangeBuildingsView — ย้าย logic มาไว้ที่นี่ทั้งหมด
+/// ระบบกริด: สี่เหลี่ยมตรง เต็มความกว้างจอ เว้นขอบบน 10% และขอบล่าง 10%
 class ArrangeModeOverlay extends ConsumerStatefulWidget {
   final Settlement settlement;
   final List<Building> buildings;
@@ -27,10 +27,9 @@ class ArrangeModeOverlay extends ConsumerStatefulWidget {
 }
 
 class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
-  static const Offset _vTop = Offset(0.503, 0.066);
-  static const Offset _vRight = Offset(0.992, 0.444);
-  static const Offset _vBottom = Offset(0.519, 0.860);
-  static const Offset _vLeft = Offset(0.026, 0.324);
+  // ขอบเขตกริด: เต็มความกว้าง (0.0-1.0), สูงเว้นบน 10% ล่าง 10%
+  static const double _marginTop = 0.10;
+  static const double _marginBottom = 0.10;
   static const int _gridSize = 20;
 
   // อาคาร 1 หลัง ยึด 3 cols x 2 rows, anchor = กลางล่าง
@@ -53,31 +52,19 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
     'watchtower': Offset(0.55, 0.38),
   };
 
+  // grid (x,y) -> offset สัดส่วนจอ (0.0-1.0) แบบเส้นตรง (linear)
   static Offset _gridToOffset(int x, int y) {
-    final u = x / _gridSize;
-    final v = y / _gridSize;
-    final dx =
-        (1 - u) * (1 - v) * _vTop.dx +
-        u * (1 - v) * _vRight.dx +
-        (1 - u) * v * _vLeft.dx +
-        u * v * _vBottom.dx;
-    final dy =
-        (1 - u) * (1 - v) * _vTop.dy +
-        u * (1 - v) * _vRight.dy +
-        (1 - u) * v * _vLeft.dy +
-        u * v * _vBottom.dy;
+    final dx = x / _gridSize;
+    final dy = _marginTop + (y / _gridSize) * (1 - _marginTop - _marginBottom);
     return Offset(dx, dy);
   }
 
+  // offset สัดส่วนจอ -> grid (x,y)
   static ({int x, int y}) _offsetToGrid(Offset offset) {
-    final ux = _vRight.dx - _vTop.dx, uy = _vRight.dy - _vTop.dy;
-    final vx = _vLeft.dx - _vTop.dx, vy = _vLeft.dy - _vTop.dy;
-    final px = offset.dx - _vTop.dx, py = offset.dy - _vTop.dy;
-    final det = ux * vy - uy * vx;
-    final u = (px * vy - py * vx) / det;
-    final v = (ux * py - uy * px) / det;
-    final x = (u * _gridSize).round().clamp(1, _gridSize - 2);
-    final y = (v * _gridSize).round().clamp(1, _gridSize - 1);
+    final u = offset.dx;
+    final v = (offset.dy - _marginTop) / (1 - _marginTop - _marginBottom);
+    final x = (u * _gridSize).round().clamp(0, _gridSize - 1);
+    final y = (v * _gridSize).round().clamp(0, _gridSize - 1);
     return (x: x, y: y);
   }
 
@@ -135,31 +122,10 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
       if (cell.x < 0 || cell.x >= _gridSize || cell.y < 0 || cell.y >= _gridSize) {
         return false;
       }
-      if (!_isInsideOval(cell.x, cell.y)) return false;
       for (final entry in _positions.entries) {
         if (entry.key == excludeId) continue;
         final otherCells = _occupiedCells(entry.value.x, entry.value.y);
         if (otherCells.any((c) => c.x == cell.x && c.y == cell.y)) return false;
-      }
-    }
-    return true;
-  }
-
-  static bool _isInsideOval(int x, int y) {
-    final p = _gridToOffset(x, y);
-    const verts = [_vTop, _vRight, _vBottom, _vLeft];
-    int sign = 0;
-    for (int i = 0; i < 4; i++) {
-      final v1 = verts[i], v2 = verts[(i + 1) % 4];
-      final cross =
-          (v2.dx - v1.dx) * (p.dy - v1.dy) - (v2.dy - v1.dy) * (p.dx - v1.dx);
-      final s = cross > 0 ? 1 : (cross < 0 ? -1 : 0);
-      if (s != 0) {
-        if (sign == 0) {
-          sign = s;
-        } else if (s != sign) {
-          return false;
-        }
       }
     }
     return true;
@@ -231,7 +197,6 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // ฉากมืดคลุมเบาๆ ให้รู้ว่ากำลังอยู่โหมดจัดวาง (ไม่วาดพื้นหลัง/TopBar ซ้ำ เพราะ SettlementView มีอยู่แล้วด้านล่าง)
         Positioned.fill(
           child: IgnorePointer(
             child: Container(color: Colors.black.withValues(alpha: 0.15)),
@@ -243,7 +208,13 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
               child: SizedBox(
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
-                child: CustomPaint(painter: _ArrangeGridPainter(gridSize: _gridSize)),
+                child: CustomPaint(
+                  painter: _ArrangeGridPainter(
+                    gridSize: _gridSize,
+                    marginTop: _marginTop,
+                    marginBottom: _marginBottom,
+                  ),
+                ),
               ),
             ),
           ),
@@ -300,57 +271,74 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
 
 class _ArrangeGridPainter extends CustomPainter {
   final int gridSize;
-  const _ArrangeGridPainter({required this.gridSize});
+  final double marginTop;
+  final double marginBottom;
 
-  static const Offset _vTop = Offset(0.503, 0.066);
-  static const Offset _vRight = Offset(0.992, 0.444);
-  static const Offset _vBottom = Offset(0.519, 0.860);
-  static const Offset _vLeft = Offset(0.026, 0.324);
-
-  Offset _toPixel(double u, double v, Size size) {
-    final dx = (1 - u) * (1 - v) * _vTop.dx + u * (1 - v) * _vRight.dx
-             + (1 - u) * v * _vLeft.dx      + u * v * _vBottom.dx;
-    final dy = (1 - u) * (1 - v) * _vTop.dy + u * (1 - v) * _vRight.dy
-             + (1 - u) * v * _vLeft.dy      + u * v * _vBottom.dy;
-    return Offset(dx * size.width, dy * size.height);
-  }
+  const _ArrangeGridPainter({
+    required this.gridSize,
+    required this.marginTop,
+    required this.marginBottom,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.red
-      ..strokeWidth = 4.0;
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..strokeWidth = 1.0;
     final majorPaint = Paint()
-      ..color = Colors.yellow
-      ..strokeWidth = 5.0;
+      ..color = Colors.white.withValues(alpha: 0.55)
+      ..strokeWidth = 1.3;
 
-    const segments = 6;
+    final top = size.height * marginTop;
+    final bottom = size.height * (1 - marginBottom);
+    final gridHeight = bottom - top;
+    final cellW = size.width / gridSize;
+    final cellH = gridHeight / gridSize;
 
     for (int i = 0; i <= gridSize; i++) {
-      final v = i / gridSize;
-      final path = Path();
-      for (int s = 0; s <= segments; s++) {
-        final p = _toPixel(s / segments, v, size);
-        s == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
-      }
-      canvas.drawPath(path, i % 5 == 0 ? majorPaint : gridPaint);
+      final x = i * cellW;
+      canvas.drawLine(Offset(x, top), Offset(x, bottom), i % 5 == 0 ? majorPaint : gridPaint);
+    }
+    for (int i = 0; i <= gridSize; i++) {
+      final y = top + i * cellH;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), i % 5 == 0 ? majorPaint : gridPaint);
     }
 
-    for (int i = 0; i <= gridSize; i++) {
-      final u = i / gridSize;
-      final path = Path();
-      for (int s = 0; s <= segments; s++) {
-        final p = _toPixel(u, s / segments, size);
-        s == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
+    // เลขไล่ 1..400 ในแต่ละช่อง (ซ้าย->ขวา, บน->ล่าง)
+    int number = 1;
+    for (int row = 0; row < gridSize; row++) {
+      for (int col = 0; col < gridSize; col++) {
+        final cx = col * cellW + cellW / 2;
+        final cy = top + row * cellH + cellH / 2;
+        _drawNumber(canvas, '$number', Offset(cx, cy));
+        number++;
       }
-      canvas.drawPath(path, i % 5 == 0 ? majorPaint : gridPaint);
     }
   }
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
+  void _drawNumber(Canvas canvas, String text, Offset center) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.85),
+          fontSize: 7,
+          fontWeight: FontWeight.w600,
+          shadows: const [Shadow(color: Colors.black, blurRadius: 2)],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+  }
 
+  @override
+  bool shouldRepaint(covariant _ArrangeGridPainter oldDelegate) {
+    return oldDelegate.gridSize != gridSize ||
+        oldDelegate.marginTop != marginTop ||
+        oldDelegate.marginBottom != marginBottom;
+  }
+}
 class _ArrangeBuildingIcon extends StatelessWidget {
   final Building building;
   final Offset offset;
@@ -432,7 +420,6 @@ class _ArrangeBuildingIcon extends StatelessWidget {
     );
   }
 }
-
 class _BottomControlPanel extends StatelessWidget {
   final String? selectedBuildingId;
   final List<Building> buildings;
