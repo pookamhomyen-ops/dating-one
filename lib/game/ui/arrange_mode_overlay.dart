@@ -318,11 +318,11 @@ class _ArrangeGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
-      ..strokeWidth = 1.0;
+      ..color = Colors.red
+      ..strokeWidth = 4.0;
     final majorPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
-      ..strokeWidth = 1.2;
+      ..color = Colors.yellow
+      ..strokeWidth = 5.0;
 
     const segments = 6;
 
@@ -418,7 +418,7 @@ class _ArrangeBuildingIcon extends StatelessWidget {
                   width: 100,
                   height: 100,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Text(
+                  errorBuilder: (_, _, _) => Text(
                     _emoji[building.buildingType] ?? '🏛️',
                     style: const TextStyle(fontSize: 36),
                   ),

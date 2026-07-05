@@ -20,20 +20,22 @@ class SettlementView extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFF152E2E),
-      body: settlementAsync.when(
-        data: (settlement) => buildingsAsync.when(
-          data: (buildings) => settlement != null
-              ? _SettlementScene(
-                  settlement: settlement,
-                  buildings: buildings,
-                  onSwitchTab: onSwitchTab,
-                )
-              : const SizedBox.shrink(),
+      body: SafeArea(
+        child: settlementAsync.when(
+          data: (settlement) => buildingsAsync.when(
+            data: (buildings) => settlement != null
+                ? _SettlementScene(
+                    settlement: settlement,
+                    buildings: buildings,
+                    onSwitchTab: onSwitchTab,
+                  )
+                : const SizedBox.shrink(),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('$e')),
+          ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('$e')),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
       ),
     );
   }
@@ -180,6 +182,7 @@ void _showQuestSheet(BuildContext context) {
               onToggleNames: () => setState(() => _showNames = !_showNames),
               showGrid: _showGrid,
               onToggleGrid: () => setState(() => _showGrid = !_showGrid),
+              onArrangePressed: () => setState(() => _isArranging = true),
             ),
           ),
         ),
@@ -212,29 +215,16 @@ void _showQuestSheet(BuildContext context) {
             ),
           ),
         ),
-        // แทนที่ Positioned ของปุ่ม arrangeBtn ด้วยอันนี้
-Positioned(
-  bottom: 16,
-  right: 16,
-  child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      FloatingActionButton.small(
-        heroTag: 'questBtn',
-        backgroundColor: const Color(0xFF0F2A2A),
-        onPressed: () => _showQuestSheet(context),
-        child: const Text('📜', style: TextStyle(fontSize: 16)),
-      ),
-      const SizedBox(height: 8),
-      FloatingActionButton.small(
-        heroTag: 'arrangeBtn',
-        backgroundColor: const Color(0xFF0D9488),
-        onPressed: () => setState(() => _isArranging = true),
-        child: const Icon(Icons.edit, color: Colors.white, size: 20),
-      ),
-    ],
-  ),
-),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.small(
+            heroTag: 'questBtn',
+            backgroundColor: const Color(0xFF0F2A2A),
+            onPressed: () => _showQuestSheet(context),
+            child: const Text('📜', style: TextStyle(fontSize: 16)),
+          ),
+        ),
         if (_isArranging)
           Positioned.fill(
             child: ArrangeModeOverlay(
@@ -315,8 +305,6 @@ class _TopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final thLevel   = ref.watch(townHallLevelProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
@@ -368,42 +356,44 @@ class _TopBar extends ConsumerWidget {
                 ),
               ),
               Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                onTap: onToggleGrid,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: onToggleGrid,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        showGrid ? Icons.grid_on : Icons.grid_off,
+                        color: showGrid
+                            ? const Color(0xFF4CAF50)
+                            : const Color(0xFFFF9800),
+                        size: 16,
+                      ),
+                    ),
                   ),
-                  child: Icon(
-                    showGrid ? Icons.grid_on : Icons.grid_off,
-                    color: showGrid
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFFF9800),
-                    size: 16,
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: onToggleNames,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        showNames ? Icons.visibility : Icons.visibility_off,
+                        color: showNames
+                            ? const Color(0xFF4CAF50)
+                            : const Color(0xFFFF9800),
+                        size: 16,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onToggleNames,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    showNames ? Icons.visibility : Icons.visibility_off,
-                    color: showNames
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFFF9800),
-                    size: 16,
-                  ),
-                ),
+                ],
               ),
             ],
           ),
