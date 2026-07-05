@@ -240,7 +240,11 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
         if (widget.showGrid)
           Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(painter: _ArrangeGridPainter(gridSize: _gridSize)),
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: CustomPaint(painter: _ArrangeGridPainter(gridSize: _gridSize)),
+              ),
             ),
           ),
         ...widget.buildings.map((b) {
@@ -314,10 +318,10 @@ class _ArrangeGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.22)
+      ..color = Colors.white.withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
     final majorPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.4)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..strokeWidth = 1.2;
 
     const segments = 6;

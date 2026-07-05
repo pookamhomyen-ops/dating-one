@@ -303,12 +303,14 @@ class _TopBar extends ConsumerWidget {
   final VoidCallback onToggleNames;
   final bool showGrid;
   final VoidCallback onToggleGrid;
+  final VoidCallback onArrangePressed;
   const _TopBar({
     required this.settlement,
     required this.showNames,
     required this.onToggleNames,
     required this.showGrid,
     required this.onToggleGrid,
+    required this.onArrangePressed,
   });
 
   @override
@@ -350,8 +352,22 @@ class _TopBar extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Padding(
-          padding: const EdgeInsets.only(right: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: onArrangePressed,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.edit, color: Color(0xFF0D9488), size: 16),
+                ),
+              ),
+              Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               GestureDetector(
