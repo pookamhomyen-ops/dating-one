@@ -16,7 +16,7 @@ class SettlementView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settlementAsync = ref.watch(settlementProvider);
-    final buildingsAsync  = ref.watch(buildingsProvider);
+    final buildingsAsync = ref.watch(buildingsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF152E2E),
@@ -61,57 +61,51 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
   bool _isArranging = false;
   bool _showGrid = false;
 
-  // ขอบเขตพื้นที่ (fraction) สำหรับแปลง grid <-> offset
-  static const Offset _vTop    = Offset(0.503, 0.066);
-  static const Offset _vRight  = Offset(0.992, 0.444);
-  static const Offset _vBottom = Offset(0.519, 0.860);
-  static const Offset _vLeft   = Offset(0.026, 0.324);
-  static const int _gridSize = 20;
+  // ขอบเขตกริด: linear ตรงกับ arrange_mode_overlay.dart (เต็มความกว้าง, เว้นบน/ล่าง 10%)
+  static const double _marginTop = 0.10;
+  static const double _marginBottom = 0.10;
+  static const int _gridSize = 10;
 
   static Offset _gridToOffset(int x, int y) {
-    final u = x / _gridSize;
-    final v = y / _gridSize;
-    final dx = (1 - u) * (1 - v) * _vTop.dx + u * (1 - v) * _vRight.dx
-             + (1 - u) * v * _vLeft.dx      + u * v * _vBottom.dx;
-    final dy = (1 - u) * (1 - v) * _vTop.dy + u * (1 - v) * _vRight.dy
-             + (1 - u) * v * _vLeft.dy      + u * v * _vBottom.dy;
+    final dx = x / _gridSize;
+    final dy = _marginTop + (y / _gridSize) * (1 - _marginTop - _marginBottom);
     return Offset(dx, dy);
   }
 
   // hardcoded fallback
   static const _positions = <String, Offset>{
-    'town_hall':      Offset(0.42, 0.32),
-    'barracks':       Offset(0.62, 0.52),
-    'sawmill':        Offset(0.25, 0.38),
-    'smelter':        Offset(0.68, 0.36),
-    'rice_farm':      Offset(0.28, 0.62),
-    'distillery':     Offset(0.58, 0.68),
-    'house':          Offset(0.42, 0.55),
-    'tavern':         Offset(0.50, 0.44),
-    'shrine':         Offset(0.72, 0.60),
-    'elephant_camp':  Offset(0.22, 0.52),
-    'smithy':         Offset(0.65, 0.44),
-    'wall':           Offset(0.35, 0.46),
-    'watchtower':     Offset(0.55, 0.38),
+    'town_hall': Offset(0.42, 0.32),
+    'barracks': Offset(0.62, 0.52),
+    'sawmill': Offset(0.25, 0.38),
+    'smelter': Offset(0.68, 0.36),
+    'rice_farm': Offset(0.28, 0.62),
+    'distillery': Offset(0.58, 0.68),
+    'house': Offset(0.42, 0.55),
+    'tavern': Offset(0.50, 0.44),
+    'shrine': Offset(0.72, 0.60),
+    'elephant_camp': Offset(0.22, 0.52),
+    'smithy': Offset(0.65, 0.44),
+    'wall': Offset(0.35, 0.46),
+    'watchtower': Offset(0.55, 0.38),
   };
 
   static const _assetPath = 'assets/games/buildings';
   static const _imageMap = <String, String>{
-    'town_hall':   'town_hall.webp',
-    'barracks':    'barracks.webp',
-    'sawmill':     'sawmill.webp',
-    'smelter':     'smelter.webp',
-    'rice_farm':   'rice_farm.webp',
-    'shrine':      'shrine.webp',
+    'town_hall': 'town_hall.webp',
+    'barracks': 'barracks.webp',
+    'sawmill': 'sawmill.webp',
+    'smelter': 'smelter.webp',
+    'rice_farm': 'rice_farm.webp',
+    'shrine': 'shrine.webp',
   };
   static const _emoji = <String, String>{
-    'distillery':    '🍶',
-    'house':         '🏠',
-    'tavern':        '🍺',
+    'distillery': '🍶',
+    'house': '🏠',
+    'tavern': '🍺',
     'elephant_camp': '🐘',
-    'smithy':        '🔨',
-    'wall':          '🧱',
-    'watchtower':    '🗼',
+    'smithy': '🔨',
+    'wall': '🧱',
+    'watchtower': '🗼',
   };
 
   String _getImagePath(Building b) {
@@ -125,7 +119,7 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
   }
 
   int _getTabIndex() => 0;
-void _showQuestSheet(BuildContext context) {
+  void _showQuestSheet(BuildContext context) {
     final container = ProviderScope.containerOf(context);
     showModalBottomSheet(
       context: context,
@@ -140,6 +134,7 @@ void _showQuestSheet(BuildContext context) {
       ),
     );
   }
+
   // แทนที่ build method ของ _SettlementScene ด้วยโค้ดนี้
   @override
   Widget build(BuildContext context) {
@@ -174,7 +169,9 @@ void _showQuestSheet(BuildContext context) {
       children: [
         _AyutthayaBackground(),
         Positioned(
-          top: 0, left: 0, right: 0,
+          top: 0,
+          left: 0,
+          right: 0,
           child: SafeArea(
             child: _TopBar(
               settlement: widget.settlement,
@@ -203,11 +200,15 @@ void _showQuestSheet(BuildContext context) {
           }),
         if (!_isArranging) WalkingVillager(buildingPositions: positionsMap),
         Positioned(
-          top: 0, left: 0,
+          top: 0,
+          left: 0,
           child: SafeArea(
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios,
-                color: Color(0xFF5EEAD4), size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios,
+                color: Color(0xFF5EEAD4),
+                size: 20,
+              ),
               onPressed: () {
                 Navigator.pop(context);
                 widget.onSwitchTab?.call(_getTabIndex());
@@ -245,10 +246,14 @@ class _AyutthayaBackground extends ConsumerWidget {
 
   String _getBgPath(String season) {
     switch (season) {
-      case 'summer': return 'assets/games/bg/bg_summer.png';
-      case 'rain':   return 'assets/games/bg/bg_rain.png';
-      case 'winter': return 'assets/games/bg/bg_winter.png';
-      default:       return 'assets/games/bg/bg.png';
+      case 'summer':
+        return 'assets/games/bg/bg_summer.png';
+      case 'rain':
+        return 'assets/games/bg/bg_rain.png';
+      case 'winter':
+        return 'assets/games/bg/bg_winter.png';
+      default:
+        return 'assets/games/bg/bg.png';
     }
   }
 
@@ -272,7 +277,12 @@ class _AyutthayaBackground extends ConsumerWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFF0D1F1F), Color(0xFF3D1F08), Color(0xFF5C3210), Color(0xFF4A6741)],
+                    colors: [
+                      Color(0xFF0D1F1F),
+                      Color(0xFF3D1F08),
+                      Color(0xFF5C3210),
+                      Color(0xFF4A6741),
+                    ],
                   ),
                 ),
               ),
@@ -316,16 +326,22 @@ class _TopBar extends ConsumerWidget {
             color: Colors.black.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: const Color(0xFF8B6914).withValues(alpha: 0.5), width: 0.5),
+              color: const Color(0xFF8B6914).withValues(alpha: 0.5),
+              width: 0.5,
+            ),
           ),
           child: Row(
             children: [
               Flexible(
-                child: Text(settlement.name,
+                child: Text(
+                  settlement.name,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF5EEAD4),
-                    fontSize: 13, fontWeight: FontWeight.w600)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               _ResChip(icon: '🪵', value: settlement.wood),
@@ -352,7 +368,11 @@ class _TopBar extends ConsumerWidget {
                     color: Colors.black.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.edit, color: Color(0xFF0D9488), size: 16),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Color(0xFF0D9488),
+                    size: 16,
+                  ),
                 ),
               ),
               Row(
@@ -410,8 +430,10 @@ class _ResChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('$icon$value',
-      style: const TextStyle(color: Color(0xFF5EEAD4), fontSize: 10));
+    return Text(
+      '$icon$value',
+      style: const TextStyle(color: Color(0xFF5EEAD4), fontSize: 10),
+    );
   }
 }
 
@@ -439,47 +461,52 @@ class _BuildingIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final left = position.dx * size.width - 28;
-    final top  = position.dy * size.height - 40;
+    final top = position.dy * size.height - 40;
 
     return Positioned(
-      left: left, top: top,
-          child: GestureDetector(
-            onTap: () => _showBuildingPopup(context),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // อาคาร
-                imagePath != null
-                    ? Image.asset(
-                        imagePath!,
-                        width: 100, height: 100,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, e, s) => Text(emoji,
-                          style: const TextStyle(fontSize: 36)),
-                      )
-                    : Text(emoji,
-                        style: const TextStyle(fontSize: 36)),
-                if (showName)
-                  Transform.translate(
-                    offset: const Offset(0, -18),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${building.displayName} ${building.level}',
-                        style: const TextStyle(
-                          color: Color(0xFFFAC775), fontSize: 8),
-                      ),
+      left: left,
+      top: top,
+      child: GestureDetector(
+        onTap: () => _showBuildingPopup(context),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // อาคาร
+            imagePath != null
+                ? Image.asset(
+                    imagePath!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, e, s) =>
+                        Text(emoji, style: const TextStyle(fontSize: 36)),
+                  )
+                : Text(emoji, style: const TextStyle(fontSize: 36)),
+            if (showName)
+              Transform.translate(
+                offset: const Offset(0, -18),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${building.displayName} ${building.level}',
+                    style: const TextStyle(
+                      color: Color(0xFFFAC775),
+                      fontSize: 8,
                     ),
                   ),
-              ],
-            ),
-          ),
-        );
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showBuildingPopup(BuildContext context) {
@@ -487,7 +514,8 @@ class _BuildingIcon extends StatelessWidget {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => _BuildingPopup(
         building: building,
         settlement: settlement,
@@ -511,7 +539,8 @@ class _BuildingPopup extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cost = building.upgradeCost;
-    final canAfford = settlement.wood >= (cost['wood'] ?? 0) &&
+    final canAfford =
+        settlement.wood >= (cost['wood'] ?? 0) &&
         settlement.iron >= (cost['iron'] ?? 0);
 
     return Padding(
@@ -534,24 +563,29 @@ class _BuildingPopup extends ConsumerWidget {
           // หัวข้อ
           Row(
             children: [
-              Text(building.displayName,
-                  style: const TextStyle(
-                      color: Color(0xFF0F2A2A),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700)),
+              Text(
+                building.displayName,
+                style: const TextStyle(
+                  color: Color(0xFF0F2A2A),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0D9488),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text('Lv.${building.level}',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Lv.${building.level}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -594,34 +628,49 @@ class _BuildingPopup extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                        'กำลังอัปเกรด Lv.${building.level} → ${building.level + 1}  '
-                        '(${_fmt(building.upgradeTimeRemaining!)})',
-                        style: const TextStyle(
-                            color: Color(0xFF0F6E56),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
+                      'กำลังอัปเกรด Lv.${building.level} → ${building.level + 1}  '
+                      '(${_fmt(building.upgradeTimeRemaining!)})',
+                      style: const TextStyle(
+                        color: Color(0xFF0F6E56),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
             )
           else if (building.level < 5) ...[
-            Text('อัปเกรด → Lv.${building.level + 1}',
-                style: const TextStyle(
-                    color: Color(0xFF0F6E56),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
+            Text(
+              'อัปเกรด → Lv.${building.level + 1}',
+              style: const TextStyle(
+                color: Color(0xFF0F6E56),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _CostBadge(
-                    icon: '🪵', need: cost['wood'] ?? 0, have: settlement.wood),
+                  icon: '🪵',
+                  need: cost['wood'] ?? 0,
+                  have: settlement.wood,
+                ),
                 const SizedBox(width: 8),
                 _CostBadge(
-                    icon: '⚙️', need: cost['iron'] ?? 0, have: settlement.iron),
+                  icon: '⚙️',
+                  need: cost['iron'] ?? 0,
+                  have: settlement.iron,
+                ),
                 const SizedBox(width: 8),
-                Text('⏱ ${_fmtSec(building.upgradeSeconds)}',
-                    style: const TextStyle(
-                        color: Color(0xFF888780), fontSize: 11)),
+                Text(
+                  '⏱ ${_fmtSec(building.upgradeSeconds)}',
+                  style: const TextStyle(
+                    color: Color(0xFF888780),
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -629,17 +678,21 @@ class _BuildingPopup extends ConsumerWidget {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      canAfford ? const Color(0xFF0F6E56) : Colors.grey[300],
+                  backgroundColor: canAfford
+                      ? const Color(0xFF0F6E56)
+                      : Colors.grey[300],
                   foregroundColor: canAfford ? Colors.white : Colors.grey[500],
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: canAfford ? () => _upgrade(context, ref) : null,
-                child: Text(canAfford ? '⚒️ อัปเกรด' : 'ทรัพยากรไม่พอ',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(
+                  canAfford ? '⚒️ อัปเกรด' : 'ทรัพยากรไม่พอ',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ] else
@@ -653,11 +706,14 @@ class _BuildingPopup extends ConsumerWidget {
                 children: [
                   Text('✅', style: TextStyle(fontSize: 14)),
                   SizedBox(width: 8),
-                  Text('อาคารถึงระดับสูงสุดแล้ว',
-                      style: TextStyle(
-                          color: Color(0xFF0F6E56),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    'อาคารถึงระดับสูงสุดแล้ว',
+                    style: TextStyle(
+                      color: Color(0xFF0F6E56),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -673,14 +729,17 @@ class _BuildingPopup extends ConsumerWidget {
                   foregroundColor: const Color(0xFF0F6E56),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.pop(context);
                   _navigateToAction(context);
                 },
-                child: Text(_actionLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(
+                  _actionLabel,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],
@@ -690,9 +749,14 @@ class _BuildingPopup extends ConsumerWidget {
   }
 
   bool get _hasAction => const [
-        'barracks', 'elephant_camp', 'sawmill', 'smelter',
-        'rice_farm', 'distillery', 'town_hall',
-      ].contains(building.buildingType);
+    'barracks',
+    'elephant_camp',
+    'sawmill',
+    'smelter',
+    'rice_farm',
+    'distillery',
+    'town_hall',
+  ].contains(building.buildingType);
 
   String get _actionLabel {
     switch (building.buildingType) {
@@ -725,8 +789,9 @@ class _BuildingPopup extends ConsumerWidget {
       if (context.mounted) Navigator.pop(context);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     }
   }
@@ -763,9 +828,10 @@ class _InfoRow extends StatelessWidget {
         Text(icon, style: const TextStyle(fontSize: 13)),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(text,
-              style:
-                  const TextStyle(color: Color(0xFF5F5E5A), fontSize: 12)),
+          child: Text(
+            text,
+            style: const TextStyle(color: Color(0xFF5F5E5A), fontSize: 12),
+          ),
         ),
       ],
     );
@@ -775,8 +841,11 @@ class _InfoRow extends StatelessWidget {
 class _CostBadge extends StatelessWidget {
   final String icon;
   final int need, have;
-  const _CostBadge(
-      {required this.icon, required this.need, required this.have});
+  const _CostBadge({
+    required this.icon,
+    required this.need,
+    required this.have,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -795,12 +864,14 @@ class _CostBadge extends StatelessWidget {
           width: 0.5,
         ),
       ),
-      child: Text('$icon $need',
-          style: TextStyle(
-            fontSize: 12,
-            color: enough ? const Color(0xFF0F6E56) : const Color(0xFFA32D2D),
-            fontWeight: FontWeight.w600,
-          )),
+      child: Text(
+        '$icon $need',
+        style: TextStyle(
+          fontSize: 12,
+          color: enough ? const Color(0xFF0F6E56) : const Color(0xFFA32D2D),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
@@ -815,8 +886,12 @@ class _QuestSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final questsWithProgress = ref.watch(questsWithProgressProvider);
-    final daily   = questsWithProgress.where((q) => q.quest.questType == 'daily').toList();
-    final weekly  = questsWithProgress.where((q) => q.quest.questType == 'weekly').toList();
+    final daily = questsWithProgress
+        .where((q) => q.quest.questType == 'daily')
+        .toList();
+    final weekly = questsWithProgress
+        .where((q) => q.quest.questType == 'weekly')
+        .toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
@@ -828,7 +903,8 @@ class _QuestSheet extends ConsumerWidget {
           // handle
           Container(
             margin: const EdgeInsets.only(top: 10, bottom: 4),
-            width: 36, height: 4,
+            width: 36,
+            height: 4,
             decoration: BoxDecoration(
               color: Colors.black26,
               borderRadius: BorderRadius.circular(2),
@@ -840,26 +916,37 @@ class _QuestSheet extends ConsumerWidget {
               children: [
                 const Text('📜', style: TextStyle(fontSize: 20)),
                 const SizedBox(width: 8),
-                const Text('ภารกิจ',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const Text(
+                  'ภารกิจ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
                 const Spacer(),
                 // badge จำนวน ready to claim
-                Builder(builder: (_) {
-                  final ready = questsWithProgress
-                      .where((q) => q.isReadyToClaim).length;
-                  if (ready == 0) return const SizedBox.shrink();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F766E),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text('$ready รอรับรางวัล',
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 11)),
-                  );
-                }),
+                Builder(
+                  builder: (_) {
+                    final ready = questsWithProgress
+                        .where((q) => q.isReadyToClaim)
+                        .length;
+                    if (ready == 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$ready รอรับรางวัล',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -871,18 +958,22 @@ class _QuestSheet extends ConsumerWidget {
               children: [
                 if (daily.isNotEmpty) ...[
                   _SectionLabel(label: '📅 ภารกิจรายวัน'),
-                  ...daily.map((q) => _QuestCard(
-                    questWithProgress: q,
-                    settlement: settlement,
-                  )),
+                  ...daily.map(
+                    (q) => _QuestCard(
+                      questWithProgress: q,
+                      settlement: settlement,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                 ],
                 if (weekly.isNotEmpty) ...[
                   _SectionLabel(label: '📆 ภารกิจรายสัปดาห์'),
-                  ...weekly.map((q) => _QuestCard(
-                    questWithProgress: q,
-                    settlement: settlement,
-                  )),
+                  ...weekly.map(
+                    (q) => _QuestCard(
+                      questWithProgress: q,
+                      settlement: settlement,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -901,12 +992,14 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-      child: Text(label,
+      child: Text(
+        label,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: Colors.grey[600],
-        )),
+        ),
+      ),
     );
   }
 }
@@ -914,27 +1007,24 @@ class _SectionLabel extends StatelessWidget {
 class _QuestCard extends ConsumerWidget {
   final QuestWithProgress questWithProgress;
   final Settlement settlement;
-  const _QuestCard({
-    required this.questWithProgress,
-    required this.settlement,
-  });
+  const _QuestCard({required this.questWithProgress, required this.settlement});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final q    = questWithProgress.quest;
-    final qwp  = questWithProgress;
+    final q = questWithProgress.quest;
+    final qwp = questWithProgress;
 
     Color borderColor;
     Color bgColor;
     if (qwp.isClaimed) {
       borderColor = Colors.grey[300]!;
-      bgColor     = Colors.grey[50]!;
+      bgColor = Colors.grey[50]!;
     } else if (qwp.isReadyToClaim) {
       borderColor = const Color(0xFF5DCAA5);
-      bgColor     = const Color(0xFF5DCAA5).withValues(alpha: 0.06);
+      bgColor = const Color(0xFF5DCAA5).withValues(alpha: 0.06);
     } else {
       borderColor = Colors.black.withValues(alpha: 0.08);
-      bgColor     = Colors.white;
+      bgColor = Colors.white;
     }
 
     return Container(
@@ -955,7 +1045,8 @@ class _QuestCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(q.title,
+                      Text(
+                        q.title,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -965,13 +1056,13 @@ class _QuestCard extends ConsumerWidget {
                           decoration: qwp.isClaimed
                               ? TextDecoration.lineThrough
                               : null,
-                        )),
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(q.description,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                        )),
+                      Text(
+                        q.description,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
                     ],
                   ),
                 ),
@@ -980,31 +1071,38 @@ class _QuestCard extends ConsumerWidget {
                 if (qwp.isClaimed)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text('✅ รับแล้ว',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey[500])),
+                    child: Text(
+                      '✅ รับแล้ว',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    ),
                   )
                 else if (qwp.isReadyToClaim)
                   GestureDetector(
                     onTap: () => _claim(context, ref),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF5DCAA5),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text('🎁 รับรางวัล',
+                      child: const Text(
+                        '🎁 รับรางวัล',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
-                        )),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -1033,8 +1131,7 @@ class _QuestCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     '${qwp.currentAmount}/${q.requirementAmount}',
-                    style: TextStyle(
-                        fontSize: 10, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -1044,12 +1141,18 @@ class _QuestCard extends ConsumerWidget {
             // rewards
             Row(
               children: [
-                Text('รางวัล: ',
-                  style: TextStyle(fontSize: 10, color: Colors.grey[500])),
-                if (q.rewardWood > 0)   _RewardChip(icon: '🪵', value: q.rewardWood),
-                if (q.rewardIron > 0)   _RewardChip(icon: '⚙️', value: q.rewardIron),
-                if (q.rewardRice > 0)   _RewardChip(icon: '🌾', value: q.rewardRice),
-                if (q.rewardLiquor > 0) _RewardChip(icon: '🍶', value: q.rewardLiquor),
+                Text(
+                  'รางวัล: ',
+                  style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                ),
+                if (q.rewardWood > 0)
+                  _RewardChip(icon: '🪵', value: q.rewardWood),
+                if (q.rewardIron > 0)
+                  _RewardChip(icon: '⚙️', value: q.rewardIron),
+                if (q.rewardRice > 0)
+                  _RewardChip(icon: '🌾', value: q.rewardRice),
+                if (q.rewardLiquor > 0)
+                  _RewardChip(icon: '🍶', value: q.rewardLiquor),
               ],
             ),
           ],
@@ -1061,22 +1164,25 @@ class _QuestCard extends ConsumerWidget {
   Future<void> _claim(BuildContext context, WidgetRef ref) async {
     try {
       final gameClient = ref.read(gameSupabaseProvider);
-      await gameClient.rpc('claim_quest_reward', params: {
-        'p_settlement_id': settlement.id,
-        'p_quest_id': questWithProgress.quest.id,
-      });
+      await gameClient.rpc(
+        'claim_quest_reward',
+        params: {
+          'p_settlement_id': settlement.id,
+          'p_quest_id': questWithProgress.quest.id,
+        },
+      );
       ref.invalidate(questProgressProvider);
       ref.invalidate(settlementProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎁 รับรางวัลเรียบร้อย!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('🎁 รับรางวัลเรียบร้อย!')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('รับรางวัลไม่ได้: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('รับรางวัลไม่ได้: $e')));
       }
     }
   }
@@ -1091,8 +1197,10 @@ class _RewardChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
-      child: Text('$icon$value',
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+      child: Text(
+        '$icon$value',
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      ),
     );
   }
 }

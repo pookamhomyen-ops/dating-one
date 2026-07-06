@@ -30,11 +30,26 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
   // ขอบเขตกริด: เต็มความกว้าง (0.0-1.0), สูงเว้นบน 10% ล่าง 10%
   static const double _marginTop = 0.10;
   static const double _marginBottom = 0.10;
-  static const int _gridSize = 20;
+  static const int _gridSize = 10;
 
-  // อาคาร 1 หลัง ยึด 3 cols x 2 rows, anchor = กลางล่าง
-  static const int _bldW = 3;
-  static const int _bldH = 2;
+  // ขนาด footprint ตามประเภทอาคาร: ทั่วไป 1x1, ค่ายทหาร 2x2, anchor = กลางล่าง
+  static ({int w, int h}) _footprint(String buildingType) {
+    if (buildingType == 'barracks') return (w: 2, h: 2);
+    return (w: 1, h: 1);
+  }
+
+  // ช่องต้องห้าม: วางอาคารไม่ได้ + ตัวละครเดินไม่ได้ (เลขช่อง 1-100 นับซ้าย->ขวา บน->ล่าง)
+  static const List<int> _forbiddenCellNumbers = [
+    9, 10, 20, 8, 1, 2, 3, 11, 51, 52, 53, 61, 62, 63, 71, 72, 73, 74,
+    81, 82, 83, 84, 80, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
+  ];
+
+  static final Set<({int x, int y})> _forbiddenCells = _forbiddenCellNumbers
+      .map((n) => (x: (n - 1) % _gridSize, y: (n - 1) ~/ _gridSize))
+      .toSet();
+
+  static bool _isForbidden(int x, int y) =>
+      _forbiddenCells.any((c) => c.x == x && c.y == y);
 
   static const _defaultOffsets = <String, Offset>{
     'town_hall': Offset(0.42, 0.32),
@@ -105,26 +120,33 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
     }
   }
 
-  // คืน list ของ cells ทั้งหมดที่อาคารยึด จาก anchor (กลางล่าง)
-  static List<({int x, int y})> _occupiedCells(int ax, int ay) {
+  // คืน list ของ cells ทั้งหมดที่อาคารยึด จาก anchor (กลางล่าง) ตามขนาด footprint ของประเภทอาคาร
+  static List<({int x, int y})> _occupiedCells(int ax, int ay, String buildingType) {
+    final fp = _footprint(buildingType);
     final cells = <({int x, int y})>[];
-    for (int row = 0; row < _bldH; row++) {
-      for (int col = -(_bldW ~/ 2); col <= _bldW ~/ 2; col++) {
+    final halfW = (fp.w - 1) ~/ 2;
+    for (int row = 0; row < fp.h; row++) {
+      for (int col = -halfW; col < fp.w - halfW; col++) {
         cells.add((x: ax + col, y: ay - row));
       }
     }
     return cells;
   }
 
+  String _typeOf(String buildingId) =>
+      widget.buildings.firstWhere((b) => b.id == buildingId).buildingType;
+
   bool _canPlace(int ax, int ay, String excludeId) {
-    final cells = _occupiedCells(ax, ay);
+    final buildingType = _typeOf(excludeId);
+    final cells = _occupiedCells(ax, ay, buildingType);
     for (final cell in cells) {
       if (cell.x < 0 || cell.x >= _gridSize || cell.y < 0 || cell.y >= _gridSize) {
         return false;
       }
+      
       for (final entry in _positions.entries) {
         if (entry.key == excludeId) continue;
-        final otherCells = _occupiedCells(entry.value.x, entry.value.y);
+        final otherCells = _occupiedCells(entry.value.x, entry.value.y, _typeOf(entry.key));
         if (otherCells.any((c) => c.x == cell.x && c.y == cell.y)) return false;
       }
     }
@@ -161,6 +183,7 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
     final id = _selectedBuildingId;
     final pos = id != null ? _positions[id] : null;
     if (id == null || pos == null) return;
+    if (_isForbidden(pos.x, pos.y)) return;
     try {
       final service = ref.read(buildingPositionServiceProvider);
       await service.savePositions([
@@ -200,6 +223,22 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
         Positioned.fill(
           child: IgnorePointer(
             child: Container(color: Colors.black.withValues(alpha: 0.15)),
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              child: CustomPaint(
+                painter: _ForbiddenCellsPainter(
+                  gridSize: _gridSize,
+                  marginTop: _marginTop,
+                  marginBottom: _marginBottom,
+                  forbiddenCells: _forbiddenCells,
+                ),
+              ),
+            ),
           ),
         ),
         if (widget.showGrid)
@@ -570,7 +609,43 @@ class _BottomControlPanel extends StatelessWidget {
     return emojis[type] ?? '🏛️';
   }
 }
+class _ForbiddenCellsPainter extends CustomPainter {
+  final int gridSize;
+  final double marginTop;
+  final double marginBottom;
+  final Set<({int x, int y})> forbiddenCells;
 
+  const _ForbiddenCellsPainter({
+    required this.gridSize,
+    required this.marginTop,
+    required this.marginBottom,
+    required this.forbiddenCells,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.red.withValues(alpha: 0.35);
+    final top = size.height * marginTop;
+    final bottom = size.height * (1 - marginBottom);
+    final gridHeight = bottom - top;
+    final cellW = size.width / gridSize;
+    final cellH = gridHeight / gridSize;
+
+    for (final cell in forbiddenCells) {
+      final rect = Rect.fromLTWH(
+        cell.x * cellW,
+        top + cell.y * cellH,
+        cellW,
+        cellH,
+      );
+      canvas.drawRect(rect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ForbiddenCellsPainter oldDelegate) =>
+      oldDelegate.forbiddenCells != forbiddenCells;
+}
 class _ArrowButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
