@@ -13,6 +13,7 @@ class ArrangeModeOverlay extends ConsumerStatefulWidget {
   final List<Building> buildings;
   final bool showGrid;
   final VoidCallback onExit;
+  final String? lockedBuildingId; // ถ้าไม่ null = โหมดจัดการอาคารหลังเดียว
 
   const ArrangeModeOverlay({
     super.key,
@@ -20,6 +21,7 @@ class ArrangeModeOverlay extends ConsumerStatefulWidget {
     required this.buildings,
     required this.showGrid,
     required this.onExit,
+    this.lockedBuildingId,
   });
 
   @override
@@ -92,6 +94,7 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
     super.initState();
     _positions = _buildDefaultPositions();
     _originalPositions = Map.from(_positions);
+    _selectedBuildingId = widget.lockedBuildingId;
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadPositionsFromDb());
   }
 
@@ -175,8 +178,9 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
   void _cancel() {
     setState(() {
       _positions = Map.from(_originalPositions);
-      _selectedBuildingId = null;
+      _selectedBuildingId = widget.lockedBuildingId;
     });
+    if (widget.lockedBuildingId != null) widget.onExit();
   }
 
   Future<void> _place() async {
@@ -201,9 +205,10 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
       if (mounted) {
         setState(() {
           _originalPositions[id] = pos;
-          _selectedBuildingId = null;
+          _selectedBuildingId = widget.lockedBuildingId;
         });
       }
+      if (widget.lockedBuildingId != null) widget.onExit();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -262,15 +267,28 @@ class _ArrangeModeOverlayState extends ConsumerState<ArrangeModeOverlay> {
           if (pos == null) return const SizedBox.shrink();
           final offset = _gridToOffset(pos.x, pos.y);
           final isSelected = _selectedBuildingId == b.id;
+          final isLockedMode = widget.lockedBuildingId != null;
+          if (isLockedMode && b.id != widget.lockedBuildingId) {
+            return IgnorePointer(
+              child: _ArrangeBuildingIcon(
+                building: b,
+                offset: offset,
+                selected: false,
+                onTap: () {},
+              ),
+            );
+          }
           return _ArrangeBuildingIcon(
             building: b,
             offset: offset,
             selected: isSelected,
-            onTap: () {
-              setState(() {
-                _selectedBuildingId = (_selectedBuildingId == b.id) ? null : b.id;
-              });
-            },
+            onTap: isLockedMode
+                ? () {}
+                : () {
+                    setState(() {
+                      _selectedBuildingId = (_selectedBuildingId == b.id) ? null : b.id;
+                    });
+                  },
           );
         }),
         Positioned(

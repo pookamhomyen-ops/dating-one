@@ -86,6 +86,13 @@ if (building.level >= maxLevel) throw Exception('อาคารนี้ถึ�
         .select()
         .single();
 
+    // อัพเดท quest progress เมื่ออัพเกรดอาคารเสร็จ
+    await _supabase.schema('game').rpc('update_quest_progress', params: {
+      'p_settlement_id': building.settlementId,
+      'p_requirement_type': 'upgrade_building',
+      'p_amount': 1,
+    });
+
     return Building.fromJson(data);
   }
 

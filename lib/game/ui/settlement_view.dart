@@ -60,6 +60,7 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
   bool _showNames = true;
   bool _isArranging = false;
   bool _showGrid = false;
+  String? _arrangingBuildingId; // ถ้าไม่ null = กำลังจัดการอาคารหลังเดียวจากการ์ด
 
   // ขอบเขตกริด: linear ตรงกับ arrange_mode_overlay.dart (เต็มความกว้าง, เว้นบน/ล่าง 10%)
   static const double _marginTop = 0.10;
@@ -180,6 +181,7 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
               showGrid: _showGrid,
               onToggleGrid: () => setState(() => _showGrid = !_showGrid),
               onArrangePressed: () => setState(() => _isArranging = true),
+              isArranging: _isArranging,
             ),
           ),
         ),
@@ -196,6 +198,10 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
               settlement: widget.settlement,
               onSwitchTab: widget.onSwitchTab,
               showName: _showNames,
+              onArrangeRequested: () => setState(() {
+                _isArranging = true;
+                _arrangingBuildingId = b.id;
+              }),
             );
           }),
         if (!_isArranging) WalkingVillager(buildingPositions: positionsMap),
@@ -218,12 +224,71 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
         ),
         Positioned(
           bottom: 16,
+          right: 84,
+          child: GestureDetector(
+            onTap: () => _showQuestSheet(context),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0D9488), Color(0xFF5EEAD4)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: const Color(0xFFFAC775).withValues(alpha: 0.6),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text('📜', style: TextStyle(fontSize: 24)),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
           right: 16,
-          child: FloatingActionButton.small(
-            heroTag: 'questBtn',
-            backgroundColor: const Color(0xFF0F2A2A),
-            onPressed: () => _showQuestSheet(context),
-            child: const Text('📜', style: TextStyle(fontSize: 16)),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              widget.onSwitchTab?.call(0); // ไปหน้า map_tab.dart
+            },
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFB91C1C), Color(0xFFF97316)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: const Color(0xFFFAC775).withValues(alpha: 0.7),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Text('⚔️', style: TextStyle(fontSize: 26)),
+              ),
+            ),
           ),
         ),
         if (_isArranging)
@@ -232,7 +297,11 @@ class _SettlementSceneState extends ConsumerState<_SettlementScene> {
               settlement: widget.settlement,
               buildings: widget.buildings,
               showGrid: _showGrid,
-              onExit: () => setState(() => _isArranging = false),
+              lockedBuildingId: _arrangingBuildingId,
+              onExit: () => setState(() {
+                _isArranging = false;
+                _arrangingBuildingId = null;
+              }),
             ),
           ),
       ],
@@ -304,6 +373,7 @@ class _TopBar extends ConsumerWidget {
   final bool showGrid;
   final VoidCallback onToggleGrid;
   final VoidCallback onArrangePressed;
+  final bool isArranging;
   const _TopBar({
     required this.settlement,
     required this.showNames,
@@ -311,6 +381,7 @@ class _TopBar extends ConsumerWidget {
     required this.showGrid,
     required this.onToggleGrid,
     required this.onArrangePressed,
+    required this.isArranging,
   });
 
   @override
@@ -378,24 +449,26 @@ class _TopBar extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  GestureDetector(
-                    onTap: onToggleGrid,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        showGrid ? Icons.grid_on : Icons.grid_off,
-                        color: showGrid
-                            ? const Color(0xFF4CAF50)
-                            : const Color(0xFFFF9800),
-                        size: 16,
+                  if (isArranging) ...[
+                    GestureDetector(
+                      onTap: onToggleGrid,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          showGrid ? Icons.grid_on : Icons.grid_off,
+                          color: showGrid
+                              ? const Color(0xFF4CAF50)
+                              : const Color(0xFFFF9800),
+                          size: 16,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                    const SizedBox(width: 8),
+                  ],
                   GestureDetector(
                     onTap: onToggleNames,
                     child: Container(
@@ -446,6 +519,7 @@ class _BuildingIcon extends StatelessWidget {
   final Settlement settlement;
   final void Function(int)? onSwitchTab;
   final bool showName;
+  final VoidCallback onArrangeRequested;
 
   const _BuildingIcon({
     required this.building,
@@ -455,6 +529,7 @@ class _BuildingIcon extends StatelessWidget {
     required this.settlement,
     this.onSwitchTab,
     required this.showName,
+    required this.onArrangeRequested,
   });
 
   @override
@@ -514,12 +589,15 @@ class _BuildingIcon extends StatelessWidget {
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _BuildingPopup(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => _BuildingPopup(
         building: building,
         settlement: settlement,
         onSwitchTab: onSwitchTab,
+        onArrange: () {
+          Navigator.pop(sheetContext);
+          onArrangeRequested();
+        },
       ),
     );
   }
@@ -530,10 +608,12 @@ class _BuildingPopup extends ConsumerWidget {
   final Building building;
   final Settlement settlement;
   final void Function(int)? onSwitchTab;
+  final VoidCallback onArrange;
   const _BuildingPopup({
     required this.building,
     required this.settlement,
     this.onSwitchTab,
+    required this.onArrange,
   });
 
   @override
@@ -563,28 +643,47 @@ class _BuildingPopup extends ConsumerWidget {
           // หัวข้อ
           Row(
             children: [
-              Text(
-                building.displayName,
-                style: const TextStyle(
-                  color: Color(0xFF0F2A2A),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Text(building.displayName,
+                  style: const TextStyle(
+                      color: Color(0xFF0F2A2A),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700)),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0D9488),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  'Lv.${building.level}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                child: Text('Lv.${building.level}',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: onArrange,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0D9488), Color(0xFF5EEAD4)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0D9488).withValues(alpha: 0.35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
+                  child: const Icon(Icons.open_with_rounded,
+                      color: Colors.white, size: 18),
                 ),
               ),
             ],

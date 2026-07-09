@@ -1,0 +1,6 @@
+{
+  "name": "Pokdeng Card Game",
+  "description": "เกมไพ่ป๊อกเด้งภาษาไทย เวอร์ชันออฟไลน์ เล่นกับบอท ระบบแต่งตัวละคร และระบบเศรษฐกิจจำลอง",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

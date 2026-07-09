@@ -166,6 +166,12 @@ class GameService {
       liquor: newLiquor,
     );
 
+    await _supabase.schema('game').rpc('update_quest_progress', params: {
+      'p_settlement_id': settlement.id,
+      'p_requirement_type': 'collect_resources',
+      'p_amount': 1,
+    });
+
     return settlement.copyWith(
       wood: newWood, iron: newIron,
       rice: newRice, liquor: newLiquor,
