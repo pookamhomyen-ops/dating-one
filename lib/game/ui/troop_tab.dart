@@ -579,7 +579,8 @@ class _TrainButton extends ConsumerWidget {
         allTroops: allTroops,
         onDone: () {
           ref.invalidate(troopsProvider);
-          ref.invalidate(settlementProvider);
+        ref.invalidate(settlementProvider);
+        ref.invalidate(questProgressProvider);
         },
       ),
     );

@@ -10,6 +10,9 @@ class March {
   final String status;
   final Map<String, int> loot;
   final DateTime createdAt;
+  final String? targetName;
+  final int? finalAttackPower;
+  final int? finalDefensePower;
 
   const March({
     required this.id,
@@ -23,6 +26,9 @@ class March {
     required this.status,
     required this.loot,
     required this.createdAt,
+    this.targetName,
+    this.finalAttackPower,
+    this.finalDefensePower,
   });
 
   factory March.fromJson(Map<String, dynamic> json) {
@@ -38,6 +44,9 @@ class March {
       status: json['status'],
       loot: Map<String, int>.from(json['loot'] ?? {}),
       createdAt: DateTime.parse(json['created_at']),
+      targetName: json['target_name'],
+      finalAttackPower: json['final_attack_power'],
+      finalDefensePower: json['final_defense_power'],
     );
   }
 

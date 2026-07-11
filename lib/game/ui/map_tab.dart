@@ -145,29 +145,27 @@ class _MapViewState extends ConsumerState<_MapView>
                     right: 60,
                     child: _MarchCountdownList(marches: activeMarches),
                   ),
-                // March history — ลอยด้านล่าง กดเปิดได้
                 Positioned(
-                  bottom: 12,
+                  bottom: 16,
                   left: 12,
                   child: _MarchHistoryButton(),
                 ),
                 Positioned(
-                  bottom: 12,
+                  bottom: 16,
                   right: 12,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      FloatingActionButton.small(
-                        heroTag: 'centerBtn',
-                        backgroundColor: const Color(0xFF3C2810),
-                        onPressed: _centerOnMySettlement,
-                        child: const Text('🏯', style: TextStyle(fontSize: 16)),
+                      _BrightRoundButton(
+                        icon: Icons.my_location_rounded,
+                        colors: const [Color(0xFFFFA451), Color(0xFFFF7A00)],
+                        onTap: _centerOnMySettlement,
                       ),
-                      const SizedBox(height: 8),
-                      FloatingActionButton.small(
-                        heroTag: 'settlementBtn',
-                        backgroundColor: const Color(0xFF854F0B),
-                        onPressed: () {
+                      const SizedBox(height: 12),
+                      _BrightRoundButton(
+                        icon: Icons.account_balance_rounded,
+                        colors: const [Color(0xFF7C6AFF), Color(0xFF5B5FEF)],
+                        onTap: () {
                           final container = ProviderScope.containerOf(context);
                           Navigator.push(
                             context,
@@ -181,7 +179,6 @@ class _MapViewState extends ConsumerState<_MapView>
                             ),
                           );
                         },
-                        child: const Text('🏛️', style: TextStyle(fontSize: 16)),
                       ),
                     ],
                   ),
@@ -1069,60 +1066,111 @@ class _MarchHistoryCard extends StatelessWidget {
       final DateTime arriveAt = march.arriveAt as DateTime;
 
       final isVictory = loot.isNotEmpty;
-      final lootText =
-          loot.entries.map((e) => '${_icon(e.key)}${e.value}').join(' ');
+      final String? targetName = march.targetName as String?;
+      final int? atk = march.finalAttackPower as int?;
+      final int? def = march.finalDefensePower as int?;
       final troopsText = troopsSent.entries
           .map((e) => '${e.value}${_troopEmoji(e.key)}')
           .join(' ');
 
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-        margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            left: BorderSide(
-              color: isVictory
-                  ? const Color(0xFF5DCAA5)
-                  : const Color(0xFFF0997B),
-              width: 3,
-            ),
-            top: BorderSide(
-                color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-            right: BorderSide(
-                color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-            bottom: BorderSide(
-                color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-          ),
+      final resultLabel = isVictory
+          ? 'ชนะ${targetName != null ? " — บุก $targetName สำเร็จ" : ""}'
+          : 'แพ้${targetName != null ? " ให้ $targetName" : ""}';
+
+      return GestureDetector(
+        onTap: () => showDialog(
+          context: context,
+          barrierColor: Colors.black.withValues(alpha: 0.55),
+          builder: (_) => _MarchDetailDialog(march: march),
         ),
-        child: Row(
-          children: [
-            Text(isVictory ? '🏆' : '💀',
-                style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      isVictory
-                          ? 'ชนะ — ได้ $lootText'
-                          : 'แพ้ — ไม่ได้ของ',
-                      style: const TextStyle(fontSize: 12)),
-                  Text('ส่ง $troopsText • ${_timeAgo(arriveAt)}',
-                      style:
-                          TextStyle(fontSize: 10, color: Colors.grey[500])),
-                ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+              border: Border(
+                left: BorderSide(
+                  color: isVictory
+                      ? const Color(0xFF34D399)
+                      : const Color(0xFFF87171),
+                  width: 4,
+                ),
               ),
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: isVictory
+                        ? const Color(0xFFE8F8F3)
+                        : const Color(0xFFFEE2E2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(isVictory ? '🏆' : '💀',
+                        style: const TextStyle(fontSize: 18)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(resultLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isVictory
+                                ? const Color(0xFF0F766E)
+                                : const Color(0xFFB91C1C),
+                          )),
+                      const SizedBox(height: 3),
+                      if (atk != null && def != null)
+                        Row(
+                          children: [
+                            Text('⚔️$atk',
+                                style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.w700,
+                                  color: atk >= def
+                                      ? const Color(0xFF0F766E)
+                                      : Colors.grey[500],
+                                )),
+                            const SizedBox(width: 4),
+                            Text('vs', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                            const SizedBox(width: 4),
+                            Text('🛡️$def',
+                                style: TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.w700,
+                                  color: def > atk
+                                      ? const Color(0xFFB91C1C)
+                                      : Colors.grey[500],
+                                )),
+                          ],
+                        ),
+                      const SizedBox(height: 2),
+                      Text('ส่ง $troopsText • ${_timeAgo(arriveAt)}',
+                          style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey[350]),
+              ],
+            ),
+          ),
         ),
       );
     } catch (e) {
-      // ถ้ายังพัง จะโชว์ error จริงตรงนี้แทนกล่องขาวว่างๆ
       return Container(
         margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
         padding: const EdgeInsets.all(10),
@@ -1158,6 +1206,237 @@ class _MarchHistoryCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
     if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
     return '${diff.inDays} วันที่แล้ว';
+  }
+}
+
+class _MarchDetailDialog extends StatelessWidget {
+  final dynamic march;
+  const _MarchDetailDialog({required this.march});
+
+  static const _troopEmoji = {
+    'swordsman': '🗡️', 'archer': '🏹', 'spearman': '🪖',
+    'cavalry': '🐴', 'elephant': '🐘',
+  };
+  static const _troopName = {
+    'swordsman': 'พลดาบ', 'archer': 'พลธนู', 'spearman': 'พลทวน',
+    'cavalry': 'ทหารม้า', 'elephant': 'ช้างศึก',
+  };
+  static const _resIcon = {'wood': '🪵', 'iron': '⚙️', 'rice': '🌾', 'liquor': '🍶'};
+  static const _resName = {'wood': 'ไม้', 'iron': 'เหล็ก', 'rice': 'ข้าว', 'liquor': 'สุรา'};
+
+  Map<String, int> _asIntMap(dynamic raw) {
+    if (raw == null) return {};
+    final map = raw as Map;
+    return map.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+  }
+
+  String _fmtDate(DateTime dt) {
+    final d = dt.toLocal();
+    return '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loot = _asIntMap(march.loot);
+    final troopsSent = _asIntMap(march.troopsSent);
+    final DateTime departAt = march.departAt as DateTime;
+    final DateTime arriveAt = march.arriveAt as DateTime;
+    final isVictory = loot.isNotEmpty;
+    final String? targetName = march.targetName as String?;
+    final int atk = (march.finalAttackPower as int?) ?? 0;
+    final int def = (march.finalDefensePower as int?) ?? 0;
+    final maxPower = (atk > def ? atk : def).clamp(1, 999999);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 24, offset: const Offset(0, 12)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isVictory
+                      ? [const Color(0xFF34D399), const Color(0xFF0F9488)]
+                      : [const Color(0xFFF87171), const Color(0xFFB91C1C)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Text(isVictory ? '🏆' : '💀', style: const TextStyle(fontSize: 40)),
+                  const SizedBox(height: 8),
+                  Text(
+                    isVictory
+                        ? 'ชัยชนะ'
+                        : targetName != null ? 'แพ้ให้ $targetName' : 'พ่ายแพ้',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('กำลังรบเทียบกัน',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF888780))),
+                  const SizedBox(height: 10),
+                  _PowerRow(label: '⚔️ กองทัพเรา', value: atk, max: maxPower, color: const Color(0xFF0D9488), isWinner: atk >= def),
+                  const SizedBox(height: 8),
+                  _PowerRow(label: '🛡️ ฝ่ายป้องกัน', value: def, max: maxPower, color: const Color(0xFFDC2626), isWinner: def > atk),
+                  const SizedBox(height: 16),
+                  _DetailRow(label: 'เวลาออกเดินทัพ', value: _fmtDate(departAt)),
+                  const SizedBox(height: 8),
+                  _DetailRow(label: 'เวลาถึงเป้าหมาย', value: _fmtDate(arriveAt)),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+                  const Text('กองทัพที่ส่งไป',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF888780))),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8, runSpacing: 8,
+                    children: troopsSent.entries.map((e) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECF4F4),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${_troopEmoji[e.key] ?? '⚔️'} ${_troopName[e.key] ?? e.key} ×${e.value}',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF0F2A2A), fontWeight: FontWeight.w600),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+                  Text(
+                    isVictory ? 'ของที่ปล้นได้' : 'ผลลัพธ์',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF888780)),
+                  ),
+                  const SizedBox(height: 8),
+                  if (isVictory)
+                    Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: loot.entries.map((e) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F8F3),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF5DCAA5).withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            '${_resIcon[e.key] ?? e.key} ${_resName[e.key] ?? e.key} +${e.value}',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF0F6E56), fontWeight: FontWeight.w700),
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  else
+                    Text('กำลังรบไม่พอ กองทัพสูญเสียหนักและถอยกลับมือเปล่า',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFECF4F4),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('ปิด', style: TextStyle(color: Color(0xFF0F2A2A), fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PowerRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final int max;
+  final Color color;
+  final bool isWinner;
+  const _PowerRow({required this.label, required this.value, required this.max, required this.color, required this.isWinner});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF5F5E5A))),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: value / max,
+              minHeight: 10,
+              backgroundColor: color.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 40,
+          child: Row(
+            children: [
+              Text('$value', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color)),
+              if (isWinner) const Padding(
+                padding: EdgeInsets.only(left: 2),
+                child: Text('👑', style: TextStyle(fontSize: 10)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F2A2A))),
+      ],
+    );
   }
 }
 
@@ -1500,6 +1779,32 @@ class _MarchInfoSheetState extends State<_MarchInfoSheet> {
   }
 }
 // ─── March History Button ─────────────────────────────────────────────────────
+class _BrightRoundButton extends StatelessWidget {
+  final IconData icon;
+  final List<Color> colors;
+  final VoidCallback onTap;
+  const _BrightRoundButton({required this.icon, required this.colors, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 58, height: 58,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: colors.last.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 6)),
+          ],
+          border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
+        ),
+        child: Icon(icon, color: Colors.white, size: 26),
+      ),
+    );
+  }
+}
+
 class _MarchHistoryButton extends ConsumerWidget {
   const _MarchHistoryButton();
 
@@ -1512,29 +1817,33 @@ class _MarchHistoryButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () => showModalBottomSheet(
         context: context,
-        backgroundColor: const Color(0xFFECF4F4),
+        backgroundColor: const Color(0xFFF7F8FC),
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         builder: (_) => _MarchHistorySheet(marches: marches),
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A0D00).withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: const Color(0xFF5EEAD4).withValues(alpha: 0.4), width: 1),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('📜', style: TextStyle(fontSize: 12)),
-            const SizedBox(width: 4),
+            Container(
+              width: 26, height: 26,
+              decoration: const BoxDecoration(color: Color(0xFFEDE9FE), shape: BoxShape.circle),
+              child: const Center(child: Text('📜', style: TextStyle(fontSize: 13))),
+            ),
+            const SizedBox(width: 8),
             Text('ประวัติการรบ (${marches.length})',
-              style: const TextStyle(
-                color: Color(0xFFFAC775), fontSize: 11)),
+              style: const TextStyle(color: Color(0xFF2C2C2C), fontSize: 12, fontWeight: FontWeight.w700)),
           ],
         ),
       ),

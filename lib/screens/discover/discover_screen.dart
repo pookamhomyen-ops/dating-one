@@ -4,12 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'member_profile_screen.dart';
 import 'swipe_screen.dart';
 import '../../models/member.dart';
-import '../../test/dating_feed_page.dart' show DatingFeedPage;
-import '../../models/gender.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/network_image_box.dart';
-import '../../widgets/soulive_header.dart';
-import 'match_popup.dart';
+import 'member_profile_screen.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -418,14 +413,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
       appBar: AppBar(
         title: const Text('Discover'),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DatingFeedPage()),
-              );
-            },
-            child: const Text('สงป้า', style: TextStyle(color: Colors.white)),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
           ),
         ],
       ),
@@ -443,8 +433,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  const SliverToBoxAdapter(child: SouliveHeader()),
-                  
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -555,12 +543,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> with TickerProviderStat
                         genderLabel: _genderFilter,
                         onNearMe: () =>
                             setState(() => _nearMeActive = !_nearMeActive),
-                        onFilter: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const SwipeScreen()),
-                          );
-                        },
                         onGender: () => _showGenderSheet(),
                         onSearch: () {},
                       ),
@@ -668,7 +650,6 @@ class _FilterBar extends StatelessWidget {
     required this.nearMeActive,
     required this.genderLabel,
     required this.onNearMe,
-    required this.onFilter,
     required this.onGender,
     required this.onSearch,
   });
@@ -676,7 +657,6 @@ class _FilterBar extends StatelessWidget {
   final bool nearMeActive;
   final String genderLabel;
   final VoidCallback onNearMe;
-  final VoidCallback onFilter;
   final VoidCallback onGender;
   final VoidCallback onSearch;
 
@@ -695,12 +675,6 @@ class _FilterBar extends StatelessWidget {
                   icon: Icons.near_me_outlined,
                   filled: nearMeActive,
                   onTap: onNearMe,
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: 'ตัวกรอง',
-                  icon: Icons.tune_rounded,
-                  onTap: onFilter,
                 ),
                 const SizedBox(width: 8),
                 _FilterPill(

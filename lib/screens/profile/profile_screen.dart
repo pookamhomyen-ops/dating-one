@@ -15,6 +15,7 @@ import '../../widgets/network_image_box.dart';
 import '../../widgets/full_screen_image_viewer.dart';
 import 'liked_me_screen.dart';
 import 'my_posts_screen.dart';
+import 'profile_setup_step1_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -216,8 +217,6 @@ class ProfileScreenState extends State<ProfileScreen> {
       return const Scaffold(body: Center(child: Text('ไม่พบข้อมูลผู้ใช้')));
     }
 
-    final headerHeight = MediaQuery.of(context).size.height * 0.65;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -239,7 +238,30 @@ class ProfileScreenState extends State<ProfileScreen> {
                   ),
                   // 2. ข้อมูลผู้ใช้
                   SliverToBoxAdapter(
-                    child: _ProfileInfoCard(user: _user!),
+                    child: _ProfileInfoCard(
+                      user: _user!,
+                      onRefresh: _loadUserData,
+                      onBrolaiWarTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProviderScope(child: GameScreen()),
+                          ),
+                        );
+                      },
+                      onSoiSmashTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const GameUI()),
+                        );
+                      },
+                      onCatVsMouseTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CatVsMouseScreen()),
+                        );
+                      },
+                    ),
                   ),
                   // 3. ส่วนความสนใจและรูปภาพอื่นๆ
                   SliverToBoxAdapter(
@@ -485,67 +507,6 @@ class ProfileScreenState extends State<ProfileScreen> {
           ),
             ),
 
-            // ── ปุ่มบรรลัยวอร์ (อยู่นอก sliver ระดับชื่อผู้ใช้) ──
-            Positioned(
-              top: headerHeight + 6,
-              right: 16,
-              child: _AnimatedSideBarButton(
-                icon: Icons.shield_rounded,
-                label: 'บรรลัยวอร์',
-                color: const Color(0xFFB91C1C),
-                animType: _SideBarAnimType.shake,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProviderScope(
-                        child: GameScreen(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // ── ปุ่มซอยสแมส (อยู่นอก sliver ระดับชื่อผู้ใช้) ──
-            Positioned(
-              top: headerHeight + 70,
-              right: 16,
-              child: _AnimatedSideBarButton(
-                icon: Icons.sports_martial_arts,
-                label: 'ซอยสแมส',
-                color: const Color(0xFF1E88E5),
-                animType: _SideBarAnimType.bounce,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const GameUI(),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // ── ปุ่มแมวปะทะหนู ──
-            Positioned(
-              top: headerHeight + 134,
-              right: 16,
-              child: _AnimatedSideBarButton(
-                icon: Icons.pets_rounded,
-                label: 'แมวปะทะหนู',
-                color: const Color(0xFFF97316),
-                animType: _SideBarAnimType.spin,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CatVsMouseScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
           ],
         ),
       ),
@@ -809,9 +770,19 @@ class _ProfileHeaderState extends State<_ProfileHeader> {
 }
 
 class _ProfileInfoCard extends StatelessWidget {
-  const _ProfileInfoCard({required this.user});
+  const _ProfileInfoCard({
+    required this.user,
+    required this.onBrolaiWarTap,
+    required this.onSoiSmashTap,
+    required this.onCatVsMouseTap,
+    required this.onRefresh,
+  });
 
   final UserProfile user;
+  final VoidCallback onBrolaiWarTap;
+  final VoidCallback onSoiSmashTap;
+  final VoidCallback onCatVsMouseTap;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -824,97 +795,139 @@ class _ProfileInfoCard extends StatelessWidget {
         ),
       ),
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ชื่อ + อายุ
-          Row(
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user.name,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.5,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '${user.age} ปี',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    _SettingsIconButton(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileSetupStep1Screen(isEditMode: true),
+                          ),
+                        );
+                        onRefresh();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _InfoLine(
+                  icon: user.gender == Gender.female
+                      ? Icons.female_rounded
+                      : Icons.male_rounded,
+                  text: user.gender.labelTh,
+                  iconColor: user.gender == Gender.female
+                      ? AppColors.iconPink
+                      : AppColors.iconBlue,
+                ),
+                const SizedBox(height: 12),
+                _InfoLine(
+                  icon: Icons.location_on_rounded,
+                  text: '${user.district}, ${user.province}',
+                  iconColor: AppColors.iconOrange,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'ช่องทางติดต่อ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                if (user.lineId.isNotEmpty)
+                  _SocialInfoTile(
+                      label: 'Line ID',
+                      value: user.lineId,
+                      color: AppColors.iconGreen,
+                      badgeText: 'LINE'),
+                if (user.instagram.isNotEmpty) ...[
+                  if (user.lineId.isNotEmpty) const SizedBox(height: 12),
+                  _SocialInfoTile(
+                      label: 'Instagram',
+                      value: user.instagram,
+                      color: AppColors.iconPink,
+                      badgeText: 'IG'),
+                ],
+                if (user.xHandle.isNotEmpty) ...[
+                  if (user.lineId.isNotEmpty || user.instagram.isNotEmpty)
+                    const SizedBox(height: 12),
+                  _SocialInfoTile(
+                      label: 'X (Twitter)',
+                      value: user.xHandle,
+                      color: AppColors.textPrimary,
+                      badgeText: 'X'),
+                ],
+                if (user.facebook.isNotEmpty) ...[
+                  if (user.lineId.isNotEmpty ||
+                      user.instagram.isNotEmpty ||
+                      user.xHandle.isNotEmpty)
+                    const SizedBox(height: 12),
+                  _SocialInfoTile(
+                      label: 'Facebook',
+                      value: user.facebook,
+                      color: AppColors.iconBlue,
+                      badgeText: 'FB'),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Flexible(
-                child: Text(
-                  user.name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.5,
-                    color: AppColors.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+              _AnimatedSideBarButton(
+                icon: Icons.shield_rounded,
+                label: 'บรรลัยวอร์',
+                color: const Color(0xFFB91C1C),
+                animType: _SideBarAnimType.shake,
+                onTap: onBrolaiWarTap,
               ),
-              const SizedBox(width: 10),
-              Text(
-                '${user.age} ปี',
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
+              const SizedBox(height: 10),
+              _AnimatedSideBarButton(
+                icon: Icons.sports_martial_arts,
+                label: 'ซอยสแมส',
+                color: const Color(0xFF1E88E5),
+                animType: _SideBarAnimType.bounce,
+                onTap: onSoiSmashTap,
               ),
-              const SizedBox(width: 10),
-              const _SettingsIconButton(),
+              const SizedBox(height: 10),
+              _AnimatedSideBarButton(
+                icon: Icons.pets_rounded,
+                label: 'แมวปะทะหนู',
+                color: const Color(0xFFF97316),
+                animType: _SideBarAnimType.spin,
+                onTap: onCatVsMouseTap,
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          // เพศ
-          _InfoLine(
-            icon: user.gender == Gender.female
-                ? Icons.female_rounded
-                : Icons.male_rounded,
-            text: user.gender.labelTh,
-            iconColor: user.gender == Gender.female
-                ? AppColors.iconPink
-                : AppColors.iconBlue,
-          ),
-          const SizedBox(height: 12),
-          // ที่อยู่
-          _InfoLine(
-            icon: Icons.location_on_rounded,
-            text: '${user.district}, ${user.province}',
-            iconColor: AppColors.iconOrange,
-          ),
-          const SizedBox(height: 24),
-          // ช่องทางติดต่อ
-          const Text(
-            'ช่องทางติดต่อ',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 16),
-          if (user.lineId.isNotEmpty)
-            _SocialInfoTile(
-                label: 'Line ID',
-                value: user.lineId,
-                color: AppColors.iconGreen,
-                badgeText: 'LINE'),
-          if (user.instagram.isNotEmpty) ...[
-            if (user.lineId.isNotEmpty) const SizedBox(height: 12),
-            _SocialInfoTile(
-                label: 'Instagram',
-                value: user.instagram,
-                color: AppColors.iconPink,
-                badgeText: 'IG'),
-          ],
-          if (user.xHandle.isNotEmpty) ...[
-            if (user.lineId.isNotEmpty || user.instagram.isNotEmpty)
-              const SizedBox(height: 12),
-            _SocialInfoTile(
-                label: 'X (Twitter)',
-                value: user.xHandle,
-                color: AppColors.textPrimary,
-                badgeText: 'X'),
-          ],
-          if (user.facebook.isNotEmpty) ...[
-            if (user.lineId.isNotEmpty ||
-                user.instagram.isNotEmpty ||
-                user.xHandle.isNotEmpty)
-              const SizedBox(height: 12),
-            _SocialInfoTile(
-                label: 'Facebook',
-                value: user.facebook,
-                color: AppColors.iconBlue,
-                badgeText: 'FB'),
-          ],
         ],
       ),
     );
@@ -1385,7 +1398,9 @@ class _ProfileActionButtonState extends State<_ProfileActionButton>
 }
 
 class _SettingsIconButton extends StatefulWidget {
-  const _SettingsIconButton();
+  const _SettingsIconButton({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   State<_SettingsIconButton> createState() => _SettingsIconButtonState();
@@ -1422,7 +1437,10 @@ class _SettingsIconButtonState extends State<_SettingsIconButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _ctrl.forward(from: 0.0),
+      onTap: () {
+        _ctrl.forward(from: 0.0);
+        widget.onTap();
+      },
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (context, child) => Transform.scale(
