@@ -5,7 +5,6 @@ import '../../models/feed_post.dart';
 import '../../models/gender.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/avatar_image.dart';
-import '../../widgets/soulive_header.dart';
 import 'create_post_sheet.dart';
 
 class FeedScreen extends StatefulWidget {
@@ -214,6 +213,15 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Feed'),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+          ),
+        ],
+      ),
       floatingActionButton: _buildFAB(context),
       body: SafeArea(
         child: RefreshIndicator(
@@ -222,7 +230,6 @@ class _FeedScreenState extends State<FeedScreen> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              const SliverToBoxAdapter(child: SouliveHeader(pageTitle: 'Feed', trailing: SizedBox())),
               SliverToBoxAdapter(child: _StoriesRow(lavenderDark: lavenderDark, lavenderLight: lavenderLight)),
               
               // แถบตัวกรอง (Filters)
