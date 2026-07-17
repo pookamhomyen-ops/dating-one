@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../chat/chat_detail_screen.dart';
 import '../../models/chat_thread.dart';
+import '../../theme/app_colors.dart';
 
 void main() {
   runApp(const _DemoApp());
@@ -1025,50 +1026,86 @@ class _ProfileInfoOverlay extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              Flexible(
+                child: Text(
+                  profile.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    shadows: [Shadow(blurRadius: 8, color: Colors.black38)],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
-                profile.name,
+                '${profile.age}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  shadows: [Shadow(blurRadius: 6, color: Colors.black)],
+                  fontWeight: FontWeight.w500,
+                  shadows: [Shadow(blurRadius: 8, color: Colors.black38)],
                 ),
               ),
-              const SizedBox(width: 6),
-              Text('${profile.age}', style: const TextStyle(color: Colors.white, fontSize: 18)),
               if (profile.isOnline) ...[
                 const SizedBox(width: 8),
                 Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text('ออนไลน์', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.black87)),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.location_on, size: 14, color: Colors.white70),
-              const SizedBox(width: 4),
-              Text('${profile.district}, ${profile.province}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            ],
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.location_on_rounded, size: 15, color: Colors.white),
+                const SizedBox(width: 4),
+                Text('${profile.district}, ${profile.province}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(
             profile.shortBio,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.35, fontWeight: FontWeight.w400),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            children: profile.tags
-                .map((t) => Text('#$t', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)))
-                .toList(),
-          ),
+          if (profile.tags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: profile.tags
+                  .map((t) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.all(Radius.circular(20)),
+                        ),
+                        child: Text(
+                          t,
+                          style: TextStyle(color: profile.themeColor, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -1099,9 +1136,13 @@ class _ActionButtonsColumn extends StatelessWidget {
         GestureDetector(
           onTap: onAvatarTap,
           child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, 3))],
+            ),
             child: ClipOval(
               child: Image.network(
                 profile.photos.first,
@@ -1111,31 +1152,31 @@ class _ActionButtonsColumn extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 22),
         _ActionIconButton(
-          icon: profile.isLiked ? Icons.favorite : Icons.favorite_border,
-          color: profile.isLiked ? kAccentColor : Colors.white,
+          icon: profile.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          iconColor: AppColors.brandPink,
           label: '${profile.likeCount}',
           onTap: onLikeTap,
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         _ActionIconButton(
-          icon: Icons.mode_comment_outlined,
-          color: Colors.white,
+          icon: Icons.mode_comment_rounded,
+          iconColor: AppColors.iconPurple,
           label: '${profile.comments.length}',
           onTap: onCommentTap,
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         _ActionIconButton(
-          icon: profile.isFavorited ? Icons.bookmark : Icons.bookmark_border,
-          color: profile.isFavorited ? const Color(0xFFFFC542) : Colors.white,
+          icon: profile.isFavorited ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+          iconColor: AppColors.iconOrange,
           label: 'บันทึก',
           onTap: onFavoriteTap,
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         _ActionIconButton(
-          icon: Icons.send_outlined,
-          color: Colors.white,
+          icon: Icons.send_rounded,
+          iconColor: AppColors.iconTeal,
           label: 'แชท',
           onTap: onChatTap,
         ),
@@ -1144,32 +1185,77 @@ class _ActionButtonsColumn extends StatelessWidget {
   }
 }
 
-class _ActionIconButton extends StatelessWidget {
+class _ActionIconButton extends StatefulWidget {
   final IconData icon;
-  final Color color;
+  final Color iconColor;
   final String label;
   final VoidCallback onTap;
 
-  const _ActionIconButton({required this.icon, required this.color, required this.label, required this.onTap});
+  const _ActionIconButton({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  State<_ActionIconButton> createState() => _ActionIconButtonState();
+}
+
+class _ActionIconButtonState extends State<_ActionIconButton> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.25), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        _ctrl.forward(from: 0);
+        widget.onTap();
+      },
       child: Column(
         children: [
-          Icon(icon, color: color, size: 32, shadows: const [Shadow(blurRadius: 6, color: Colors.black54)]),
+          ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: Icon(widget.icon, color: widget.iconColor, size: 26),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(
+            widget.label,
+            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, shadows: [Shadow(blurRadius: 6, color: Colors.black45)]),
+          ),
         ],
       ),
     );
   }
 }
-
-// ============================================================
-// TOP NAVIGATION BAR
-// ============================================================
 
 class _TopBar extends StatelessWidget {
   final int tabIndex;
@@ -1178,7 +1264,11 @@ class _TopBar extends StatelessWidget {
 
   const _TopBar({required this.tabIndex, required this.onTabTap, required this.onFilterTap});
 
-  static const List<String> _labels = ['สำหรับคุณ', 'กำลังติดตาม', 'ใกล้ฉัน'];
+  static const List<_TabInfo> _tabs = [
+    _TabInfo('สำหรับคุณ', Icons.auto_awesome_rounded),
+    _TabInfo('กำลังติดตาม', Icons.favorite_rounded),
+    _TabInfo('ใกล้ฉัน', Icons.near_me_rounded),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -1188,59 +1278,95 @@ class _TopBar extends StatelessWidget {
       left: 0,
       right: 0,
       child: Container(
-        padding: EdgeInsets.only(top: topPadding + 6, bottom: 10),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.only(top: topPadding + 10, bottom: 14, left: 12, right: 12),
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xCC000000), Colors.transparent],
+            colors: [
+              Colors.white.withValues(alpha: 0.85),
+              Colors.white.withValues(alpha: 0.0),
+            ],
           ),
         ),
         child: Row(
           children: [
-            const SizedBox(width: 44),
             Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_labels.length, (i) {
-                  final selected = i == tabIndex;
-                  return GestureDetector(
-                    onTap: () => onTabTap(i),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _labels[i],
-                            style: TextStyle(
-                              color: selected ? Colors.white : Colors.white60,
-                              fontSize: 15,
-                              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                            ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(_tabs.length, (i) {
+                    final selected = i == tabIndex;
+                    final tab = _tabs[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => onTabTap(i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: selected ? Colors.white : Colors.white.withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: selected
+                                ? [
+                                    BoxShadow(
+                                      color: kAccentColor.withValues(alpha: 0.25),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ]
+                                : null,
                           ),
-                          const SizedBox(height: 4),
-                          Container(
-                            width: 18,
-                            height: 2.5,
-                            decoration: BoxDecoration(
-                              color: selected ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(tab.icon, size: 15, color: selected ? kAccentColor : Colors.white),
+                              const SizedBox(width: 5),
+                              Text(
+                                tab.label,
+                                style: TextStyle(
+                                  color: selected ? kAccentColor : Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  }),
+                ),
               ),
             ),
-            IconButton(icon: const Icon(Icons.tune, color: Colors.white), onPressed: onFilterTap),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onFilterTap,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Icon(Icons.tune_rounded, size: 18, color: kAccentColor),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _TabInfo {
+  final String label;
+  final IconData icon;
+  const _TabInfo(this.label, this.icon);
 }
 
 class _EmptyState extends StatelessWidget {
