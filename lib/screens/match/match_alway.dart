@@ -725,8 +725,7 @@ class _DatingFeedPageState extends State<DatingFeedPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: kSheetBackground,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent,
       builder: (context) => _CommentsSheet(
         profile: profile,
         onAdd: (text) {
@@ -1135,21 +1134,65 @@ class _ActionButtonsColumn extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: onAvatarTap,
-          child: Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, 3))],
-            ),
-            child: ClipOval(
-              child: Image.network(
-                profile.photos.first,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) => Container(color: profile.themeColor, child: const Icon(Icons.person, color: Colors.white)),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFF8FA3), // shiny pink
+                      Color(0xFFFFB6C1), // light pink
+                      Color(0xFFB07CFF), // purple
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF8FA3).withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.5),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        profile.photos.first,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => Container(
+                          color: profile.themeColor,
+                          child: const Icon(Icons.person, color: Colors.white, size: 28),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              // Glossy reflection bubble
+              Positioned(
+                top: 4,
+                left: 14,
+                child: Container(
+                  width: 18,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    borderRadius: const BorderRadius.all(Radius.elliptical(18, 8)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 22),
@@ -1233,23 +1276,82 @@ class _ActionIconButtonState extends State<_ActionIconButton> with SingleTickerP
         children: [
           ScaleTransition(
             scale: _scale,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10, offset: const Offset(0, 3)),
-                ],
-              ),
-              child: Icon(widget.icon, color: widget.iconColor, size: 26),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer glowing shadow & glossy gradient border container
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white,
+                        widget.iconColor.withValues(alpha: 0.08),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      width: 2.0,
+                    ),
+                    boxShadow: [
+                      // Cute colored glow shadow
+                      BoxShadow(
+                        color: widget.iconColor.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                      // Soft inner light highlight
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 4,
+                        offset: const Offset(-2, -2),
+                        spreadRadius: -1,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      widget.icon,
+                      color: widget.iconColor,
+                      size: 29,
+                    ),
+                  ),
+                ),
+                // Glossy glass reflection bubble effect
+                Positioned(
+                  top: 5,
+                  left: 12,
+                  child: Container(
+                    width: 16,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      borderRadius: const BorderRadius.all(Radius.elliptical(16, 8)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             widget.label,
-            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, shadows: [Shadow(blurRadius: 6, color: Colors.black45)]),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  blurRadius: 6,
+                  color: Colors.black54,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1677,87 +1779,260 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.7,
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4))),
-              const SizedBox(height: 12),
-              Text('คอมเมนต์ (${widget.profile.comments.length})', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              const Divider(color: Colors.white12, height: 16),
-              Expanded(
-                child: widget.profile.comments.isEmpty
-                    ? const Center(child: Text('ยังไม่มีคอมเมนต์ ลองเป็นคนแรกสิ!', style: TextStyle(color: Colors.white54)))
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: widget.profile.comments.length,
-                        itemBuilder: (context, i) {
-                          final c = widget.profile.comments[i];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: hexToColor(c.avatarColorHex),
-                                  child: Text(
-                                    c.author.isNotEmpty ? c.author[0] : '?',
-                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.75,
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 48,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD1DC), // Soft pastel pink drag handle
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.chat_bubble_rounded, color: Color(0xFFFF7A8A), size: 22),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'ความคิดเห็น',
+                            style: TextStyle(
+                              color: Color(0xFF2E3E5C),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF0F2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${widget.profile.comments.length}',
+                              style: const TextStyle(
+                                color: Color(0xFFFF4D67),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.close_rounded, size: 18, color: Colors.grey[600]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: Color(0xFFF1F5F9), height: 1),
+                Expanded(
+                  child: widget.profile.comments.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.bubble_chart_rounded, size: 64, color: const Color(0xFFFFD1DC).withOpacity(0.5)),
+                              const SizedBox(height: 12),
+                              Text(
+                                'ยังไม่มีคอมเมนต์ ลองเป็นคนแรกสิ!',
+                                style: TextStyle(color: Colors.grey[500], fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: widget.profile.comments.length,
+                          itemBuilder: (context, i) {
+                            final c = widget.profile.comments[i];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: const Color(0xFFFFF0F2), width: 2),
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: hexToColor(c.avatarColorHex).withOpacity(0.2),
+                                      child: Text(
+                                        c.author.isNotEmpty ? c.author[0] : '?',
+                                        style: TextStyle(
+                                          color: hexToColor(c.avatarColorHex),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: const BorderRadius.only(
+                                          topRight: Radius.circular(16),
+                                          bottomLeft: Radius.circular(16),
+                                          bottomRight: Radius.circular(16),
+                                        ),
+                                        border: Border.all(
+                                          color: const Color(0xFFF1F5F9),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(c.author, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                                          const SizedBox(width: 8),
-                                          Text(c.timeAgo, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                c.author,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF2E3E5C),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              Text(
+                                                c.timeAgo,
+                                                style: TextStyle(
+                                                  color: Colors.grey[400],
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            c.text,
+                                            style: const TextStyle(
+                                              color: Color(0xFF4A5568),
+                                              fontSize: 13,
+                                              height: 1.4,
+                                            ),
+                                          ),
                                         ],
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(c.text, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                                    ],
+                                    ),
                                   ),
-                                ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          style: const TextStyle(color: Color(0xFF2E3E5C)),
+                          decoration: InputDecoration(
+                            hintText: 'เขียนคอมเมนต์...',
+                            hintStyle: TextStyle(color: Colors.grey[400]),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: const BorderSide(color: Color(0xFFFF7A8A), width: 1.5),
+                            ),
+                          ),
+                          onSubmitted: (_) => _submit(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: _submit,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFFFF8FA3), // shiny pastel pink
+                                Color(0xFFFF4D67), // shiny brand pink
                               ],
                             ),
-                          );
-                        },
-                      ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'เขียนคอมเมนต์...',
-                          hintStyle: const TextStyle(color: Colors.white38),
-                          filled: true,
-                          fillColor: kCardBackground,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF4D67).withOpacity(0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                        onSubmitted: (_) => _submit(),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(icon: const Icon(Icons.send, color: kAccentColor), onPressed: _submit),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
